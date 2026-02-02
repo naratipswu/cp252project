@@ -181,3 +181,9 @@ graph TD
 
 ### 7. สรุปขั้นตอนการทำ Requirement (Requirement Gathering)
 🎥 Interview Video: https://youtu.be/NaG_dEiouVI
+
+
+### 8. สรุปการประชุม Retrospective
+🎥 Video: https://youtu.be/sSMA5fetilM
+
+
