@@ -32,10 +32,10 @@
 ## 2. การเปลี่ยนแปลงความต้องการ (New Requirements)
 
 ### Functional Requirements (เพิ่มเติม/แก้ไข)
-* [ ] to be add
+* [ ] nothing
 
 ### Non-functional Requirements (เพิ่มเติม/แก้ไข)
-* [ ] to be add
+* [ ] nothing
 
 ---
 
@@ -44,7 +44,7 @@
 | หัวข้อ | รายละเอียดเอกสาร |
 | :--- | :--- |
 | **3.1 Architectural Design** | to be add |
-| **3.2 Use Case Diagram** | to be add |
+| **3.2 Use Case Diagram** | ![Camera Rental Use Case Diagram](images/UseCaseDiagram.png) |
 | **3.3 Database Schema** | to be add |
 
 
@@ -66,7 +66,7 @@
 * `Done`: งานที่ตรวจสอบและเสร็จสิ้นแล้ว
 
 ### Workflow & Standards
-* **Scrum Frequency:** ประชุม Update งานทุกๆ 1 วันต่อสัปดาห์ (วันอาทิตย์)
+* **Scrum Frequency:** ประชุม Update งานทุกๆ 1 วันต่อสัปดาห์
 * **Git Flow & Branching:**
     * `main`: สำหรับ Production ที่เสถียรแล้วเท่านั้น
     * `develop`: กิ่งหลักสำหรับการรวม Feature ต่างๆ
@@ -82,16 +82,18 @@
 ## 6. สรุปการประชุม Retrospective
 
 ### What went well
-* to be add
+* อัปเดตความคืบหน้าเรียบร้อย
+* แบ่งหน้าที่เพิ่มเติมสำหรับ phase 2
 
 ### What could be improved
-* to be add
+* ความลื่นไหล
+* ความเป็นระบบ
 
 ### Action items
-* to be add
+* [ ] นำ GitHub Projects มาใช้อย่างเคร่งครัดมากขึ้น ตั้ง Deadline ในแต่ละ Task และ Assign งานให้ชัดเจน
 
 ---
 
 ## Retrospective Video
-* **YouTube Playlist:** to be add
-* **หมายเหตุ:** to be add
+* **YouTube link:** [retropective video](https://youtu.be/pDNuwRGK49s?si=MCN7Xc9IYVV-MZtf)
+* **หมายเหตุ:** ได้แนะนำตัวสมาชิกที่ช่วงต้นของวิดีโอแล้ว (ชื่อ-นามสกุล + เลขสามตัวท้าย)
