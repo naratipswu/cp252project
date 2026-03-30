@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../db');
+const sequelize = require('../config/db');
 
 const Booking = sequelize.define('Booking', {
   start_date: { type: DataTypes.DATEONLY, allowNull: false },
