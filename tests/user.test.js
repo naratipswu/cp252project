@@ -1,4 +1,4 @@
-const { User } = require('../models/User'); // สมมติว่า export มาจาก model
+const { User } = require('../models/user'); // สมมติว่า export มาจาก model
 
 describe('User Model Validation', () => {
   // TC-01: Email Validation

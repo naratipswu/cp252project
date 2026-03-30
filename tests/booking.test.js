@@ -1,4 +1,5 @@
 const { calculatePrice, applyMembershipDiscount, validateBookingDates } = require('../utils/logic');
+const Booking = require('../models/booking');
 
 describe('Booking Business Logic', () => {
   
