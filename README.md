@@ -190,3 +190,6 @@ graph TD
 https://www.figma.com/proto/YVqTr3EiIpPg1v7y9oaU4G/CP252-Project?node-id=0-1&t=kSAoM3fooFb1x5MB-1
 
 
+## Start Web use
+### node app.js
+### http://localhost:3000
