@@ -193,3 +193,76 @@ https://www.figma.com/proto/YVqTr3EiIpPg1v7y9oaU4G/CP252-Project?node-id=0-1&t=k
 ## Start Web use
 ### node app.js
 ### http://localhost:3000
+
+# 📸 Camera Rental System - Database Documentation
+
+ระบบเช่ากล้องที่ออกแบบด้วยสถาปัตยกรรม Model-Driven และทดสอบด้วย Unit Testing (Jest) โดยใช้ PostgreSQL เป็นระบบจัดการฐานข้อมูล
+
+---
+
+## 🗄️ Database Structure (Schema)
+
+ระบบประกอบด้วย 6 ตารางหลักที่ทำงานสัมพันธ์กัน ดังนี้
+
+### 1. Users (ผู้ใช้)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | UUID / INT | Primary Key |
+| `username` | String | ชื่อผู้ใช้งาน |
+| `email` | String | อีเมล (Unique) |
+| `password` | String | รหัสผ่าน (Hashed) |
+| `role` | Enum | สิทธิ์การใช้งาน (customer, admin) |
+
+### 2. Cameras (กล้อง)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | UUID / INT | Primary Key |
+| `model_name` | String | ชื่อรุ่นกล้อง |
+| `brand` | String | ยี่ห้อ |
+| `daily_rate` | Decimal | ราคาเช่าต่อวัน |
+| `status` | Enum | สถานะ (available, rented, maintenance) |
+
+### 3. Bookings (การจอง)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | UUID / INT | Primary Key |
+| `user_id` | FK | เชื่อมกับ Users |
+| `camera_id` | FK | เชื่อมกับ Cameras |
+| `start_date` | Date | วันที่เริ่มเช่า |
+| `end_date` | Date | วันที่สิ้นสุด |
+| `total_price` | Decimal | ราคาสุทธิ |
+
+### 4. Orders (คำสั่งเช่าจริง)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | UUID / INT | Primary Key |
+| `booking_id` | FK | เชื่อมกับการจอง |
+| `actual_return` | Date | วันที่คืนจริง |
+| `late_fee` | Decimal | ค่าปรับกรณีคืนช้า |
+
+### 5. Payments (การชำระเงิน)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | UUID / INT | Primary Key |
+| `booking_id` | FK | เชื่อมกับการจอง |
+| `amount` | Decimal | ยอดเงินที่ชำระ |
+| `status` | Enum | สถานะ (pending, paid, failed) |
+
+### 6. Promotions (โปรโมชั่น)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | UUID / INT | Primary Key |
+| `code` | String | รหัสส่วนลด |
+| `discount` | Integer | เปอร์เซ็นต์ส่วนลด |
+
+---
+
+## 📊 Entity Relationship Diagram (ERD)
+
+
+
+> **คำอธิบายความสัมพันธ์ (Relationships):**
+> * **One-to-Many (Users & Bookings):** ผู้ใช้ 1 คน สามารถทำการจองได้หลายครั้ง
+> * **One-to-Many (Cameras & Bookings):** กล้อง 1 ตัว สามารถถูกจองได้หลายช่วงเวลา
+> * **One-to-One (Bookings & Payments):** การจอง 1 ครั้ง จะมีรายการชำระเงินที่สัมพันธ์กันเพียง 1 รายการ
+> * **One-to-One (Bookings & Orders):** การจอง 1 ครั้ง จะเปลี่ยนเป็นคำสั่งเช่า 1 รายการเมื่อมีการรับของ
