@@ -22,6 +22,34 @@
 
 #  Database Documentation (Phase 3)
 
+## 🏗️ โครงสร้างทางเทคนิคและสถาปัตยกรรมเชิงลึก (Detailed Technical Architecture)
+
+ระบบใน Phase 3 ถูกพัฒนาด้วยโครงสร้างที่รองรับการขยายตัวและมีความเป็นระเบียบสูง โดยสรุปรายละเอียดการทำงานได้ดังนี้:
+
+### 1. สถาปัตยกรรม MVC (Model-View-Controller)
+ระบบแยกส่วนการทำงานออกจากกันอย่างชัดเจนตามมาตรฐานอุตสาหกรรม:
+*   **Model:** ทำหน้าที่จัดการข้อมูลเปรียบเสมือนโกดัง (ปัจจุบันใช้ Mock data ใน `model/data.js`)
+*   **View:** ส่วนแสดงผลหน้าบ้าน (Frontend) โดยใช้ EJS เพื่อสร้าง HTML แบบ Dynamic
+*   **Controller:** ส่วนประมวลผลตรรกะหลัก (Brain) รับคำสั่งจากหน้าบ้านไปติดต่อกับ Model และส่งข้อมูลกลับไปแสดงผล
+*   **Router:** ประสานงานการรับคำขอ (Request) จาก URL ใน `app.js` เพื่อกระจายงานไปยัง Controller ที่เหมาะสม
+
+### 2. เจาะลึกระบบหลังบ้าน (Core Backend Engine)
+ผ่านไฟล์ `app.js` ที่เป็นศูนย์กลางการตั้งค่าสภาพแวดล้อม:
+*   **EJS View Engine:** ตั้งค่าให้เรนเดอร์หน้าเว็บที่สามารถแทรกตัวแปร JavaScript ได้โดยตรง
+*   **Body Parsers:** ใช้ Middleware จัดการข้อมูลจาก Form (`urlencoded`) เพื่อให้อ่านค่าผ่าน `req.body` ได้อย่างแม่นยำ
+*   **Session Management:** ใช้ระบบ `express-session` ในการจดจำตัวตนผู้ใช้ผ่าน Cookie เพื่อแยกแยะสิทธิ์ระหว่าง **User** และ **Admin** ตลอดการใช้งาน
+
+### 3. ระบบจัดการข้อมูลและตรรกะควบคุม (Model & Controller Layer)
+*   **Memory-based Data:** จำลองฐานข้อมูลด้วย JavaScript Array (`cameras`, `bookings`) ช่วยให้พัฒนาระบบได้อย่างรวดเร็วก่อนนำ PostgreSQL เข้ามาใช้งานจริง
+*   **Authentication & Guards:** มีระบบ `authController` ที่ดูแลทั้งการล็อกอินแบบปกติและแบบจำลอง Google Login พร้อม Middleware (`requireAuth`, `requireAdmin`) ที่ทำหน้าที่เป็น "ยามเด้าหน้าประตู" เพื่อป้องกันการเข้าถึงข้อมูลที่ไม่ได้รับอนุญาต
+*   **Camera Logic:** ระบบค้นหาที่รองรับการพิมพ์แบบ Case-insensitive (พิมพ์เล็ก-ใหญ่ก็ได้) และระบบจองที่รองรับกรณี **Overbooking** ตามความต้องการของระบบจำลอง
+
+### 4. ระบบแสดงผลและส่วนประสานงานผู้ใช้ (View & Frontend Logic)
+*   **Dynamic Rendering:** ใช้ EJS Loop วางโครงสร้างการ์ดสินค้าอัตโนมัติ พร้อมกำหนด Unique ID ให้กับ Input ของกล้องแต่ละตัวเพื่อป้องกันข้อมูลตีกัน
+*   **Client-side Calculation:** มีระบบ JavaScript คำนวณราคาสุทธิทันทีเมื่อผู้ใช้เลือกวันเริ่มต้นและวันสิ้นสุด พร้อมระบบ **Date Validation** ที่จะล็อกปุ่มจอง (Disable) หากเลือกวันที่ผิดพลาดหรือไม่เหมาะสม
+*   **Modern Styling:** ใช้ TailwindCSS ในการออกแบบ Layout แบบ Grid และ Flexbox ที่รองรับ Responsive Design (แสดงผลต่างกันระหว่างมือถือและคอมพิวเตอร์) พร้อมการตกแต่งด้วย Linear Gradients และ Shadow เพื่อความสวยงามระดับ Premium
+
+---
 
 ระบบเช่ากล้องที่ออกแบบด้วยสถาปัตยกรรม Model-Driven และทดสอบด้วย Unit Testing (Jest) โดยใช้ PostgreSQL เป็นระบบจัดการฐานข้อมูล
 
