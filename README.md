@@ -183,8 +183,8 @@ graph TD
 🎥 Interview Video: https://youtu.be/NaG_dEiouVI
 
 
-### 8. สรุปการประชุม Retrospective
-🎥 Video: https://youtu.be/sSMA5fetilM
+### 8. สรุปการประชุม Retrospective (playlist ทุก phase)
+🎥 Video: https://youtube.com/playlist?list=PL5leYMm09zHlTQg28mYUbLgPnmWBIGE0n&si=Q-dYDBKXvZ3g3Dzm
 
 ## Figma
 https://www.figma.com/proto/YVqTr3EiIpPg1v7y9oaU4G/CP252-Project?node-id=0-1&t=kSAoM3fooFb1x5MB-1
