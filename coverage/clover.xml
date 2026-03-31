@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1774888678385" clover="3.2.0">
-  <project timestamp="1774888678385" name="All files">
+<coverage generated="1774967425657" clover="3.2.0">
+  <project timestamp="1774967425657" name="All files">
     <metrics statements="31" coveredstatements="31" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0" elements="31" coveredelements="31" complexity="0" loc="31" ncloc="31" packages="1" files="6" classes="6"/>
     <file name="booking.js" path="C:\Users\AdminWC\OneDrive\Desktop\CP252 Project\cp252project\models\booking.js">
       <metrics statements="4" coveredstatements="4" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
