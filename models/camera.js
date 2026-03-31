@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../db');
+const sequelize = require('../config/db');
 
 const Camera = sequelize.define('Camera', {
   model_name: { type: DataTypes.STRING, allowNull: false },

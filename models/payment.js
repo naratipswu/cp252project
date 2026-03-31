@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../db');
+const sequelize = require('../config/db');
 
 const Payment = sequelize.define('Payment', {
   amount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },

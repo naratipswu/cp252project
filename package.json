@@ -1,13 +1,19 @@
 {
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "test:cov": "jest --coverage"
   },
-  "dependencies": {
-    "pg": "^8.20.0",
-    "pg-hstore": "^2.3.4",
-    "sequelize": "^6.37.8"
-  },
-  "devDependencies": {
-    "jest": "^30.3.0"
+  "jest": {
+    "collectCoverageFrom": [
+      "models/**/*.js" 
+    ],
+    "coverageThreshold": {
+      "global": {
+        "statements": 80,
+        "branches": 80,
+        "functions": 80,
+        "lines": 80
+      }
+    }
   }
 }

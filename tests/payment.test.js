@@ -1,3 +1,5 @@
+const Booking = require('../models/payment');
+
 describe('Payment Logic', () => {
   // TC-10: Late Fee Calculation
   test('TC-10: คำนวณค่าปรับกรณีคืนเลท (วันละ 200)', () => {
