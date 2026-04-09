@@ -45,11 +45,9 @@
             const endInput = document.getElementById('end-' + cameraId);
             const totalSpan = document.getElementById('total-' + cameraId);
             /** @type {HTMLInputElement | null} */
-            const totalInput = document.getElementById('total-input-' + cameraId);
-            /** @type {HTMLButtonElement | null} */
             const bookBtn = document.getElementById('btn-' + cameraId);
 
-            if (startInput && endInput && totalSpan && totalInput && bookBtn) {
+            if (startInput && endInput && totalSpan && bookBtn) {
                 if (startInput.value && endInput.value) {
                     const start = new Date(startInput.value);
                     const end = new Date(endInput.value);
@@ -63,7 +61,6 @@
 
                         const total = diffDays * pricePerDay;
                         totalSpan.innerText = total.toLocaleString() + ' ฿';
-                        totalInput.value = total.toString();
                         bookBtn.disabled = false;
                         bookBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                         bookBtn.classList.add('hover:bg-yellow-500');
@@ -118,15 +115,21 @@
 
         <!-- Icons Area -->
         <div class="bg-white text-black flex items-center justify-center px-6 gap-6 ml-auto md:ml-0 relative group">
-            <a href="/logout"
-                class="absolute right-0 top-16 bg-white border border-gray-300 px-4 py-2 text-red-600 font-bold hidden group-hover:block transition shadow-lg">Logout</a>
+            <form action="/logout" method="POST"
+                class="absolute right-0 top-16 bg-white border border-gray-300 px-4 py-2 text-red-600 font-bold hidden group-hover:block transition shadow-lg">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit">Logout</button>
+            </form>
 
-            <a href="/logout" class="hover:text-gray-600 transition" title="Logout">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                </svg>
-            </a>
+            <form action="/logout" method="POST" class="inline" title="Logout">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="hover:text-gray-600 transition">
+                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                </button>
+            </form>
             <button class="hover:text-gray-600 transition" title="Cart">
                 <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -243,8 +246,8 @@
 
                             <!-- Booking Form inside Card -->
                             <form action="/book" method="POST" class="space-y-3 mt-4">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                 <input type="hidden" name="cameraId" value="<%= camera.id %>">
-                                <input type="hidden" name="totalPrice" id="total-input-<%= camera.id %>" value="">
 
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>

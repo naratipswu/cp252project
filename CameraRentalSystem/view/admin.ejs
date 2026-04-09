@@ -15,7 +15,10 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <span class="text-gray-300 text-sm">Logged in as <%= user.username %></span>
-                    <a href="/logout" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Logout Admin</a>
+                    <form action="/logout" method="POST" class="inline">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button type="submit" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Logout Admin</button>
+                    </form>
                 </div>
             </div>
         </div>

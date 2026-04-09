@@ -1,4 +1,12 @@
-const { User, Booking, Camera } = require('./models'); // ปรับ Path ให้ตรง
+const {
+    Category,
+    Equipment,
+    Customer,
+    Rental,
+    RentalDetail,
+    Payment,
+    Return
+} = require('./models');
 const sequelize = require('./config/db');
 
 async function profileOperation(name, taskFn) {
@@ -28,34 +36,68 @@ async function runProfiling() {
     console.log('| Operation            | Time (ms)  | Memory (MB) |');
     console.log('|----------------------|------------|-------------|');
 
-    // 1. Create User (ต้องมี password)
-    await profileOperation('Create User', async () => {
-        await User.create({ 
-            username: 'testuser', 
-            email: 'test@mail.com', 
-            password: 'password123' 
+    await profileOperation('Create Category', async () => {
+        await Category.create({
+            CategoryName: 'Mirrorless'
         });
     });
 
-    // 2. Create Camera (สมมติว่ามีฟิลด์ name, model)
-    await profileOperation('Create Camera', async () => {
-        await Camera.create({ 
-            model_name: 'Canon EOS R5', // เพิ่มตามที่ Error ฟ้อง
-            daily_rate: 1500,           // เพิ่มตามที่ Error ฟ้อง
-            status: 'available' 
+    await profileOperation('Create Customer', async () => {
+        await Customer.create({
+            FirstName: 'Test',
+            LastName: 'User',
+            Phone: '0800000000',
+            Email: 'test@mail.com',
+            Address: 'Bangkok'
         });
     });
 
-    // 3. Create Booking (ต้องมี userId และ cameraId)
-    await profileOperation('Create Booking', async () => {
-        // ต้องตรวจสอบชื่อฟิลด์ใน models/booking.js ของคุณด้วยนะครับ
-        // ปกติถ้าเพิ่งสร้าง User กับ Camera ตัวแรก ID จะเป็น 1
-        await Booking.create({ 
-            UserId: 1, 
-            CameraId: 1, 
-            start_date: new Date(), 
-            end_date: new Date(Date.now() + 86400000), // +1 วัน
-            total_price: 1500
+    await profileOperation('Create Equipment', async () => {
+        await Equipment.create({
+            ModelName: 'Canon EOS R5',
+            Brand: 'Canon',
+            SerialNumber: 'SN-0001',
+            DailyRate: 1500,
+            Status: 'available',
+            CategoryID: 1
+        });
+    });
+
+    await profileOperation('Create Rental', async () => {
+        await Rental.create({
+            CustomerID: 1,
+            RentalDate: new Date(),
+            TotalAmount: 1500,
+            RentalStatus: 'pending'
+        });
+    });
+
+    await profileOperation('Create RentalDetail', async () => {
+        await RentalDetail.create({
+            RentalID: 1,
+            EquipmentID: 1,
+            StartDate: '2026-04-10',
+            EndDate: '2026-04-11',
+            SubTotal: 1500
+        });
+    });
+
+    await profileOperation('Create Payment', async () => {
+        await Payment.create({
+            RentalID: 1,
+            PaymentMethod: 'bank_transfer',
+            Amount: 1500,
+            PaymentDate: new Date()
+        });
+    });
+
+    await profileOperation('Create Return', async () => {
+        await Return.create({
+            RentalDetailID: 1,
+            ActualReturnDate: new Date(),
+            LateFee: 0,
+            DamageFee: 0,
+            Notes: 'Returned in good condition'
         });
     });
 
