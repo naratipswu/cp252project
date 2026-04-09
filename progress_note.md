@@ -110,6 +110,9 @@
 
 > ส่วนนี้เป็น Delta Log แบบละเอียด เพื่อแก้ข้อมูลที่ล้าสมัยในเอกสารส่วนบน
 > (ด้านบนบางข้อเป็น behavior เดิมก่อนปรับปรุง)
+>
+> ✅ **สถานะปัจจุบัน:** ระบบเชื่อมต่อกับ **pgAdmin4 / PostgreSQL** แล้วเรียบร้อย
+> และสามารถเห็นตารางหลักใน `public schema` ได้จริง (`Category`, `Equipment`, `Customer`, `Rental`, `RentalDetail`, `Payment`, `Return`, `SyncLog`)
 
 ### 1) Security/Session/Production Hardening
 
@@ -267,6 +270,143 @@
    FROM "SyncLog"
    ORDER BY "SyncLogID" DESC;
    ```
+
+---
+
+## 🔌 คู่มือเชื่อมต่อ pgAdmin4 แบบละเอียด (สำหรับเพื่อนที่เอาโปรเจกต์ไปต่อ)
+
+หัวข้อนี้เขียนให้คนที่เพิ่ง clone โปรเจกต์สามารถทำตามได้ทีละขั้นจนเห็นข้อมูลใน pgAdmin4 จริง
+
+### A) สิ่งที่ต้องมีบนเครื่องก่อนเริ่ม
+
+1. ติดตั้ง **PostgreSQL** (เช่น v15+ หรือ v18)
+2. ติดตั้ง **pgAdmin4**
+3. ต้องรู้ credential ของ DB:
+   - Host (ส่วนใหญ่ `localhost`)
+   - Port (ส่วนใหญ่ `5432`)
+   - Username (เช่น `postgres`)
+   - Password
+   - Database name (เช่น `postgres` หรือ `camera_rental`)
+
+### B) ต่อ Server ใน pgAdmin4
+
+1. เปิด pgAdmin4
+2. ที่แถบซ้าย คลิกขวา `Servers` -> `Register` -> `Server...`
+3. แท็บ **General**
+   - Name: ตั้งอะไรก็ได้ เช่น `Local PostgreSQL`
+4. แท็บ **Connection**
+   - Host name/address: `localhost`
+   - Port: `5432`
+   - Maintenance database: `postgres`
+   - Username: `postgres`
+   - Password: (ใส่รหัสของเครื่อง)
+   - ติ๊ก `Save password` (ถ้าต้องการ)
+5. กด `Save`
+
+### C) ตั้งค่าโปรเจกต์ให้ใช้ PostgreSQL
+
+ให้รันแอปพร้อม environment variables เหล่านี้:
+
+- `DB_DIALECT=postgres`
+- `DB_HOST=localhost`
+- `DB_PORT=5432`
+- `DB_NAME=postgres` (หรือ db ที่สร้างไว้)
+- `DB_USER=postgres`
+- `DB_PASSWORD=<your-password>`
+
+และเพื่อรองรับ route SQL realtime (ถ้าจะใช้):
+
+- `ENABLE_PG_REALTIME=true`
+- `PGHOST=localhost`
+- `PGPORT=5432`
+- `PGDATABASE=postgres`
+- `PGUSER=postgres`
+- `PGPASSWORD=<your-password>`
+
+> แนะนำ: ตั้งทั้งชุด `DB_*` และ `PG*` ให้ตรงกัน เพื่อลดความสับสน
+
+### D) ลำดับการรันที่ถูกต้อง
+
+1. เปิด terminal ที่ root โปรเจกต์
+2. ติดตั้ง dependency
+3. ตั้ง env ตามข้อ C
+4. รันแอป
+5. เข้าเว็บและทำ action เช่น:
+   - สมัคร user
+   - เพิ่มสินค้า
+   - จอง/ยืนยัน/จ่าย
+6. กลับไป pgAdmin4 แล้ว `Refresh` ตาราง
+
+### E) ตารางที่ควรเห็นใน pgAdmin หลังเชื่อมสำเร็จ
+
+ใน `Databases -> <db> -> Schemas -> public -> Tables` ควรเห็น:
+
+- `Category`
+- `Equipment`
+- `Customer`
+- `Rental`
+- `RentalDetail`
+- `Payment`
+- `Return`
+- `SyncLog`
+
+### F) SQL เช็กเร็วว่าเชื่อมและเขียนข้อมูลได้จริง
+
+1. ดูลูกค้าใหม่ล่าสุด:
+```sql
+SELECT "CustomerID","FirstName","LastName","Phone","Email","Address"
+FROM "Customer"
+ORDER BY "CustomerID" DESC
+LIMIT 20;
+```
+
+2. ดูสินค้าล่าสุด:
+```sql
+SELECT "EquipmentID","Brand","ModelName","DailyRate","ImageURL","Status","CategoryID"
+FROM "Equipment"
+ORDER BY "EquipmentID" DESC
+LIMIT 20;
+```
+
+3. ดู log sync:
+```sql
+SELECT "SyncLogID","Source","Status","ImportedCustomers","ImportedRentals","ImportedPayments","Message","SyncedAt"
+FROM "SyncLog"
+ORDER BY "SyncLogID" DESC
+LIMIT 50;
+```
+
+### G) อธิบาย behavior เวลาเพื่อนไม่ได้ต่อ pgAdmin
+
+ระบบรองรับการทำงานแบบ local JSON ได้ก่อน:
+- เพื่อนที่ยังไม่ต่อ PostgreSQL ยังทดสอบ flow ได้
+- เมื่ออีกคน pull โค้ดไปแล้วรันในโหมด PostgreSQL
+  - ระบบมีทั้ง realtime sync และ legacy sync เพื่อดึงข้อมูลเข้า DB
+
+### H) Troubleshooting (อาการที่เจอบ่อย)
+
+1. **ERROR: relation does not exist**
+   - ยังไม่ได้ sync schema หรือเปิดคนละ database
+   - แก้: เช็ก env + restart app + refresh tables ใน pgAdmin
+
+2. **สมัครแล้วไม่เข้า Customer**
+   - process ที่รันอาจเป็นโค้ดเก่า (ยังไม่ restart)
+   - หรือ query คอลัมน์ผิด (ใน DB ไม่มี `username`, map ไป `FirstName/LastName`)
+
+3. **ต่อได้แต่ไม่เห็นข้อมูลใหม่**
+   - เปิดผิด DB (เช่นแอปเขียน `postgres` แต่ pgAdmin เปิดอีก DB)
+   - ลองรัน query เช็กจาก `Email` จริงที่สมัคร
+
+4. **Login/ฟอร์ม submit แปลก ๆ**
+   - ตรวจว่า CSRF token ถูกส่งใน form ครบ
+   - ตรวจว่า app path/routing เป็น process ล่าสุด
+
+### I) Best Practice สำหรับทำงานเป็นทีม
+
+1. ก่อนเริ่มทุกวัน ให้ pull ล่าสุด + restart server
+2. ใช้ env template เดียวกันทั้งทีม (`DB_*` + `PG*`)
+3. ทุกครั้งที่เพิ่มฟีเจอร์ที่เขียนข้อมูล ให้เช็กด้วย SQL ใน pgAdmin
+4. เวลาส่งงาน ให้แนบ query ตรวจข้อมูลจริง (Customer/Equipment/SyncLog)
 
 ---
 
