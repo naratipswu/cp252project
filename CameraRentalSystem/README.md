@@ -1,4 +1,4 @@
-#Update1
+# Update1
 # Camera Rental System
 
 A simple web application for renting cameras built with Node.js and Express.
