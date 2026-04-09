@@ -3,9 +3,15 @@ jest.mock('../CameraRentalSystem/model/data', () => ({
   bookings: [],
   persistData: jest.fn()
 }));
+jest.mock('../CameraRentalSystem/service/cameraStore', () => ({
+  DEFAULT_IMAGE: 'https://example.com/default.jpg',
+  getAllCameras: jest.fn(),
+  addCamera: jest.fn()
+}));
 
 const cameraController = require('../CameraRentalSystem/controller/cameraController');
 const { cameras, bookings, persistData } = require('../CameraRentalSystem/model/data');
+const { getAllCameras } = require('../CameraRentalSystem/service/cameraStore');
 
 function createResponse() {
   return {
@@ -41,9 +47,10 @@ describe('Camera Controller Booking Rules', () => {
     });
     bookings.splice(0, bookings.length);
     persistData.mockClear();
+    getAllCameras.mockResolvedValue(cameras);
   });
 
-  test('allows overlap when stock still available', () => {
+  test('allows overlap when stock still available', async () => {
     bookings.push({
       id: 'existing-1',
       cameraId: 1,
@@ -60,7 +67,7 @@ describe('Camera Controller Booking Rules', () => {
     };
     const res = createResponse();
 
-    cameraController.bookCamera(req, res);
+    await cameraController.bookCamera(req, res);
 
     expect(res.statusCode).toBe(200);
     expect(res.redirectedTo).toMatch(/^\/booking\/.+\/confirm$/);
@@ -68,7 +75,7 @@ describe('Camera Controller Booking Rules', () => {
     expect(persistData).toHaveBeenCalled();
   });
 
-  test('blocks overlap when overlapping bookings reach stock', () => {
+  test('blocks overlap when overlapping bookings reach stock', async () => {
     bookings.push(
       {
         id: 'existing-1',
@@ -96,7 +103,7 @@ describe('Camera Controller Booking Rules', () => {
     };
     const res = createResponse();
 
-    cameraController.bookCamera(req, res);
+    await cameraController.bookCamera(req, res);
 
     expect(res.statusCode).toBe(409);
     expect(res.sent).toBe('Selected camera is already booked for these dates');

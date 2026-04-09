@@ -1,5 +1,6 @@
 const { cameras, bookings, persistData } = require('../model/data');
 const crypto = require('crypto');
+const { getAllCameras, addCamera, DEFAULT_IMAGE } = require('../service/cameraStore');
 
 function getDateOrNull(dateString) {
     const parsed = new Date(dateString);
@@ -16,14 +17,19 @@ function isBlockingBooking(booking) {
     return booking.paymentStatus !== 'cancelled';
 }
 
-exports.browseCameras = (req, res) => {
+async function getCameraById(cameraId) {
+    const allCameras = await getAllCameras();
+    return allCameras.find((item) => item.id === cameraId) || null;
+}
+
+exports.browseCameras = async (req, res) => {
     const searchQuery = req.query.search || '';
-    
+
     // Filter by brand or model
-    let filteredCameras = cameras;
+    let filteredCameras = await getAllCameras();
     if (searchQuery) {
         const lowerQuery = searchQuery.toLowerCase();
-        filteredCameras = cameras.filter(c => 
+        filteredCameras = filteredCameras.filter(c =>
             c.brand.toLowerCase().includes(lowerQuery) || 
             c.model.toLowerCase().includes(lowerQuery)
         );
@@ -36,10 +42,40 @@ exports.browseCameras = (req, res) => {
     });
 };
 
-exports.bookCamera = (req, res) => {
+exports.addCamera = async (req, res) => {
+    const { brand, model, stock, pricePerDay, imageUrl } = req.body;
+    const normalizedBrand = typeof brand === 'string' ? brand.trim() : '';
+    const normalizedModel = typeof model === 'string' ? model.trim() : '';
+    const normalizedStock = Number(stock);
+    const normalizedPricePerDay = Number(pricePerDay);
+    const normalizedImageUrl = typeof imageUrl === 'string' ? imageUrl.trim() : '';
+    const uploadedImagePath = req.file ? `/uploads/products/${req.file.filename}` : '';
+
+    if (!normalizedBrand || !normalizedModel) {
+        return res.status(400).send('Brand and model are required');
+    }
+    if (!Number.isInteger(normalizedStock) || normalizedStock < 0) {
+        return res.status(400).send('Stock must be a non-negative integer');
+    }
+    if (!Number.isFinite(normalizedPricePerDay) || normalizedPricePerDay <= 0) {
+        return res.status(400).send('Price per day must be greater than 0');
+    }
+
+    await addCamera({
+        brand: normalizedBrand,
+        model: normalizedModel,
+        stock: normalizedStock,
+        pricePerDay: normalizedPricePerDay,
+        image: uploadedImagePath || normalizedImageUrl || DEFAULT_IMAGE
+    });
+
+    return res.redirect('/browse');
+};
+
+exports.bookCamera = async (req, res) => {
     const { cameraId, startDate, endDate } = req.body;
     const normalizedCameraId = Number(cameraId);
-    const camera = cameras.find((c) => c.id === normalizedCameraId);
+    const camera = await getCameraById(normalizedCameraId);
     if (!camera) return res.status(404).send('Camera not found');
 
     const start = getDateOrNull(startDate);
@@ -89,7 +125,7 @@ exports.showAdminDashboard = (req, res) => {
     res.render('admin', { bookings, user: req.session.user });
 };
 
-exports.showBookingConfirm = (req, res) => {
+exports.showBookingConfirm = async (req, res) => {
     const { bookingId } = req.params;
     const booking = bookings.find((item) => item.id === bookingId);
     if (!booking) return res.status(404).send('Booking not found');
@@ -97,7 +133,7 @@ exports.showBookingConfirm = (req, res) => {
         return res.status(403).send('Forbidden');
     }
 
-    const camera = cameras.find((item) => item.id === booking.cameraId);
+    const camera = await getCameraById(booking.cameraId);
     if (!camera) return res.status(404).send('Camera not found');
 
     res.render('booking_confirm', {

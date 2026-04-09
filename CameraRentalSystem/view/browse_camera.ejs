@@ -137,6 +137,24 @@
             }
         }
 
+        function toggleAdminAddPanel() {
+            const panel = document.getElementById('admin-add-panel');
+            const icon = document.getElementById('admin-add-icon');
+            const buttonText = document.getElementById('admin-add-button-text');
+            if (!panel || !icon || !buttonText) return;
+
+            const isHidden = panel.classList.contains('hidden');
+            if (isHidden) {
+                panel.classList.remove('hidden');
+                icon.innerText = '-';
+                buttonText.innerText = 'Hide Add Product';
+            } else {
+                panel.classList.add('hidden');
+                icon.innerText = '+';
+                buttonText.innerText = 'Add New Product';
+            }
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             initializeBookingInputs();
         });
@@ -240,6 +258,34 @@
 
         <!-- Product Grid & Search -->
         <main class="w-full md:w-3/4 flex flex-col gap-8">
+            <% if (user && user.role === 'admin') { %>
+                <section class="bg-gradient-to-r from-[#1f1811] to-[#2a2017] border border-yellow-800/70 rounded-2xl p-4 shadow-lg">
+                    <button
+                        type="button"
+                        onclick="toggleAdminAddPanel()"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/25 hover:bg-black/35 transition">
+                        <div class="flex items-center gap-2">
+                            <span class="text-brand-yellow font-semibold text-sm uppercase tracking-wider">Admin Tools</span>
+                            <span class="text-white font-bold" id="admin-add-button-text">Add New Product</span>
+                        </div>
+                        <span id="admin-add-icon" class="text-brand-yellow text-xl leading-none">+</span>
+                    </button>
+
+                    <div id="admin-add-panel" class="hidden mt-4">
+                        <form action="/admin/cameras" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="text" name="brand" placeholder="Brand (e.g. Sony)" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
+                            <input type="text" name="model" placeholder="Model (e.g. A7 IV)" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
+                            <input type="number" name="stock" min="0" placeholder="Stock" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
+                            <input type="number" name="pricePerDay" min="1" placeholder="Price per day" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
+                            <input type="file" name="imageFile" accept=".jpg,.jpeg,.png,.webp,.gif,.svg" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 md:col-span-2 focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                            <input type="text" name="imageUrl" placeholder="Or paste image URL (optional)" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 md:col-span-2 focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                            <button type="submit" class="md:col-span-2 px-4 py-2.5 rounded-lg bg-brand-yellow text-black font-bold hover:opacity-90 transition">Add Camera</button>
+                        </form>
+                        <p class="text-xs text-gray-300 mt-2">Visible only to admin. Click the header above to hide/show this panel.</p>
+                    </div>
+                </section>
+            <% } %>
 
             <!-- Search Bar -->
             <form action="/browse" method="GET" class="flex w-full">

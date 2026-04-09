@@ -24,6 +24,14 @@ exports.showSignUp = (req, res) => {
     res.render('signup', { error: null });
 };
 
+exports.showAdminAccounts = (req, res) => {
+    return res.render('admin_accounts', {
+        users,
+        error: null,
+        success: null
+    });
+};
+
 exports.showProfile = (req, res) => {
     const currentUsername = req.session.user && req.session.user.username;
     const user = users.find((item) => item.username === currentUsername);
@@ -59,6 +67,87 @@ exports.updateProfileAvatar = (req, res) => {
     user.avatar = `/uploads/avatars/${req.file.filename}`;
     persistData();
     return res.redirect('/profile');
+};
+
+exports.updateUserRole = (req, res) => {
+    const { username, role } = req.body;
+    const normalizedUsername = typeof username === 'string' ? username.trim() : '';
+    const normalizedRole = role === 'admin' ? 'admin' : 'user';
+
+    const targetUser = users.find((item) => item.username === normalizedUsername);
+    if (!targetUser) {
+        return res.status(404).render('admin_accounts', {
+            users,
+            error: 'User not found',
+            success: null
+        });
+    }
+
+    if (targetUser.role === 'admin' && normalizedRole === 'user') {
+        const adminCount = users.filter((item) => item.role === 'admin').length;
+        if (adminCount <= 1) {
+            return res.status(400).render('admin_accounts', {
+                users,
+                error: 'Cannot demote the last admin account',
+                success: null
+            });
+        }
+    }
+
+    targetUser.role = normalizedRole;
+    persistData();
+    return res.render('admin_accounts', {
+        users,
+        error: null,
+        success: `Updated role for ${targetUser.username} to ${normalizedRole}`
+    });
+};
+
+exports.createAdminAccount = (req, res) => {
+    const { username, email, password } = req.body;
+    const normalizedUsername = typeof username === 'string' ? username.trim() : '';
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const normalizedPassword = typeof password === 'string' ? password : '';
+
+    if (!normalizedUsername || !normalizedEmail || !normalizedPassword) {
+        return res.status(400).render('admin_accounts', {
+            users,
+            error: 'Username, email and password are required',
+            success: null
+        });
+    }
+    if (normalizedPassword.length < 8) {
+        return res.status(400).render('admin_accounts', {
+            users,
+            error: 'Password must be at least 8 characters',
+            success: null
+        });
+    }
+    const duplicateUser = users.find(
+        (item) => item.username === normalizedUsername || item.email === normalizedEmail
+    );
+    if (duplicateUser) {
+        return res.status(400).render('admin_accounts', {
+            users,
+            error: 'Username or email already exists',
+            success: null
+        });
+    }
+
+    users.push({
+        username: normalizedUsername,
+        email: normalizedEmail,
+        password: bcrypt.hashSync(normalizedPassword, PASSWORD_HASH_ROUNDS),
+        role: 'admin',
+        avatar: null
+    });
+    persistData();
+
+    return res.render('admin_accounts', {
+        users,
+        error: null,
+        success: `Created admin account: ${normalizedUsername}`
+    });
 };
 
 exports.login = async (req, res) => {

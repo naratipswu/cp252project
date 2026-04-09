@@ -7,6 +7,9 @@ const cameraController = require('./controller/cameraController');
 const mediaController = require('./controller/mediaController');
 const { registerPgRealtimeRoutes } = require('./service/pgRealtime');
 const { ensureUploadDirectories, uploadImage } = require('./service/uploadService');
+const { ensureCameraStoreReady } = require('./service/cameraStore');
+const { ensureFullSchemaReady } = require('./service/schemaSync');
+const { syncLegacyDataToPostgres } = require('./service/legacyDataSync');
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -26,6 +29,18 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'view'));
 ensureUploadDirectories();
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+ensureFullSchemaReady().catch((error) => {
+  // eslint-disable-next-line no-console
+  console.error('Schema sync failed:', error.message);
+});
+ensureCameraStoreReady().catch((error) => {
+  // eslint-disable-next-line no-console
+  console.error('Camera store initialization failed:', error.message);
+});
+syncLegacyDataToPostgres().catch((error) => {
+  // eslint-disable-next-line no-console
+  console.error('Legacy data sync failed:', error.message);
+});
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -68,6 +83,7 @@ app.post('/logout', authController.requireAuth, authController.requireCsrf, auth
 
 // 2. Camera Browsing & Booking
 app.get('/browse', cameraController.browseCameras);
+app.post('/admin/cameras', authController.requireAdmin, uploadImage.single('imageFile'), authController.requireCsrf, cameraController.addCamera);
 app.post('/book', authController.requireAuth, authController.requireCsrf, cameraController.bookCamera);
 app.get('/booking/:bookingId/confirm', authController.requireAuth, cameraController.showBookingConfirm);
 app.post('/booking/:bookingId/confirm', authController.requireAuth, authController.requireCsrf, cameraController.confirmBooking);
@@ -76,6 +92,9 @@ app.post('/booking/:bookingId/payment/confirm', authController.requireAuth, auth
 
 // Admin dashboard 
 app.get('/admin', authController.requireAdmin, cameraController.showAdminDashboard);
+app.get('/admin/accounts', authController.requireAdmin, authController.showAdminAccounts);
+app.post('/admin/accounts/role', authController.requireAdmin, authController.requireCsrf, authController.updateUserRole);
+app.post('/admin/accounts/create-admin', authController.requireAdmin, authController.requireCsrf, authController.createAdminAccount);
 app.get('/admin/media', authController.requireAdmin, mediaController.showMediaManager);
 app.post(
   '/admin/media/upload',
