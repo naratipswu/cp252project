@@ -5,6 +5,7 @@ const Rental = require('./rental');
 const RentalDetail = require('./rentalDetail');
 const Payment = require('./payment');
 const Return = require('./return');
+const SyncLog = require('./syncLog');
 
 // Category 1 - N Equipment
 Category.hasMany(Equipment, {
@@ -74,6 +75,7 @@ module.exports = {
   RentalDetail,
   Payment,
   Return,
+  SyncLog,
   // Backward-compatible aliases
   User: Customer,
   Camera: Equipment,

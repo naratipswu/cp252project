@@ -1,5 +1,7 @@
 const { cameras, bookings, persistData } = require('../model/data');
 const crypto = require('crypto');
+const { getAllCameras, addCamera, DEFAULT_IMAGE } = require('../service/cameraStore');
+const { syncBookingToPostgres } = require('../service/bookingSync');
 
 function getDateOrNull(dateString) {
     const parsed = new Date(dateString);
@@ -16,14 +18,19 @@ function isBlockingBooking(booking) {
     return booking.paymentStatus !== 'cancelled';
 }
 
-exports.browseCameras = (req, res) => {
+async function getCameraById(cameraId) {
+    const allCameras = await getAllCameras();
+    return allCameras.find((item) => item.id === cameraId) || null;
+}
+
+exports.browseCameras = async (req, res) => {
     const searchQuery = req.query.search || '';
-    
+
     // Filter by brand or model
-    let filteredCameras = cameras;
+    let filteredCameras = await getAllCameras();
     if (searchQuery) {
         const lowerQuery = searchQuery.toLowerCase();
-        filteredCameras = cameras.filter(c => 
+        filteredCameras = filteredCameras.filter(c =>
             c.brand.toLowerCase().includes(lowerQuery) || 
             c.model.toLowerCase().includes(lowerQuery)
         );
@@ -36,10 +43,40 @@ exports.browseCameras = (req, res) => {
     });
 };
 
-exports.bookCamera = (req, res) => {
+exports.addCamera = async (req, res) => {
+    const { brand, model, stock, pricePerDay, imageUrl } = req.body;
+    const normalizedBrand = typeof brand === 'string' ? brand.trim() : '';
+    const normalizedModel = typeof model === 'string' ? model.trim() : '';
+    const normalizedStock = Number(stock);
+    const normalizedPricePerDay = Number(pricePerDay);
+    const normalizedImageUrl = typeof imageUrl === 'string' ? imageUrl.trim() : '';
+    const uploadedImagePath = req.file ? `/uploads/products/${req.file.filename}` : '';
+
+    if (!normalizedBrand || !normalizedModel) {
+        return res.status(400).send('Brand and model are required');
+    }
+    if (!Number.isInteger(normalizedStock) || normalizedStock < 0) {
+        return res.status(400).send('Stock must be a non-negative integer');
+    }
+    if (!Number.isFinite(normalizedPricePerDay) || normalizedPricePerDay <= 0) {
+        return res.status(400).send('Price per day must be greater than 0');
+    }
+
+    await addCamera({
+        brand: normalizedBrand,
+        model: normalizedModel,
+        stock: normalizedStock,
+        pricePerDay: normalizedPricePerDay,
+        image: uploadedImagePath || normalizedImageUrl || DEFAULT_IMAGE
+    });
+
+    return res.redirect('/browse');
+};
+
+exports.bookCamera = async (req, res) => {
     const { cameraId, startDate, endDate } = req.body;
     const normalizedCameraId = Number(cameraId);
-    const camera = cameras.find((c) => c.id === normalizedCameraId);
+    const camera = await getCameraById(normalizedCameraId);
     if (!camera) return res.status(404).send('Camera not found');
 
     const start = getDateOrNull(startDate);
@@ -52,22 +89,21 @@ exports.bookCamera = (req, res) => {
         return res.status(400).send('Camera is out of stock');
     }
 
-    const isOverlap = bookings.some((booking) => {
+    const overlappingBookingCount = bookings.filter((booking) => {
         if (booking.cameraId !== camera.id) return false;
         if (!isBlockingBooking(booking)) return false;
         const bookedStart = getDateOrNull(booking.startDate);
         const bookedEnd = getDateOrNull(booking.endDate);
         if (!bookedStart || !bookedEnd) return false;
         return hasDateOverlap(start, end, bookedStart, bookedEnd);
-    });
-    if (isOverlap) {
+    }).length;
+
+    if (overlappingBookingCount >= camera.stock) {
         return res.status(409).send('Selected camera is already booked for these dates');
     }
 
     const rentalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const totalPrice = rentalDays * camera.pricePerDay;
-
-    camera.stock -= 1;
 
     bookings.push({
         id: crypto.randomUUID(),
@@ -82,6 +118,7 @@ exports.bookCamera = (req, res) => {
         createdAt: new Date().toISOString()
     });
     persistData();
+    await syncBookingToPostgres(bookings[bookings.length - 1]);
 
     res.redirect(`/booking/${bookings[bookings.length - 1].id}/confirm`);
 };
@@ -90,7 +127,7 @@ exports.showAdminDashboard = (req, res) => {
     res.render('admin', { bookings, user: req.session.user });
 };
 
-exports.showBookingConfirm = (req, res) => {
+exports.showBookingConfirm = async (req, res) => {
     const { bookingId } = req.params;
     const booking = bookings.find((item) => item.id === bookingId);
     if (!booking) return res.status(404).send('Booking not found');
@@ -98,7 +135,7 @@ exports.showBookingConfirm = (req, res) => {
         return res.status(403).send('Forbidden');
     }
 
-    const camera = cameras.find((item) => item.id === booking.cameraId);
+    const camera = await getCameraById(booking.cameraId);
     if (!camera) return res.status(404).send('Camera not found');
 
     res.render('booking_confirm', {
@@ -107,7 +144,7 @@ exports.showBookingConfirm = (req, res) => {
     });
 };
 
-exports.confirmBooking = (req, res) => {
+exports.confirmBooking = async (req, res) => {
     const { bookingId } = req.params;
     const booking = bookings.find((item) => item.id === bookingId);
     if (!booking) return res.status(404).send('Booking not found');
@@ -115,8 +152,13 @@ exports.confirmBooking = (req, res) => {
         return res.status(403).send('Forbidden');
     }
 
+    if (booking.bookingStatus !== 'awaiting_confirmation' || booking.paymentStatus !== 'unpaid') {
+        return res.status(409).send('Booking cannot be confirmed from its current state');
+    }
+
     booking.bookingStatus = 'confirmed';
     persistData();
+    await syncBookingToPostgres(booking);
     res.redirect(`/booking/${booking.id}/payment`);
 };
 
@@ -133,7 +175,7 @@ exports.showPaymentPage = (req, res) => {
     });
 };
 
-exports.confirmPayment = (req, res) => {
+exports.confirmPayment = async (req, res) => {
     const { bookingId } = req.params;
     const booking = bookings.find((item) => item.id === bookingId);
     if (!booking) return res.status(404).send('Booking not found');
@@ -141,10 +183,15 @@ exports.confirmPayment = (req, res) => {
         return res.status(403).send('Forbidden');
     }
 
+    if (booking.bookingStatus !== 'confirmed' || booking.paymentStatus !== 'unpaid') {
+        return res.status(409).send('Payment cannot be confirmed from its current state');
+    }
+
     booking.paymentStatus = 'paid';
     booking.bookingStatus = 'completed';
     booking.paidAt = new Date().toISOString();
     persistData();
+    await syncBookingToPostgres(booking);
 
     res.render('payment_success', { booking });
 };

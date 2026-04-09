@@ -15,6 +15,10 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <span class="text-gray-300 text-sm">Logged in as <%= user.username %></span>
+                    <a href="/main" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Go to Main</a>
+                    <a href="/browse" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Go to Browse</a>
+                    <a href="/admin/accounts" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Accounts</a>
+                    <a href="/admin/media" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Media</a>
                     <form action="/logout" method="POST" class="inline">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <button type="submit" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Logout Admin</button>
