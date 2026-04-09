@@ -39,14 +39,14 @@ describe('Auth Controller Security', () => {
     delete process.env.ENABLE_MOCK_GOOGLE_LOGIN;
   });
 
-  test('register hashes password before persisting', () => {
+  test('register hashes password before persisting', async () => {
     const req = {
       body: { username: 'alice', password: 'Secret123!', email: 'alice@mail.com' },
       session: {}
     };
     const res = createResponse();
 
-    authController.register(req, res);
+    await authController.register(req, res);
 
     expect(users).toHaveLength(1);
     expect(users[0].password).not.toBe('Secret123!');
@@ -75,11 +75,11 @@ describe('Auth Controller Security', () => {
     expect(res.redirectedTo).toBe('/admin');
   });
 
-  test('mock google login is disabled by default', () => {
+  test('mock google login is disabled by default', async () => {
     const req = { body: { email: 'user@gmail.com' }, session: {} };
     const res = createResponse();
 
-    authController.loginGoogle(req, res);
+    await authController.loginGoogle(req, res);
 
     expect(res.statusCode).toBe(403);
     expect(res.sent).toBe('Google login is disabled');

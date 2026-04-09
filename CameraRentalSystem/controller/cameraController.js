@@ -1,6 +1,7 @@
 const { cameras, bookings, persistData } = require('../model/data');
 const crypto = require('crypto');
 const { getAllCameras, addCamera, DEFAULT_IMAGE } = require('../service/cameraStore');
+const { syncBookingToPostgres } = require('../service/bookingSync');
 
 function getDateOrNull(dateString) {
     const parsed = new Date(dateString);
@@ -117,6 +118,7 @@ exports.bookCamera = async (req, res) => {
         createdAt: new Date().toISOString()
     });
     persistData();
+    await syncBookingToPostgres(bookings[bookings.length - 1]);
 
     res.redirect(`/booking/${bookings[bookings.length - 1].id}/confirm`);
 };
@@ -142,7 +144,7 @@ exports.showBookingConfirm = async (req, res) => {
     });
 };
 
-exports.confirmBooking = (req, res) => {
+exports.confirmBooking = async (req, res) => {
     const { bookingId } = req.params;
     const booking = bookings.find((item) => item.id === bookingId);
     if (!booking) return res.status(404).send('Booking not found');
@@ -156,6 +158,7 @@ exports.confirmBooking = (req, res) => {
 
     booking.bookingStatus = 'confirmed';
     persistData();
+    await syncBookingToPostgres(booking);
     res.redirect(`/booking/${booking.id}/payment`);
 };
 
@@ -172,7 +175,7 @@ exports.showPaymentPage = (req, res) => {
     });
 };
 
-exports.confirmPayment = (req, res) => {
+exports.confirmPayment = async (req, res) => {
     const { bookingId } = req.params;
     const booking = bookings.find((item) => item.id === bookingId);
     if (!booking) return res.status(404).send('Booking not found');
@@ -188,6 +191,7 @@ exports.confirmPayment = (req, res) => {
     booking.bookingStatus = 'completed';
     booking.paidAt = new Date().toISOString();
     persistData();
+    await syncBookingToPostgres(booking);
 
     res.render('payment_success', { booking });
 };

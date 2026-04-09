@@ -85,7 +85,49 @@
       "password": "$2b$10$hBZdp9ANhhTUx8E9DEtZleaTeoHIrXC4Wpu.5SsUWDlmV0UNvQgRK",
       "email": "asdsadsadasd@gmail.com",
       "role": "user",
-      "avatar": "/uploads/avatars/erd-1-2026-04-09T15-25-36-151Z-f41043cb.png"
+      "avatar": "/uploads/avatars/erd-2026-04-09T15-55-16-909Z-2088b67d.png"
+    },
+    {
+      "username": "grace123",
+      "password": "$2b$10$KqCePYFbWGtfFcOL5Gqafes4ihBBHFsVKKkndimS4BhRza96JWlGW",
+      "email": "asdasduhiosahdalshdas@gmail.com",
+      "role": "user",
+      "avatar": null
+    },
+    {
+      "username": "gracetest",
+      "password": "$2b$10$kbzMA/GovY7yB4e2/RlDqOiaX3GkeykyrHHhlWPm6FF5tIkRLnx8q",
+      "email": "wefwefew@gmail.com",
+      "role": "user",
+      "avatar": null
+    },
+    {
+      "username": "gtest",
+      "password": "$2b$10$6i47a9udxThCIvavFO/HMu/p1wpkSG25Ff0YahYZPuv1iCqCngE..",
+      "email": "adasdsadsd@gmail.com",
+      "role": "user",
+      "avatar": null
+    },
+    {
+      "username": "grace12",
+      "password": "$2b$10$eh01djUqpPtCJEiUq/XqJ.m5RjhAfhUbOe9CtgqlzLUGUShTDsbNy",
+      "email": "sadsadasdas@gmail.com",
+      "role": "user",
+      "avatar": null
+    },
+    {
+      "username": "grace121",
+      "password": "$2b$10$/kfEAe.tjRh9rG8lsyw7mehGKjsek3UHdW5Ybbck/0v..5rc34NOe",
+      "email": "dwfsoihdshfisdfius@gmail.com",
+      "role": "user",
+      "avatar": null
+    },
+    {
+      "username": "test",
+      "password": "$2b$10$0fuEuCQih8wUAqOj2CSr8u3Fzg.8ZELnurmLm2PHgtW4CJ1AI5dKe",
+      "email": "ewfsdfdsfdsf@gmail.com",
+      "role": "user",
+      "avatar": null
     }
   ]
 }

@@ -1,10 +1,46 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { users, bookings, persistData } = require('../model/data');
+const { upsertCustomerDirectPg } = require('../service/directPgSync');
 const PASSWORD_HASH_ROUNDS = Number(process.env.PASSWORD_HASH_ROUNDS || 10);
 
 function isHash(value) {
     return typeof value === 'string' && value.startsWith('$2');
+}
+
+function shouldSyncToPostgres() {
+    return process.env.DB_DIALECT === 'postgres';
+}
+
+function splitName(username) {
+    const safe = String(username || 'User').trim();
+    const chunks = safe.split(/\s+/).filter(Boolean);
+    if (chunks.length === 0) return { firstName: 'User', lastName: 'Unknown' };
+    if (chunks.length === 1) return { firstName: chunks[0], lastName: 'User' };
+    return { firstName: chunks[0], lastName: chunks.slice(1).join(' ') };
+}
+
+async function upsertCustomerFromUser(user) {
+    // Always try direct PostgreSQL upsert first for real-time sync in pgAdmin.
+    // If PG is unavailable, this quietly fails and app keeps working in JSON mode.
+    await upsertCustomerDirectPg(user);
+
+    if (!shouldSyncToPostgres()) return;
+    // Lazy-load DB model only when PostgreSQL sync is enabled.
+    // This keeps tests/local JSON mode free from DB open handles.
+    // eslint-disable-next-line global-require
+    const Customer = require('../../models/customer');
+    const email = (user.email || `${user.username}@legacy.local`).toLowerCase();
+    const existing = await Customer.findOne({ where: { Email: email } });
+    if (existing) return;
+    const name = splitName(user.username);
+    await Customer.create({
+        FirstName: name.firstName,
+        LastName: name.lastName,
+        Phone: '0000000000',
+        Email: email,
+        Address: 'Created from app registration'
+    });
 }
 
 exports.showMain = (req, res) => {
@@ -103,7 +139,7 @@ exports.updateUserRole = (req, res) => {
     });
 };
 
-exports.createAdminAccount = (req, res) => {
+exports.createAdminAccount = async (req, res) => {
     const { username, email, password } = req.body;
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
@@ -134,14 +170,16 @@ exports.createAdminAccount = (req, res) => {
         });
     }
 
-    users.push({
+    const newAdmin = {
         username: normalizedUsername,
         email: normalizedEmail,
         password: bcrypt.hashSync(normalizedPassword, PASSWORD_HASH_ROUNDS),
         role: 'admin',
         avatar: null
-    });
+    };
+    users.push(newAdmin);
     persistData();
+    await upsertCustomerFromUser(newAdmin);
 
     return res.render('admin_accounts', {
         users,
@@ -178,7 +216,7 @@ exports.login = async (req, res) => {
 };
 
 // Mock Google Login
-exports.loginGoogle = (req, res) => {
+exports.loginGoogle = async (req, res) => {
     const isMockGoogleEnabled = process.env.ENABLE_MOCK_GOOGLE_LOGIN === 'true';
     if (!isMockGoogleEnabled) {
         return res.status(403).send('Google login is disabled');
@@ -200,13 +238,14 @@ exports.loginGoogle = (req, res) => {
         };
         users.push(matchedUser);
         persistData();
+        await upsertCustomerFromUser(matchedUser);
     }
 
     req.session.user = { username: matchedUser.username, role: matchedUser.role };
     return res.redirect('/browse');
 };
 
-exports.register = (req, res) => {
+exports.register = async (req, res) => {
     const { username, password, email } = req.body;
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
     const normalizedPassword = typeof password === 'string' ? password : '';
@@ -227,14 +266,16 @@ exports.register = (req, res) => {
         return res.render('signup', { error: 'Username or email already exists' });
     }
 
-    users.push({
+    const newUser = {
         username: normalizedUsername,
         password: bcrypt.hashSync(normalizedPassword, PASSWORD_HASH_ROUNDS),
         email: normalizedEmail,
         role: 'user',
         avatar: null
-    });
+    };
+    users.push(newUser);
     persistData();
+    await upsertCustomerFromUser(newUser);
 
     req.session.user = { username: normalizedUsername, role: 'user' };
     return res.redirect('/browse');
