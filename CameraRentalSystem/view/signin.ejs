@@ -34,8 +34,7 @@
         <div class="w-full md:w-1/2 bg-right-panel flex flex-col justify-center px-10 py-10 h-[650px]">
             <div class="max-w-md w-full mx-auto">
                 
-                <!-- Exact Match to signup.png which acts as Login -->
-                <h2 class="text-4xl tracking-wide mb-2">Sign Up</h2>
+                <h2 class="text-4xl tracking-wide mb-2">Sign In</h2>
                 <p class="text-xs font-sans text-gray-300 mb-8 font-light">กรุณาเข้าสู่ระบบเพื่อทำการจองอุปกรณ์</p>
                 <% if (error) { %>
                     <p class="mb-4 text-sm text-red-400 font-sans"><%= error %></p>
@@ -72,20 +71,6 @@
                 <div class="text-center mt-6 text-xs font-sans">
                     <span class="text-gray-300">Not sign up yet?</span> 
                     <a href="/signup" class="text-yellow-link font-serif-elegant ml-1 hover:underline text-sm">Sign up</a>
-                </div>
-
-                <div class="border-t border-gray-500 mt-6 mb-6 max-w-sm mx-auto"></div>
-
-                <!-- Social Buttons -->
-                <div class="flex justify-center gap-6">
-                    <div class="w-10 h-10 bg-input-gray rounded-full cursor-pointer hover:bg-gray-300 transition"></div>
-                    <div class="w-10 h-10 bg-input-gray rounded-full cursor-pointer hover:bg-gray-300 transition"></div>
-                    <!-- Fake Google Login form -->
-                    <form action="/login/google" method="POST" class="inline">
-                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <input type="hidden" name="email" value="user@gmail.com">
-                        <button type="submit" class="w-10 h-10 bg-input-gray rounded-full cursor-pointer hover:bg-gray-300 transition"></button>
-                    </form>
                 </div>
 
             </div>

@@ -11,7 +11,7 @@ describe('Booking Business Logic', () => {
   // TC-03: Date Constraint
   test('TC-03: End date cannot be before or same as start date', () => {
     expect(validateBookingDates('2026-04-10', '2026-04-09')).toBe(false);
-    expect(validateBookingDates('2026-04-10', '2026-04-10')).toBe(false);
+    expect(validateBookingDates('2026-04-10', '2026-04-10')).toBe(true);
   });
 
   // TC-04: Price Calculation

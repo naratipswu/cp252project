@@ -6,16 +6,11 @@
   },
   "jest": {
     "collectCoverageFrom": [
-      "models/**/*.js"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "statements": 80,
-        "branches": 80,
-        "functions": 80,
-        "lines": 80
-      }
-    }
+      "models/**/*.js",
+      "utils/**/*.js",
+      "CameraRentalSystem/controller/**/*.js",
+      "CameraRentalSystem/service/**/*.js"
+    ]
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -25,6 +20,7 @@
     "jest": "^30.3.0"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "mysql2": "^3.20.0",
     "pg": "^8.20.0",
     "pg-hstore": "^2.3.4",

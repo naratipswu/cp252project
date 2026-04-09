@@ -9,9 +9,12 @@
  *   PGUSER=your_user
  *   PGPASSWORD=your_password
  */
-function registerPgRealtimeRoutes(app) {
+function registerPgRealtimeRoutes(app, requireAdmin) {
   const isEnabled = process.env.ENABLE_PG_REALTIME === 'true';
   if (!isEnabled) return;
+  if (typeof requireAdmin !== 'function') {
+    throw new Error('registerPgRealtimeRoutes requires an admin middleware');
+  }
 
   // Lazy-load pg only when this feature is enabled.
   // This keeps local app development simple when pg is not installed yet.
@@ -25,8 +28,21 @@ function registerPgRealtimeRoutes(app) {
     password: process.env.PGPASSWORD || ''
   });
 
+  const requestCounter = new Map();
+  function sqlRateLimit(req, res, next) {
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const currentMinute = Math.floor(Date.now() / 60000);
+    const key = `${ip}:${currentMinute}`;
+    const current = requestCounter.get(key) || 0;
+    if (current >= 60) {
+      return res.status(429).json({ error: 'Too many SQL API requests' });
+    }
+    requestCounter.set(key, current + 1);
+    return next();
+  }
+
   // Health check for pgAdmin/PostgreSQL connectivity.
-  app.get('/api/sql/health', async (req, res) => {
+  app.get('/api/sql/health', requireAdmin, sqlRateLimit, async (req, res) => {
     try {
       const result = await pool.query('SELECT NOW() AS server_time');
       res.json({ ok: true, serverTime: result.rows[0].server_time });
@@ -36,7 +52,7 @@ function registerPgRealtimeRoutes(app) {
   });
 
   // Daily revenue report (SQL-first endpoint for classroom demo).
-  app.get('/api/sql/revenue-daily', async (req, res) => {
+  app.get('/api/sql/revenue-daily', requireAdmin, sqlRateLimit, async (req, res) => {
     try {
       const query = `
         SELECT DATE("PaymentDate") AS pay_day, SUM("Amount")::numeric(10,2) AS total_revenue
@@ -52,7 +68,7 @@ function registerPgRealtimeRoutes(app) {
   });
 
   // Active rentals report.
-  app.get('/api/sql/active-rentals', async (req, res) => {
+  app.get('/api/sql/active-rentals', requireAdmin, sqlRateLimit, async (req, res) => {
     try {
       const query = `
         SELECT

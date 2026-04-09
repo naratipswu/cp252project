@@ -1,5 +1,11 @@
 const crypto = require('crypto');
-const { users, persistData } = require('../model/data');
+const bcrypt = require('bcryptjs');
+const { users, bookings, persistData } = require('../model/data');
+const PASSWORD_HASH_ROUNDS = Number(process.env.PASSWORD_HASH_ROUNDS || 10);
+
+function isHash(value) {
+    return typeof value === 'string' && value.startsWith('$2');
+}
 
 exports.showMain = (req, res) => {
     // If already logged in, redirect
@@ -18,16 +24,63 @@ exports.showSignUp = (req, res) => {
     res.render('signup', { error: null });
 };
 
-exports.login = (req, res) => {
+exports.showProfile = (req, res) => {
+    const currentUsername = req.session.user && req.session.user.username;
+    const user = users.find((item) => item.username === currentUsername);
+    if (!user) {
+        return res.status(404).send('User not found');
+    }
+
+    const userBookings = bookings
+        .filter((booking) => booking.user === currentUsername)
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    return res.render('profile', {
+        user: {
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            avatar: user.avatar || null
+        },
+        bookings: userBookings
+    });
+};
+
+exports.updateProfileAvatar = (req, res) => {
+    const currentUsername = req.session.user && req.session.user.username;
+    const user = users.find((item) => item.username === currentUsername);
+    if (!user) {
+        return res.status(404).send('User not found');
+    }
+    if (!req.file) {
+        return res.status(400).send('Please upload an image');
+    }
+
+    user.avatar = `/uploads/avatars/${req.file.filename}`;
+    persistData();
+    return res.redirect('/profile');
+};
+
+exports.login = async (req, res) => {
     const { username, password } = req.body;
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
     const normalizedPassword = typeof password === 'string' ? password : '';
 
-    const matchedUser = users.find(
-        (user) => user.username === normalizedUsername && user.password === normalizedPassword
-    );
+    const matchedUser = users.find((user) => user.username === normalizedUsername);
+    if (!matchedUser || !matchedUser.password) {
+        return res.render('signin', { error: 'Invalid username or password' });
+    }
 
-    if (matchedUser) {
+    const passwordMatches = isHash(matchedUser.password)
+        ? await bcrypt.compare(normalizedPassword, matchedUser.password)
+        : matchedUser.password === normalizedPassword;
+
+    if (passwordMatches) {
+        // Opportunistically migrate legacy plaintext passwords.
+        if (!isHash(matchedUser.password)) {
+            matchedUser.password = await bcrypt.hash(normalizedPassword, PASSWORD_HASH_ROUNDS);
+            persistData();
+        }
         req.session.user = { username: matchedUser.username, role: matchedUser.role };
         if (matchedUser.role === 'admin') return res.redirect('/admin');
         return res.redirect('/browse');
@@ -37,6 +90,11 @@ exports.login = (req, res) => {
 
 // Mock Google Login
 exports.loginGoogle = (req, res) => {
+    const isMockGoogleEnabled = process.env.ENABLE_MOCK_GOOGLE_LOGIN === 'true';
+    if (!isMockGoogleEnabled) {
+        return res.status(403).send('Google login is disabled');
+    }
+
     const { email } = req.body;
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
     if (!normalizedEmail || !normalizedEmail.includes('@')) {
@@ -82,9 +140,10 @@ exports.register = (req, res) => {
 
     users.push({
         username: normalizedUsername,
-        password: normalizedPassword,
+        password: bcrypt.hashSync(normalizedPassword, PASSWORD_HASH_ROUNDS),
         email: normalizedEmail,
-        role: 'user'
+        role: 'user',
+        avatar: null
     });
     persistData();
 

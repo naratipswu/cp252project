@@ -1,9 +1,30 @@
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcryptjs');
 
 const DATA_FILE_PATH = path.join(__dirname, 'data-store.json');
+const PASSWORD_HASH_ROUNDS = Number(process.env.PASSWORD_HASH_ROUNDS || 10);
+
+function getAdminCredentials() {
+    const username = process.env.ADMIN_USERNAME || 'admin';
+    const email = process.env.ADMIN_EMAIL || 'admin@camera.com';
+    const plainPassword = process.env.ADMIN_PASSWORD || 'admin123!';
+    const isProd = process.env.NODE_ENV === 'production';
+
+    if (isProd && (!process.env.ADMIN_USERNAME || !process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD)) {
+        throw new Error('ADMIN_USERNAME, ADMIN_EMAIL, and ADMIN_PASSWORD are required in production');
+    }
+
+    return {
+        username,
+        email,
+        password: bcrypt.hashSync(plainPassword, PASSWORD_HASH_ROUNDS),
+        role: 'admin'
+    };
+}
 
 function getDefaultData() {
+    const adminUser = getAdminCredentials();
     return {
         cameras: [
             { id: 1, brand: 'Sony', model: 'A7III', stock: 5, pricePerDay: 800, image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=400' },
@@ -12,20 +33,15 @@ function getDefaultData() {
             { id: 4, brand: 'Nikon', model: 'Z6 II', stock: 4, pricePerDay: 900, image: 'https://images.unsplash.com/photo-1521575034604-e53f19e4a3aa?auto=format&fit=crop&q=80&w=400' }
         ],
         bookings: [],
-        users: [
-            {
-                username: process.env.ADMIN_USERNAME || 'admin',
-                password: process.env.ADMIN_PASSWORD || 'admin123!',
-                email: process.env.ADMIN_EMAIL || 'admin@camera.com',
-                role: 'admin'
-            }
-        ]
+        users: [{ ...adminUser, avatar: null }]
     };
 }
 
 function persistData() {
     const dataToSave = { cameras, bookings, users };
-    fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(dataToSave, null, 2), 'utf8');
+    const tempFilePath = `${DATA_FILE_PATH}.tmp`;
+    fs.writeFileSync(tempFilePath, JSON.stringify(dataToSave, null, 2), 'utf8');
+    fs.renameSync(tempFilePath, DATA_FILE_PATH);
 }
 
 function loadData() {
@@ -57,11 +73,24 @@ const users = loaded.users;
 // Ensure at least one admin account exists.
 const hasAdmin = users.some((user) => user.role === 'admin');
 if (!hasAdmin) {
-    users.push({
-        username: process.env.ADMIN_USERNAME || 'admin',
-        password: process.env.ADMIN_PASSWORD || 'admin123!',
-        email: process.env.ADMIN_EMAIL || 'admin@camera.com',
-        role: 'admin'
+    users.push(getAdminCredentials());
+    persistData();
+}
+
+const usersNeedingMigration = users.filter(
+    (user) => user.password && !user.password.startsWith('$2')
+);
+if (usersNeedingMigration.length > 0) {
+    usersNeedingMigration.forEach((user) => {
+        user.password = bcrypt.hashSync(user.password, PASSWORD_HASH_ROUNDS);
+    });
+    persistData();
+}
+
+const usersMissingAvatarField = users.filter((user) => !Object.prototype.hasOwnProperty.call(user, 'avatar'));
+if (usersMissingAvatarField.length > 0) {
+    usersMissingAvatarField.forEach((user) => {
+        user.avatar = null;
     });
     persistData();
 }

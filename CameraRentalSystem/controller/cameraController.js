@@ -52,22 +52,21 @@ exports.bookCamera = (req, res) => {
         return res.status(400).send('Camera is out of stock');
     }
 
-    const isOverlap = bookings.some((booking) => {
+    const overlappingBookingCount = bookings.filter((booking) => {
         if (booking.cameraId !== camera.id) return false;
         if (!isBlockingBooking(booking)) return false;
         const bookedStart = getDateOrNull(booking.startDate);
         const bookedEnd = getDateOrNull(booking.endDate);
         if (!bookedStart || !bookedEnd) return false;
         return hasDateOverlap(start, end, bookedStart, bookedEnd);
-    });
-    if (isOverlap) {
+    }).length;
+
+    if (overlappingBookingCount >= camera.stock) {
         return res.status(409).send('Selected camera is already booked for these dates');
     }
 
     const rentalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     const totalPrice = rentalDays * camera.pricePerDay;
-
-    camera.stock -= 1;
 
     bookings.push({
         id: crypto.randomUUID(),
@@ -115,6 +114,10 @@ exports.confirmBooking = (req, res) => {
         return res.status(403).send('Forbidden');
     }
 
+    if (booking.bookingStatus !== 'awaiting_confirmation' || booking.paymentStatus !== 'unpaid') {
+        return res.status(409).send('Booking cannot be confirmed from its current state');
+    }
+
     booking.bookingStatus = 'confirmed';
     persistData();
     res.redirect(`/booking/${booking.id}/payment`);
@@ -139,6 +142,10 @@ exports.confirmPayment = (req, res) => {
     if (!booking) return res.status(404).send('Booking not found');
     if (booking.user !== req.session.user.username && req.session.user.role !== 'admin') {
         return res.status(403).send('Forbidden');
+    }
+
+    if (booking.bookingStatus !== 'confirmed' || booking.paymentStatus !== 'unpaid') {
+        return res.status(409).send('Payment cannot be confirmed from its current state');
     }
 
     booking.paymentStatus = 'paid';

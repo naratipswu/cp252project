@@ -13,7 +13,7 @@ const applyMembershipDiscount = (totalPrice, memberType) => {
 const validateBookingDates = (startDate, endDate) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
-  if (end <= start) return false;
+  if (end < start) return false;
   return true;
 };
 

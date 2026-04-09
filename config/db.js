@@ -1,21 +1,31 @@
-// const { Sequelize } = require('sequelize');
-
-// // แก้ไขข้อมูลให้ตรงกับ DB ของคุณ
-// const sequelize = new Sequelize('database_name', 'username', 'password', {
-//   host: 'localhost',
-//   dialect: 'postgres', // ระบุว่าเป็น postgres
-//   logging: false,      // ปิด log query ในหน้า console (ถ้าอยากเห็นก็เปิดเป็น true)
-// });
-
-// module.exports = sequelize;
-
-// for test
 const { Sequelize } = require('sequelize');
 
-const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: './database.sqlite', // มันจะสร้างไฟล์นี้ให้เอง ไม่ต้องตั้งค่า user/pass
-  logging: false,
-});
+const dialect = process.env.DB_DIALECT || 'sqlite';
+
+function buildConfig() {
+  if (dialect === 'postgres') {
+    if (process.env.NODE_ENV === 'production' && !process.env.DB_NAME) {
+      throw new Error('DB_NAME is required for postgres in production');
+    }
+
+    return {
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT || 5432),
+      database: process.env.DB_NAME || 'camera_rental',
+      username: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || '',
+      dialect: 'postgres',
+      logging: false
+    };
+  }
+
+  return {
+    dialect: 'sqlite',
+    storage: process.env.DB_STORAGE || './database.sqlite',
+    logging: false
+  };
+}
+
+const sequelize = new Sequelize(buildConfig());
 
 module.exports = sequelize;

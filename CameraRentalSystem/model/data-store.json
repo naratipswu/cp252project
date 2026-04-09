@@ -46,20 +46,46 @@
       "paymentStatus": "paid",
       "createdAt": "2026-04-09T10:29:24.270Z",
       "paidAt": "2026-04-09T10:29:30.583Z"
+    },
+    {
+      "id": "59f2d730-a910-409e-832c-e8f929cfb7f2",
+      "cameraId": 1,
+      "cameraModel": "A7III",
+      "user": "grace1",
+      "startDate": "2026-04-09",
+      "endDate": "2026-04-10",
+      "totalPrice": 1600,
+      "bookingStatus": "confirmed",
+      "paymentStatus": "unpaid",
+      "createdAt": "2026-04-09T15:15:27.158Z"
+    },
+    {
+      "id": "49177927-65dd-4f95-9012-191eb922a34f",
+      "cameraId": 1,
+      "cameraModel": "A7III",
+      "user": "grace1",
+      "startDate": "2026-04-09",
+      "endDate": "2026-04-10",
+      "totalPrice": 1600,
+      "bookingStatus": "awaiting_confirmation",
+      "paymentStatus": "unpaid",
+      "createdAt": "2026-04-09T15:17:11.575Z"
     }
   ],
   "users": [
     {
       "username": "admin",
-      "password": "admin123!",
+      "password": "$2b$10$L8oc4WUf8Ee7RSAGryJidey8T5cGSudFYOD.GidQQL7F75ebqH0Xi",
       "email": "admin@camera.com",
-      "role": "admin"
+      "role": "admin",
+      "avatar": null
     },
     {
       "username": "grace1",
-      "password": "12345678",
+      "password": "$2b$10$hBZdp9ANhhTUx8E9DEtZleaTeoHIrXC4Wpu.5SsUWDlmV0UNvQgRK",
       "email": "asdsadsadasd@gmail.com",
-      "role": "user"
+      "role": "user",
+      "avatar": "/uploads/avatars/erd-1-2026-04-09T15-25-36-151Z-f41043cb.png"
     }
   ]
 }
