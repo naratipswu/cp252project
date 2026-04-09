@@ -20,6 +20,14 @@ function splitName(username) {
     return { firstName: chunks[0], lastName: chunks.slice(1).join(' ') };
 }
 
+function normalizePersonFields(input) {
+    const firstName = typeof input.firstName === 'string' ? input.firstName.trim() : '';
+    const lastName = typeof input.lastName === 'string' ? input.lastName.trim() : '';
+    const phone = typeof input.phone === 'string' ? input.phone.trim() : '';
+    const address = typeof input.address === 'string' ? input.address.trim() : '';
+    return { firstName, lastName, phone, address };
+}
+
 async function upsertCustomerFromUser(user) {
     // Always try direct PostgreSQL upsert first for real-time sync in pgAdmin.
     // If PG is unavailable, this quietly fails and app keeps working in JSON mode.
@@ -31,15 +39,16 @@ async function upsertCustomerFromUser(user) {
     // eslint-disable-next-line global-require
     const Customer = require('../../models/customer');
     const email = (user.email || `${user.username}@legacy.local`).toLowerCase();
+    const person = normalizePersonFields(user);
     const existing = await Customer.findOne({ where: { Email: email } });
     if (existing) return;
-    const name = splitName(user.username);
+    const fallbackName = splitName(user.username);
     await Customer.create({
-        FirstName: name.firstName,
-        LastName: name.lastName,
-        Phone: '0000000000',
+        FirstName: person.firstName || fallbackName.firstName,
+        LastName: person.lastName || fallbackName.lastName,
+        Phone: person.phone || '0000000000',
         Email: email,
-        Address: 'Created from app registration'
+        Address: person.address || 'Created from app registration'
     });
 }
 
@@ -246,12 +255,16 @@ exports.loginGoogle = async (req, res) => {
 };
 
 exports.register = async (req, res) => {
-    const { username, password, email } = req.body;
+    const { username, password, email, firstName, lastName, phone, address } = req.body;
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
     const normalizedPassword = typeof password === 'string' ? password : '';
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const normalizedFirstName = typeof firstName === 'string' ? firstName.trim() : '';
+    const normalizedLastName = typeof lastName === 'string' ? lastName.trim() : '';
+    const normalizedPhone = typeof phone === 'string' ? phone.trim() : '';
+    const normalizedAddress = typeof address === 'string' ? address.trim() : '';
 
-    if (!normalizedUsername || !normalizedPassword || !normalizedEmail) {
+    if (!normalizedUsername || !normalizedPassword || !normalizedEmail || !normalizedFirstName || !normalizedLastName || !normalizedPhone) {
         return res.render('signup', { error: 'All fields are required' });
     }
 
@@ -270,6 +283,10 @@ exports.register = async (req, res) => {
         username: normalizedUsername,
         password: bcrypt.hashSync(normalizedPassword, PASSWORD_HASH_ROUNDS),
         email: normalizedEmail,
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName,
+        phone: normalizedPhone,
+        address: normalizedAddress,
         role: 'user',
         avatar: null
     };

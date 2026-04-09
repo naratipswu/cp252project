@@ -18,8 +18,10 @@ function getPool() {
 async function upsertCustomerDirectPg(user) {
   const username = String(user.username || 'User').trim();
   const chunks = username.split(/\s+/).filter(Boolean);
-  const firstName = chunks[0] || 'User';
-  const lastName = chunks.length > 1 ? chunks.slice(1).join(' ') : 'User';
+  const firstName = String(user.firstName || chunks[0] || 'User').trim();
+  const lastName = String(user.lastName || (chunks.length > 1 ? chunks.slice(1).join(' ') : 'User')).trim();
+  const phone = String(user.phone || '0000000000').trim();
+  const address = String(user.address || 'Created from app registration').trim();
   const email = String(user.email || `${username}@legacy.local`).toLowerCase();
 
   const sql = `
@@ -28,11 +30,13 @@ async function upsertCustomerDirectPg(user) {
     ON CONFLICT ("Email")
     DO UPDATE SET
       "FirstName" = EXCLUDED."FirstName",
-      "LastName" = EXCLUDED."LastName"
+      "LastName" = EXCLUDED."LastName",
+      "Phone" = EXCLUDED."Phone",
+      "Address" = EXCLUDED."Address"
   `;
 
   try {
-    await getPool().query(sql, [firstName, lastName, '0000000000', email, 'Created from app registration']);
+    await getPool().query(sql, [firstName, lastName, phone, email, address]);
     return true;
   } catch (error) {
     return false;

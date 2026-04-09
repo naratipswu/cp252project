@@ -41,7 +41,15 @@ describe('Auth Controller Security', () => {
 
   test('register hashes password before persisting', async () => {
     const req = {
-      body: { username: 'alice', password: 'Secret123!', email: 'alice@mail.com' },
+      body: {
+        username: 'alice',
+        password: 'Secret123!',
+        email: 'alice@mail.com',
+        firstName: 'Alice',
+        lastName: 'Tester',
+        phone: '0812345678',
+        address: 'Bangkok'
+      },
       session: {}
     };
     const res = createResponse();
