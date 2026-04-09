@@ -1,1 +1,3 @@
 roombook(template)/
+venv/
+coverage/
