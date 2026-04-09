@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { users } = require('../model/data');
+const { users, persistData } = require('../model/data');
 
 exports.showMain = (req, res) => {
     // If already logged in, redirect
@@ -52,6 +52,7 @@ exports.loginGoogle = (req, res) => {
             role: 'user'
         };
         users.push(matchedUser);
+        persistData();
     }
 
     req.session.user = { username: matchedUser.username, role: matchedUser.role };
@@ -85,6 +86,7 @@ exports.register = (req, res) => {
         email: normalizedEmail,
         role: 'user'
     });
+    persistData();
 
     req.session.user = { username: normalizedUsername, role: 'user' };
     return res.redirect('/browse');

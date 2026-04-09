@@ -1,4 +1,4 @@
-const { cameras, bookings } = require('../model/data');
+const { cameras, bookings, persistData } = require('../model/data');
 const crypto = require('crypto');
 
 function getDateOrNull(dateString) {
@@ -73,6 +73,7 @@ exports.bookCamera = (req, res) => {
         endDate: end.toISOString().slice(0, 10),
         totalPrice
     });
+    persistData();
 
     res.redirect('/browse');
 };

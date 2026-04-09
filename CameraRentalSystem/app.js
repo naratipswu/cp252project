@@ -3,6 +3,7 @@ const session = require('express-session');
 const path = require('path');
 const authController = require('./controller/authController');
 const cameraController = require('./controller/cameraController');
+const { registerPgRealtimeRoutes } = require('./service/pgRealtime');
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -43,5 +44,9 @@ app.post('/book', authController.requireAuth, authController.requireCsrf, camera
 
 // Admin dashboard 
 app.get('/admin', authController.requireAdmin, cameraController.showAdminDashboard);
+
+// Optional PostgreSQL SQL/report endpoints for pgAdmin class demo.
+// Disabled by default (ENABLE_PG_REALTIME=false or unset).
+registerPgRealtimeRoutes(app);
 
 app.listen(3000, () => console.log('Server running on http://localhost:3000'));
