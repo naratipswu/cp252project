@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | Camera Rental</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background-color: #0c0a09; color: #fff; }
+        .bg-card { background-color: #1c1917; border: 1px solid rgba(255, 255, 255, 0.05); }
+        .text-gold { color: #d69e2e; }
+        .bg-gold { background-color: #d69e2e; }
+    </style>
+</head>
+
+<body class="min-h-screen pb-20">
+
+    <!-- Navbar -->
+    <nav class="flex h-16 w-full sticky top-0 z-50 shadow-2xl bg-[#1a1a1a]">
+        <a href="/" class="bg-[#d69e2e] text-black font-black text-[10px] md:text-[11px] flex items-center justify-center px-10 tracking-[0.3em] whitespace-nowrap active:opacity-80 transition-all">
+            CAMERA TYPE
+        </a>
+        <div class="flex-1 flex items-center justify-start px-8 gap-8 border-b border-black/20">
+            <a href="/browse" class="text-white font-black tracking-[0.3em] text-[10px] hover:text-[#d69e2e] transition-all">BROWSE</a>
+        </div>
+        <a href="/logout" class="bg-red-600 text-white font-black text-[10px] flex items-center justify-center px-10 tracking-[0.3em] hover:bg-red-700 transition-all uppercase">
+            LOGOUT
+        </a>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-6 py-12">
+        <div class="grid lg:grid-cols-3 gap-12">
+            
+            <!-- Left: User Info -->
+            <div class="lg:col-span-1 space-y-8">
+                <div class="bg-card rounded-[2.5rem] p-10 text-center relative overflow-hidden shadow-2xl">
+                    <div class="w-32 h-32 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-gold/20">
+                        <span class="text-5xl font-black text-gold"><%= user.username.charAt(0).toUpperCase() %></span>
+                    </div>
+                    <h1 class="text-3xl font-black mb-1 italic tracking-tighter uppercase"><%= user.FirstName %> <%= user.LastName %></h1>
+                    <p class="text-[10px] text-gray-500 font-black uppercase tracking-[0.4em] mb-8">Member since <%= new Date(user.createdAt).getFullYear() %></p>
+                    
+                    <div class="space-y-4 pt-8 border-t border-white/5 text-left">
+                        <div>
+                            <p class="text-[8px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Email</p>
+                            <p class="text-sm font-bold text-gray-300"><%= user.Email %></p>
+                        </div>
+                        <div>
+                            <p class="text-[8px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Phone</p>
+                            <p class="text-sm font-bold text-gray-300"><%= user.Phone %></p>
+                        </div>
+                        <div>
+                            <p class="text-[8px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Address</p>
+                            <p class="text-xs font-medium text-gray-400 leading-relaxed"><%= user.Address %></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recently Viewed -->
+                <div class="bg-card rounded-[2.5rem] p-10 shadow-2xl">
+                    <h2 class="text-xs font-black uppercase tracking-[0.4em] text-gray-500 mb-8">Recently Viewed</h2>
+                    <div class="space-y-6">
+                        <% recentlyViewed.forEach(item => { %>
+                            <a href="/view-camera/<%= item.id %>" class="flex items-center gap-4 group">
+                                <div class="w-16 h-16 bg-black rounded-2xl overflow-hidden border border-white/5">
+                                    <img src="<%= item.ImageURL %>" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-all">
+                                </div>
+                                <div>
+                                    <p class="text-[11px] font-black uppercase tracking-tighter italic group-hover:text-gold transition-all"><%= item.ModelName %></p>
+                                    <p class="text-[8px] text-gray-600 font-black uppercase tracking-widest"><%= item.Brand %></p>
+                                </div>
+                            </a>
+                        <% }) %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Rental History -->
+            <div class="lg:col-span-2 space-y-8">
+                <h2 class="text-xl font-black italic tracking-tighter uppercase mb-2">RENTAL <span class="text-gold">HISTORY</span></h2>
+                
+                <div class="space-y-6">
+                    <% if (rentals.length === 0) { %>
+                        <div class="bg-card rounded-[2.5rem] p-20 text-center">
+                            <p class="text-gray-600 uppercase tracking-widest text-xs font-bold">No rental history yet.</p>
+                            <a href="/browse" class="inline-block mt-6 text-gold font-black uppercase tracking-[0.4em] text-[10px] hover:underline">Start Browsing</a>
+                        </div>
+                    <% } %>
+
+                    <% rentals.forEach(rental => { %>
+                        <div class="bg-card rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/5">
+                            <div class="p-8 border-b border-white/5 flex justify-between items-center bg-white/5">
+                                <div>
+                                    <p class="text-[8px] text-gray-500 font-black uppercase tracking-[0.4em] mb-1">Rental Date</p>
+                                    <p class="text-xs font-bold"><%= new Date(rental.RentalDate).toLocaleDateString() %></p>
+                                </div>
+                                <div>
+                                    <span class="px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-[0.3em] bg-gold/10 text-gold border border-gold/20">
+                                        <%= rental.RentalStatus %>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="p-8 space-y-6">
+                                <% rental.RentalDetails.forEach(detail => { %>
+                                    <div class="flex items-center gap-6">
+                                        <div class="w-24 h-24 bg-black rounded-2xl overflow-hidden border border-white/5">
+                                            <img src="<%= detail.Equipment.ImageURL %>" class="w-full h-full object-cover opacity-70">
+                                        </div>
+                                        <div class="flex-1">
+                                            <h3 class="text-lg font-black italic tracking-tighter uppercase"><%= detail.Equipment.ModelName %></h3>
+                                            <p class="text-[9px] text-gray-500 font-black uppercase tracking-[0.3em] mb-3"><%= detail.Equipment.Brand %></p>
+                                            <div class="flex gap-4">
+                                                <div class="text-[9px] font-bold text-gray-400">
+                                                    <span class="text-gray-600">FROM:</span> <%= detail.StartDate %>
+                                                </div>
+                                                <div class="text-[9px] font-bold text-gray-400">
+                                                    <span class="text-gray-600">TO:</span> <%= detail.EndDate %>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="text-[8px] text-gray-600 font-black uppercase tracking-[0.3em] mb-1">Subtotal</p>
+                                            <p class="text-xl font-black"><%= detail.SubTotal %> ฿</p>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            </div>
+
+                            <div class="px-8 py-6 bg-black/20 flex justify-between items-center border-t border-white/5">
+                                <p class="text-[10px] text-gray-500 font-black uppercase tracking-[0.4em]">Transaction Total</p>
+                                <p class="text-3xl font-black text-gold tracking-tighter"><%= rental.TotalAmount %> ฿</p>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
