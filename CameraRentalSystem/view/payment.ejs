@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-xl bg-white rounded-2xl shadow-xl p-8 text-center">
+        <h1 class="text-2xl font-bold mb-2">Scan QR to Pay</h1>
+        <p class="text-gray-500 mb-6">Booking ID: <span class="font-semibold"><%= booking.id %></span></p>
+
+        <div class="bg-gray-50 rounded-xl p-6 mb-6">
+            <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=BOOKING-<%= booking.id %>-AMOUNT-<%= booking.totalPrice %>"
+                alt="Payment QR Code"
+                class="mx-auto rounded-lg border border-gray-200"
+            >
+            <p class="mt-4 text-lg">Amount</p>
+            <p class="text-3xl font-bold text-green-700"><%= booking.totalPrice %> THB</p>
+        </div>
+
+        <form action="/booking/<%= booking.id %>/payment/confirm" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="w-full py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition">
+                Confirm Payment
+            </button>
+        </form>
+
+        <a href="/booking/<%= booking.id %>/confirm" class="inline-block mt-4 text-sm text-gray-500 hover:text-gray-700">
+            Back to booking confirmation
+        </a>
+    </div>
+</body>
+</html>

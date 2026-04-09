@@ -12,6 +12,10 @@ function hasDateOverlap(startA, endA, startB, endB) {
     return startA <= endB && startB <= endA;
 }
 
+function isBlockingBooking(booking) {
+    return booking.paymentStatus !== 'cancelled';
+}
+
 exports.browseCameras = (req, res) => {
     const searchQuery = req.query.search || '';
     
@@ -50,6 +54,7 @@ exports.bookCamera = (req, res) => {
 
     const isOverlap = bookings.some((booking) => {
         if (booking.cameraId !== camera.id) return false;
+        if (!isBlockingBooking(booking)) return false;
         const bookedStart = getDateOrNull(booking.startDate);
         const bookedEnd = getDateOrNull(booking.endDate);
         if (!bookedStart || !bookedEnd) return false;
@@ -71,13 +76,75 @@ exports.bookCamera = (req, res) => {
         user: req.session.user.username,
         startDate: start.toISOString().slice(0, 10),
         endDate: end.toISOString().slice(0, 10),
-        totalPrice
+        totalPrice,
+        bookingStatus: 'awaiting_confirmation',
+        paymentStatus: 'unpaid',
+        createdAt: new Date().toISOString()
     });
     persistData();
 
-    res.redirect('/browse');
+    res.redirect(`/booking/${bookings[bookings.length - 1].id}/confirm`);
 };
 
 exports.showAdminDashboard = (req, res) => {
     res.render('admin', { bookings, user: req.session.user });
+};
+
+exports.showBookingConfirm = (req, res) => {
+    const { bookingId } = req.params;
+    const booking = bookings.find((item) => item.id === bookingId);
+    if (!booking) return res.status(404).send('Booking not found');
+    if (booking.user !== req.session.user.username && req.session.user.role !== 'admin') {
+        return res.status(403).send('Forbidden');
+    }
+
+    const camera = cameras.find((item) => item.id === booking.cameraId);
+    if (!camera) return res.status(404).send('Camera not found');
+
+    res.render('booking_confirm', {
+        booking,
+        camera
+    });
+};
+
+exports.confirmBooking = (req, res) => {
+    const { bookingId } = req.params;
+    const booking = bookings.find((item) => item.id === bookingId);
+    if (!booking) return res.status(404).send('Booking not found');
+    if (booking.user !== req.session.user.username && req.session.user.role !== 'admin') {
+        return res.status(403).send('Forbidden');
+    }
+
+    booking.bookingStatus = 'confirmed';
+    persistData();
+    res.redirect(`/booking/${booking.id}/payment`);
+};
+
+exports.showPaymentPage = (req, res) => {
+    const { bookingId } = req.params;
+    const booking = bookings.find((item) => item.id === bookingId);
+    if (!booking) return res.status(404).send('Booking not found');
+    if (booking.user !== req.session.user.username && req.session.user.role !== 'admin') {
+        return res.status(403).send('Forbidden');
+    }
+
+    res.render('payment', {
+        booking
+    });
+};
+
+exports.confirmPayment = (req, res) => {
+    const { bookingId } = req.params;
+    const booking = bookings.find((item) => item.id === bookingId);
+    if (!booking) return res.status(404).send('Booking not found');
+    if (booking.user !== req.session.user.username && req.session.user.role !== 'admin') {
+        return res.status(403).send('Forbidden');
+    }
+
+    booking.paymentStatus = 'paid';
+    booking.bookingStatus = 'completed';
+    booking.paidAt = new Date().toISOString();
+    persistData();
+
+    res.render('payment_success', { booking });
 };

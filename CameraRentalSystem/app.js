@@ -41,6 +41,10 @@ app.post('/logout', authController.requireAuth, authController.requireCsrf, auth
 // 2. Camera Browsing & Booking
 app.get('/browse', cameraController.browseCameras);
 app.post('/book', authController.requireAuth, authController.requireCsrf, cameraController.bookCamera);
+app.get('/booking/:bookingId/confirm', authController.requireAuth, cameraController.showBookingConfirm);
+app.post('/booking/:bookingId/confirm', authController.requireAuth, authController.requireCsrf, cameraController.confirmBooking);
+app.get('/booking/:bookingId/payment', authController.requireAuth, cameraController.showPaymentPage);
+app.post('/booking/:bookingId/payment/confirm', authController.requireAuth, authController.requireCsrf, cameraController.confirmPayment);
 
 // Admin dashboard 
 app.get('/admin', authController.requireAdmin, cameraController.showAdminDashboard);

@@ -4,7 +4,7 @@
       "id": 1,
       "brand": "Sony",
       "model": "A7III",
-      "stock": 5,
+      "stock": 4,
       "pricePerDay": 800,
       "image": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=400"
     },
@@ -33,13 +33,33 @@
       "image": "https://images.unsplash.com/photo-1521575034604-e53f19e4a3aa?auto=format&fit=crop&q=80&w=400"
     }
   ],
-  "bookings": [],
+  "bookings": [
+    {
+      "id": "753c45d1-bd3a-4a4b-82aa-749f3c8af000",
+      "cameraId": 1,
+      "cameraModel": "A7III",
+      "user": "grace1",
+      "startDate": "2026-04-08",
+      "endDate": "2026-04-16",
+      "totalPrice": 7200,
+      "bookingStatus": "completed",
+      "paymentStatus": "paid",
+      "createdAt": "2026-04-09T10:29:24.270Z",
+      "paidAt": "2026-04-09T10:29:30.583Z"
+    }
+  ],
   "users": [
     {
       "username": "admin",
       "password": "admin123!",
       "email": "admin@camera.com",
       "role": "admin"
+    },
+    {
+      "username": "grace1",
+      "password": "12345678",
+      "email": "asdsadsadasd@gmail.com",
+      "role": "user"
     }
   ]
 }

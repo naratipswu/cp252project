@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Booking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-8">
+        <h1 class="text-2xl font-bold mb-2">Confirm Your Booking</h1>
+        <p class="text-gray-500 mb-6">Please review details before continuing to payment.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-500">Booking ID</p>
+                <p class="font-semibold"><%= booking.id %></p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-500">Camera</p>
+                <p class="font-semibold"><%= camera.brand %> <%= camera.model %></p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-500">Start Date</p>
+                <p class="font-semibold"><%= booking.startDate %></p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-500">End Date</p>
+                <p class="font-semibold"><%= booking.endDate %></p>
+            </div>
+            <div class="bg-yellow-50 rounded-lg p-4 md:col-span-2">
+                <p class="text-sm text-gray-500">Total Price</p>
+                <p class="text-2xl font-bold text-yellow-700"><%= booking.totalPrice %> THB</p>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+            <a href="/browse" class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-100 transition">Back</a>
+            <form action="/booking/<%= booking.id %>/confirm" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="px-5 py-2 rounded-lg bg-black text-white hover:bg-gray-800 transition">
+                    Confirm and Continue
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
