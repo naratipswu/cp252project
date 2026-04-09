@@ -31,8 +31,30 @@
         .bg-sidebar-dark {
             background-color: #1a150d;
         }
+
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 1;
+            cursor: pointer;
+        }
     </style>
     <script>
+        function toDateOnlyString(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function initializeBookingInputs() {
+            const today = new Date();
+            const todayStr = toDateOnlyString(today);
+            const dateInputs = document.querySelectorAll('input[type="date"]');
+            dateInputs.forEach((input) => {
+                input.min = todayStr;
+            });
+        }
+
         /**
          * Calculate total price for a camera
          * @param {string | number} cameraId
@@ -46,8 +68,14 @@
             const totalSpan = document.getElementById('total-' + cameraId);
             /** @type {HTMLInputElement | null} */
             const bookBtn = document.getElementById('btn-' + cameraId);
+            const statusText = document.getElementById('status-' + cameraId);
+            const daysText = document.getElementById('days-' + cameraId);
 
-            if (startInput && endInput && totalSpan && bookBtn) {
+            if (startInput && endInput && totalSpan && bookBtn && statusText && daysText) {
+                if (startInput.value && !endInput.value) {
+                    endInput.min = startInput.value;
+                }
+
                 if (startInput.value && endInput.value) {
                     const start = new Date(startInput.value);
                     const end = new Date(endInput.value);
@@ -61,15 +89,32 @@
 
                         const total = diffDays * pricePerDay;
                         totalSpan.innerText = total.toLocaleString() + ' ฿';
+                        daysText.innerText = diffDays + ' day(s)';
+                        statusText.innerText = 'Ready to book';
+                        statusText.className = 'text-xs text-green-400';
+                        bookBtn.innerText = 'Book Now';
                         bookBtn.disabled = false;
                         bookBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                         bookBtn.classList.add('hover:bg-yellow-500');
                     } else {
-                        totalSpan.innerText = 'Invalid Date';
+                        totalSpan.innerText = '0 ฿';
+                        daysText.innerText = '-';
+                        statusText.innerText = 'End date must be the same or after start date';
+                        statusText.className = 'text-xs text-red-400';
+                        bookBtn.innerText = 'Select valid dates';
                         bookBtn.disabled = true;
                         bookBtn.classList.add('opacity-50', 'cursor-not-allowed');
                         bookBtn.classList.remove('hover:bg-yellow-500');
                     }
+                } else {
+                    totalSpan.innerText = '0 ฿';
+                    daysText.innerText = '-';
+                    statusText.innerText = 'Choose start and end date';
+                    statusText.className = 'text-xs text-gray-400';
+                    bookBtn.innerText = 'Pick dates first';
+                    bookBtn.disabled = true;
+                    bookBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    bookBtn.classList.remove('hover:bg-yellow-500');
                 }
             }
         }
@@ -91,6 +136,10 @@
                 }
             }
         }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeBookingInputs();
+        });
     </script>
 </head>
 
@@ -199,7 +248,7 @@
 
             <!-- Search Bar -->
             <form action="/browse" method="GET" class="flex w-full">
-                <input type="text" name="search" value="<%= searchQuery %>" placeholder=""
+                <input type="text" name="search" value="<%= searchQuery %>" placeholder="Search by brand or model..."
                     class="w-full h-14 bg-[#D9D9D9] text-black px-6 rounded-l-full focus:outline-none focus:ring-2 focus:ring-brand-yellow">
                 <button type="submit"
                     class="bg-brand-yellow w-20 h-14 rounded-r-full flex items-center justify-center hover:opacity-90 transition cursor-pointer">
@@ -254,6 +303,7 @@
                                         <label
                                             class="block text-xs uppercase tracking-wider text-gray-500 mb-1">Start</label>
                                         <input type="date" name="startDate" id="start-<%= camera.id %>" required
+                                            oninput="calculatePrice('<%= camera.id %>', <%= camera.pricePerDay %>)"
                                             onchange="calculatePrice('<%= camera.id %>', <%= camera.pricePerDay %>)"
                                             class="w-full text-xs bg-black/40 border border-gray-700 rounded p-2 outline-none focus:border-brand-yellow text-white">
                                     </div>
@@ -261,19 +311,22 @@
                                         <label
                                             class="block text-xs uppercase tracking-wider text-gray-500 mb-1">End</label>
                                         <input type="date" name="endDate" id="end-<%= camera.id %>" required
+                                            oninput="calculatePrice('<%= camera.id %>', <%= camera.pricePerDay %>)"
                                             onchange="calculatePrice('<%= camera.id %>', <%= camera.pricePerDay %>)"
                                             class="w-full text-xs bg-black/40 border border-gray-700 rounded p-2 outline-none focus:border-brand-yellow text-white">
                                     </div>
                                 </div>
+                                <p id="status-<%= camera.id %>" class="text-xs text-gray-400">Choose start and end date</p>
 
                                 <div class="flex items-center justify-between pt-3 border-t border-gray-800">
                                     <div class="text-xs font-medium text-gray-400">
                                         Total: <span id="total-<%= camera.id %>"
                                             class="text-base font-bold text-white ml-1">0 ฿</span>
+                                        <span class="ml-2 text-gray-500">Days: <span id="days-<%= camera.id %>">-</span></span>
                                     </div>
                                     <button type="submit" id="btn-<%= camera.id %>" disabled
                                         class="bg-gray-700 text-white px-4 py-1.5 rounded font-bold transition opacity-50 cursor-not-allowed text-xs uppercase tracking-wider">
-                                        Book
+                                        Pick dates first
                                     </button>
                                 </div>
                             </form>
