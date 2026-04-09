@@ -103,3 +103,173 @@
 4. User ยังไม่ล็อกอิน กดจอง (Submit) → ส่ง POST `/book` → วิ่งชน Middleware `authController.requireAuth` → ยามจับได้ว่าไม่มี Session → ถูกกระแทกเด้ง `res.redirect('/signin')`!
 5. User กรอกล็อกอินผ่าน → กลับมาหน้า `/browse` กดปุ่มจองอีกครั้ง → วิ่งชน Middleware แบบเดิมแต่คราวนี้ผ่าน → เข้าสู่กระบวนการ `bookCamera` → Controller หยิบข้อมูลยัดใส่กล่อง `bookings` ในหน่วยความจำ แล้วเตะกลับหน้า Browse พร้อมประวัติที่ถูกเก็บไว้ในเซิร์ฟเวอร์
 6. ในที่สุด **Admin** เข้าสู่ระบบ → เข้าหน้า `/admin` → Controller ส่งถุงตะกร้า `bookings` ไปให้ EJS ถอดรหัสใส่ตารางให้เห็นครบถ้วนสมบูรณ์!
+
+---
+
+## 🆕 อัปเดตล่าสุด (09/04/2026) — ส่วนที่เพิ่งทำและยังไม่ได้บันทึก
+
+> ส่วนนี้เป็น Delta Log แบบละเอียด เพื่อแก้ข้อมูลที่ล้าสมัยในเอกสารส่วนบน
+> (ด้านบนบางข้อเป็น behavior เดิมก่อนปรับปรุง)
+
+### 1) Security/Session/Production Hardening
+
+1. **Password ไม่เก็บ plaintext แล้ว**
+   - `authController.register` ใช้ `bcryptjs` hash ก่อนบันทึก
+   - `authController.login` ใช้ `bcrypt.compare`
+   - มี migration แบบ opportunistic สำหรับ user เก่าที่เป็น plaintext เมื่อ login สำเร็จ
+
+2. **เพิ่ม CSRF protection ครบ flow**
+   - ใช้ `attachCsrfToken` และ `requireCsrf` ในฟอร์มสำคัญ
+   - หาก token ไม่ตรงจะตอบ `403 Invalid CSRF token`
+
+3. **Session config ปลอดภัยขึ้น**
+   - เช็ก `SESSION_SECRET` ใน production
+   - เพิ่ม `maxAge` cookie
+   - รองรับเปิด secure cookie ผ่าน `SESSION_COOKIE_SECURE=true`
+   - ตั้ง `trust proxy` เมื่อบังคับ secure cookie
+
+4. **Google login mock ถูกปิดเป็นค่าเริ่มต้น**
+   - `loginGoogle` ใช้ได้เมื่อ `ENABLE_MOCK_GOOGLE_LOGIN=true` เท่านั้น
+
+5. **App startup ทดสอบ/ดีพลอยง่ายขึ้น**
+   - `app.listen` แยกด้วย `if (require.main === module)`
+   - `module.exports = app` เพื่อรองรับ integration test
+
+### 2) Data Layer เปลี่ยนจาก Mock-only เป็น Hybrid + PostgreSQL Sync
+
+1. **ยังมี JSON fallback (เพื่อให้เพื่อนที่ยังไม่ต่อ DB ทำงานได้)**
+   - ข้อมูล local อยู่ที่ `CameraRentalSystem/model/data-store.json`
+
+2. **โหมด PostgreSQL ถูกผูกแล้ว**
+   - `config/db.js` รองรับ env-driven (`sqlite`/`postgres`)
+   - เมื่อ `DB_DIALECT=postgres` จะ sync schema และใช้งาน DB ได้
+
+3. **Sync schema ตาม ERD ครบ 7 ตารางหลัก**
+   - `Category`, `Equipment`, `Customer`, `Rental`, `RentalDetail`, `Payment`, `Return`
+   - ทำผ่าน `CameraRentalSystem/service/schemaSync.js`
+
+4. **เพิ่มตาราง `SyncLog` สำหรับ audit**
+   - เก็บสถานะ sync (`success`/`failed`) และจำนวนรายการที่นำเข้า
+   - โมเดลอยู่ที่ `models/syncLog.js`
+
+### 3) Realtime/Batch Sync ที่เพิ่งเพิ่ม
+
+1. **Legacy Batch Sync (JSON -> PostgreSQL)**
+   - `CameraRentalSystem/service/legacyDataSync.js`
+   - import `cameras/users/bookings` ไปตารางเดิมตาม ERD
+   - เขียนผลเข้า `SyncLog`
+
+2. **Direct realtime customer sync ตอนสมัคร/สร้างบัญชี**
+   - `CameraRentalSystem/service/directPgSync.js`
+   - ตอน `register`, `createAdminAccount`, และกรณีสร้าง user จาก `loginGoogle`
+   - พยายาม upsert เข้า `Customer` ทันทีผ่าน pg client
+   - ถ้า DB ไม่พร้อม แอปไม่ล่ม (ยัง fallback โหมด JSON)
+
+3. **Booking realtime sync**
+   - `CameraRentalSystem/service/bookingSync.js`
+   - หลังทำรายการจอง/confirm/payment จะพยายาม sync เข้า `Rental`, `RentalDetail`, `Payment`
+   - เขียน status ลง `SyncLog` ด้วย
+
+### 4) Product/Camera Management ล่าสุด
+
+1. **Add Product ฝั่ง Admin**
+   - หน้า `/browse` มี Admin panel แบบพับ/ขยาย (hide/show)
+   - เพิ่มสินค้าได้เฉพาะ role `admin`
+   - route: `POST /admin/cameras`
+
+2. **ข้อมูลสินค้าใช้ตารางเดิม `Equipment`**
+   - ยกเลิกการใช้ตารางทดลอง `camera_products`
+   - map ฟิลด์จาก UI -> ตารางเดิม (`ModelName`, `Brand`, `DailyRate`, `ImageURL`, `Status`, `CategoryID`)
+
+3. **รองรับอัปโหลดไฟล์ภาพสินค้า**
+   - ฟอร์มเพิ่มสินค้ามีทั้ง `imageFile` และ `imageUrl`
+   - path รูปถูกเสิร์ฟผ่าน `/uploads/...`
+
+### 5) Media/File Organization ที่เพิ่มแล้ว
+
+1. **โครงสร้างโฟลเดอร์รูป**
+   - `public/uploads/products`
+   - `public/uploads/website`
+   - `public/uploads/slips`
+   - `public/uploads/avatars`
+   - `public/uploads/others`
+
+2. **Media Manager สำหรับแอดมิน**
+   - หน้า `GET /admin/media`
+   - อัปโหลดผ่าน `POST /admin/media/upload`
+   - มี rename อัตโนมัติ (timestamp + random suffix)
+   - ถ้าเลือกหมวด products + cameraId ระบบอัปเดตรูปสินค้าให้ได้
+
+3. **User Avatar**
+   - หน้า profile รองรับอัปโหลดรูปตัวเอง
+   - route `POST /profile/avatar`
+   - บันทึก path avatar ใน user data
+
+### 6) Account/Admin Management ที่เพิ่มแล้ว
+
+1. **Manage Accounts**
+   - หน้า `GET /admin/accounts`
+   - เปลี่ยน role user/admin ได้
+   - สร้าง admin ใหม่ได้
+   - ป้องกัน demote แอดมินคนสุดท้าย
+
+2. **ปุ่มนำทาง**
+   - เพิ่มปุ่มไป `Main`, `Browse`, `Admin` ในหลายหน้า admin
+
+### 7) Signup/Profile Data ที่เพิ่มล่าสุด
+
+1. **หน้า signup เก็บข้อมูล user เพิ่ม**
+   - `firstName` (required)
+   - `lastName` (required)
+   - `phone` (required)
+   - `address` (optional)
+   - พร้อม `username`, `password`, `email` เดิม
+
+2. **ข้อมูลเหล่านี้ถูกส่งต่อเข้า Customer**
+   - ผ่าน direct upsert + ORM sync logic
+   - ช่วยให้ข้อมูลใน pgAdmin ครบขึ้น
+
+3. **ปรับ UI หน้า signup ไม่ล้นเฟรม**
+   - เพิ่มความสูง panel และเปิด scroll ใน card ฝั่งขวา
+   - ลด spacing/ความสูง input ให้พอดีกรอบ
+
+### 8) สถานะฟังก์ชันที่ยังควรทำต่อ (ยังไม่ครบ)
+
+1. **DB-first เต็มระบบยังไม่ 100%**
+   - ยังมีหลาย flow เขียน JSON ก่อน แล้วค่อย sync
+   - หากต้องการลดความซับซ้อน ควรย้ายเป็น write-through DB เป็นหลัก
+
+2. **Booking domain ยังผูกกับข้อมูล local บางส่วน**
+   - การคำนวณ overlap และ stock ในหน้า browse/book ยังมี dependency กับรูปแบบข้อมูลที่ map จากหลายแหล่ง
+
+3. **ไม่มี transactional boundary ครบวงจร**
+   - เช่น create rental + detail + payment ควรอยู่ใน transaction เดียวเมื่อเป็น production-grade
+
+4. **ยังไม่มีหน้า monitor sync status ในเว็บ**
+   - ปัจจุบันดู log ผ่าน `SyncLog` ใน pgAdmin เป็นหลัก
+
+5. **User profile edit (ชื่อ/เบอร์/ที่อยู่) ยังไม่ครบ UX**
+   - signup มีข้อมูลเพิ่มแล้ว แต่หน้า profile ยังไม่รองรับ edit all fields เต็มรูป
+
+### 9) วิธีตรวจว่า sync เข้าจริง (Checklist สำหรับทีม)
+
+1. สมัคร user ใหม่ในหน้า signup
+2. เปิด pgAdmin และรัน:
+   ```sql
+   SELECT "CustomerID","FirstName","LastName","Phone","Email","Address"
+   FROM "Customer"
+   ORDER BY "CustomerID" DESC;
+   ```
+3. ถ้าไม่เจอ ให้ตรวจว่าแอปรัน process ล่าสุดและเชื่อม DB เดียวกับที่เปิดใน pgAdmin
+4. ตรวจ `SyncLog` เพื่อดูว่า sync success/failed:
+   ```sql
+   SELECT "SyncLogID","Source","Status","ImportedCustomers","Message","SyncedAt"
+   FROM "SyncLog"
+   ORDER BY "SyncLogID" DESC;
+   ```
+
+---
+
+## 🧾 หมายเหตุการใช้งานเอกสารฉบับนี้
+- ส่วนหัวเอกสาร (ก่อนหน้านี้) เป็น baseline เดิมช่วงเริ่มทำโปรเจกต์
+- ให้ใช้หัวข้อ **อัปเดตล่าสุด (09/04/2026)** เป็นแหล่งจริงสำหรับ behavior ปัจจุบันของระบบ
