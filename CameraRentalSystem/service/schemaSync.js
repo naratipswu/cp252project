@@ -44,18 +44,20 @@ async function migrateLegacyPostgresTables() {
 
   if (hasUsers) {
     await sequelize.query(`
-      INSERT INTO "Customer" ("FirstName", "LastName", "Phone", "Email", "Address")
+      INSERT INTO "Customer" ("FirstName", "LastName", "Username", "Phone", "Email", "Address")
       SELECT
         COALESCE(NULLIF(TRIM(u."firstName"), ''), COALESCE(NULLIF(TRIM(u."username"), ''), 'User')),
         COALESCE(NULLIF(TRIM(u."lastName"), ''), 'User'),
+        u."username",
         COALESCE(NULLIF(TRIM(u."phone"), ''), '0000000000'),
         LOWER(COALESCE(NULLIF(TRIM(u."email"), ''), CONCAT(COALESCE(NULLIF(TRIM(u."username"), ''), 'user'), '@legacy.local'))),
-        COALESCE(NULLIF(TRIM(u."address"), ''), 'Imported from legacy SQL')
+        NULLIF(TRIM(u."address"), '')
       FROM "Users" u
       ON CONFLICT ("Email")
       DO UPDATE SET
         "FirstName" = EXCLUDED."FirstName",
         "LastName" = EXCLUDED."LastName",
+        "Username" = EXCLUDED."Username",
         "Phone" = EXCLUDED."Phone",
         "Address" = EXCLUDED."Address"
     `);
@@ -169,14 +171,14 @@ async function ensureFullSchemaReady() {
   await sequelize.authenticate();
 
   // Sync in dependency order to avoid FK creation issues.
-  await Category.sync();
-  await Equipment.sync();
-  await Customer.sync();
-  await Rental.sync();
-  await RentalDetail.sync();
-  await Payment.sync();
-  await Return.sync();
-  await SyncLog.sync();
+  await Category.sync({ alter: true });
+  await Equipment.sync({ alter: true });
+  await Customer.sync({ alter: true });
+  await Rental.sync({ alter: true });
+  await RentalDetail.sync({ alter: true });
+  await Payment.sync({ alter: true });
+  await Return.sync({ alter: true });
+  await SyncLog.sync({ alter: true });
 
   // If older class schema exists, migrate it into ERD tables.
   await migrateLegacyPostgresTables();

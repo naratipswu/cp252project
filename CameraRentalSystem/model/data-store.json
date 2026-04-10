@@ -128,6 +128,72 @@
       "email": "ewfsdfdsfdsf@gmail.com",
       "role": "user",
       "avatar": null
+    },
+    {
+      "username": "Test123",
+      "password": "$2b$10$OpTZswAL0UWV7So/NK4S4eK2h.qvGGlaY0XSJXCk5v8BIkZtA6mjm",
+      "email": "wdsdfsdf@gmail.com",
+      "firstName": "Test1",
+      "lastName": "test1",
+      "phone": "0914148813",
+      "address": "",
+      "role": "user",
+      "avatar": null
+    },
+    {
+      "username": "Testkub",
+      "password": "$2b$10$NVFLYWOgnH2a2MwVbY7DrOJdDoWF.IkBEQjH5ObvWRJL8e5wp1QA2",
+      "email": "sadsadsad@gmail.com",
+      "firstName": "Host",
+      "lastName": "Loi",
+      "phone": "0000000000",
+      "address": null,
+      "role": "user",
+      "avatar": null
+    },
+    {
+      "username": "Grace1234",
+      "password": "$2b$10$N7zHdzUrr.cmw4VrED6LVu0AsDhz6apJFMp2iPkxD2mDm/qfQyu3y",
+      "email": "sdfsdfdsfds@gmail.com",
+      "firstName": "First1",
+      "lastName": "123",
+      "phone": "0911111111",
+      "address": null,
+      "role": "user",
+      "avatar": null
+    },
+    {
+      "username": "Testeiei",
+      "password": "$2b$10$/tyL0G6bbOR0KDoI35RnKOtDyVybML9qI2pL0xOd5JF5mfzkdxpOG",
+      "email": "gdsgfdgfdg@gmail.com",
+      "firstName": "asda",
+      "lastName": "asda",
+      "phone": "0000000000",
+      "address": null,
+      "role": "user",
+      "avatar": null
+    },
+    {
+      "username": "Dooooo",
+      "password": "$2b$10$IIUMFNSAAOC4eDHfaPvNDu6A/PBB6XDU.93o1Y7510k8ig7q/J9fy",
+      "email": "sdfsdfsdfdsfds@gmail.com",
+      "firstName": "asdsad",
+      "lastName": "sadas",
+      "phone": "0000000000",
+      "address": null,
+      "role": "user",
+      "avatar": null
+    },
+    {
+      "username": "Gracereal",
+      "password": "$2b$10$OuTuNNwcRz/zoc/ZVwZ94.ClGvZXGWoNKFeN9G7QpWd2dArJSdDGu",
+      "email": "dasdasdsa@gmail.com",
+      "firstName": "Grace",
+      "lastName": "Grace",
+      "phone": "0000000000",
+      "address": null,
+      "role": "user",
+      "avatar": null
     }
   ]
 }

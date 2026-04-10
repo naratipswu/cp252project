@@ -430,9 +430,17 @@ LIMIT 50;
     - มีการใช้ `ENUM` สำหรับ `Status` และ `RentalStatus` เพื่อควบคุมสถานะให้เป็นระบบ
     - ฟิลด์ที่ต้องใช้ความละเอียดสูงอย่าง `Phone` และ `Email` มีการตั้งค่า `allowNull: false` และ `unique: true` ไว้อย่างเหมาะสม
 
-### 2) สถานะความพร้อมของ Schema
-- ไฟล์ `CameraRentalSystem/service/schemaSync.js` ถูกตั้งค่าให้ `sync()` ตารางใน Dependency Order ที่ถูกต้อง (สร้างตารางแม่ก่อนตารางลูก) เพื่อป้องกันความผิดพลาดของ Foreign Key
-- ระบบพร้อมสำหรับโหมด Database-first ในการพัฒนาขั้นตอนต่อไป
+### 2) การเปลี่ยนระบบฐานข้อมูล (Database Migration)
+- **ระบบหลัก**: เปลี่ยนจาก SQLite (Local File) มาเป็น **PostgreSQL** เพื่อให้รองรับการทำงานระดับ Professional และเชื่อมต่อกับ pgAdmin4 ได้โดยตรง
+- **การตั้งค่า**: ติดตั้งแพ็กเกจ `dotenv` และสร้างไฟล์ [**.env**](file:///d:/GitHub/cp252project/.env) เพื่อจัดการค่าคงที่ต่างๆ (Environment Variables) เช่น รหัสผ่านฐานข้อมูล และ Session Secret
+
+### 3) การอัปเดตโครงสร้าง (Schema Enhancements)
+- **Customer Table**: เพิ่มฟิลด์ `Username` เพื่อให้สอดคล้องกับระบบ Login และช่วยในการค้นหาข้อมูล (เชื่อมต่อผ่าน `authController.js` และ `directPgSync.js`)
+- **Address Handling**: ปรับระดับ Model และ Controller ให้ฟิลด์ `Address` เป็น `null` ได้ (Optional) หากผู้ใช้ยังไม่กรอกตอนสมัคร
+- **Automatic Sync**: เปิดใช้งาน `{ alter: true }` ใน Sequelize เพื่อให้ฐานข้อมูลใน pgAdmin4 อัปเดตโครงสร้างตามโค้ดล่าสุดโดยอัตโนมัติเมื่อ Restart แอป
+
+### 4) ความเสถียรของระบบ (System Stability)
+- **Sequential Startup**: ปรับปรุง `app.js` ให้รันการตรวจสอบ Schema ให้เสร็จสิ้นก่อนเริ่มการย้ายข้อมูล (Migration) เพื่อป้องกันปัญหา Column not found
 
 ---
 

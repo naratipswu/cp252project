@@ -32,18 +32,18 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'view'));
 ensureUploadDirectories();
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
-ensureFullSchemaReady().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error('Schema sync failed:', error.message);
-});
-ensureCameraStoreReady().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error('Camera store initialization failed:', error.message);
-});
-syncLegacyDataToPostgres().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error('Legacy data sync failed:', error.message);
-});
+async function initializeApp() {
+  try {
+    await ensureFullSchemaReady();
+    await ensureCameraStoreReady();
+    await syncLegacyDataToPostgres();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Initialization failed:', error.message);
+  }
+}
+
+initializeApp();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());

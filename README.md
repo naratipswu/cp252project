@@ -39,6 +39,7 @@ erDiagram
         integer CustomerID PK
         varchar FirstName
         varchar LastName
+        varchar Username
         varchar Phone
         varchar Email
         text Address
@@ -110,7 +111,7 @@ Security : มีการเข้ารหัสรหัสผ่าน (Encr
 * ใช้กระบวนการพัฒนาแบบ Agile (Scrum)
 * **Backend**: Node.js, Express.js
 * **Frontend**: EJS, TailwindCSS, Vanilla JS
-* **Database**: PostgreSQL / SQLite (via Sequelize ORM)
+* **Database**: PostgreSQL (Primary) / SQLite (Fallback) via Sequelize ORM
 * **Design Tools**: Figma, Canva
 * **Development Tools**: VS Code, Git, GitHub Projects 
 
@@ -263,7 +264,31 @@ graph TD
 https://www.figma.com/proto/YVqTr3EiIpPg1v7y9oaU4G/CP252-Project?node-id=0-1&t=kSAoM3fooFb1x5MB-1
 
 
-## Start Web use
-### node app.js
-### http://localhost:3000
+## 🚀 Getting Started
+
+### 1. Prerequisites
+- **Node.js**: ติดตั้ง Node.js เวอร์ชันล่าสุด
+- **PostgreSQL**: ติดตั้งและสร้าง Database ชื่อ `camera_rental`
+
+### 2. Configuration
+สร้างไฟล์ `.env` ที่ Root เพื่อเชื่อมต่อฐานข้อมูล:
+```env
+DB_DIALECT=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=camera_rental
+DB_USER=postgres
+DB_PASSWORD=YOUR_PASSWORD
+```
+
+### 3. Installation
+```powershell
+npm install
+```
+
+### 4. Start Application
+```powershell
+node app.js
+```
+เปิดบราวเซอร์ไปที่: **http://localhost:3000**
 

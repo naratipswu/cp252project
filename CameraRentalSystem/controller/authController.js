@@ -25,7 +25,8 @@ function normalizePersonFields(input) {
     const firstName = typeof input.firstName === 'string' ? input.firstName.trim() : '';
     const lastName = typeof input.lastName === 'string' ? input.lastName.trim() : '';
     const phone = typeof input.phone === 'string' ? input.phone.trim() : '';
-    const address = typeof input.address === 'string' ? input.address.trim() : '';
+    const addressRaw = typeof input.address === 'string' ? input.address.trim() : '';
+    const address = addressRaw || null;
     return { firstName, lastName, phone, address };
 }
 
@@ -54,9 +55,10 @@ async function upsertCustomerFromUser(user) {
     await Customer.create({
         FirstName: person.firstName || fallbackName.firstName,
         LastName: person.lastName || fallbackName.lastName,
+        Username: user.username,
         Phone: person.phone || '0000000000',
         Email: email,
-        Address: person.address || 'Created from app registration'
+        Address: person.address || null
     });
 }
 
@@ -309,7 +311,7 @@ exports.register = async (req, res) => {
         firstName: normalizedFirstName,
         lastName: normalizedLastName,
         phone: normalizedPhone,
-        address: normalizedAddress,
+        address: normalizedAddress || null,
         role: 'user',
         avatar: null
     };
