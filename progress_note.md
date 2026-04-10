@@ -423,6 +423,113 @@ LIMIT 50;
 
 ---
 
+## 🆕 อัปเดตล่าสุด (11/04/2026) — สำรวจไฟล์ทั้งโปรเจกต์ + ช่องว่างที่ยังไม่ทำ (Full Repo Review)
+
+> บล็อกนี้สรุปจากการอ่านโค้ดและโครงสร้างไฟล์จริงในรีโป้ ณ วันที่ **11 เมษายน 2026** เพื่อให้เอกสารตรงกับสถานะปัจจุบัน แยก **(ก) สิ่งที่มีแล้ว**, **(ข) สิ่งที่เอกสารเก่าส่วนต้นฉบับเล่าไม่ตรงโค้ด**, **(ค) สิ่งที่ยังไม่มีหรือยังไม่ต่อสาย**, และ **(ง) งานที่อาจต้องทำต่อ** แบบละเอียด
+
+### A) โครงสร้างโปรเจกต์จริง (แผนที่ไฟล์หลัก)
+
+รากโปรเจกต์ (`cp252project/`) ใช้ **`npm start` → `node CameraRentalSystem/app.js`** และอ่าน `.env` จาก **รากรีโป้** (`config/db.js` โหลด `../.env`)
+
+| พื้นที่ | พาธ / ไฟล์ | บทบาท |
+|--------|-------------|--------|
+| เซิร์ฟเวอร์หลัก | `CameraRentalSystem/app.js` | ตั้งค่า Express, session, static `/uploads`, ประกาศ route ทั้งหมด, `initializeApp()` ก่อน `listen` |
+| Controller | `CameraRentalSystem/controller/authController.js` | Login/Register/Logout, CSRF, profile, avatar, admin accounts, mock Google |
+| | `CameraRentalSystem/controller/cameraController.js` | Browse, add camera (admin), book, confirm, payment, admin dashboard, admin payment slips approve/reject |
+| | `CameraRentalSystem/controller/cartController.js` | ตะกร้า (รายการ rental ของ user), ยกเลิกรายการ |
+| | `CameraRentalSystem/controller/mediaController.js` | Media manager อัปโหลด + ผูกรูปกับ Equipment |
+| Service | `CameraRentalSystem/service/schemaSync.js` | `sync` ตารางตามลำดับ FK, เพิ่มคอลัมน์ legacy, migrate จากตารางเก่า (`Users`, `Cameras`, `Bookings`, `Payments`) |
+| | `CameraRentalSystem/service/cameraStore.js` | Seed กล้องเริ่มต้น, `getAllCameras`, `addCamera` |
+| | `CameraRentalSystem/service/uploadService.js` | สร้างโฟลเดอร์ `public/uploads/*`, multer จำกัดชนิดไฟล์/ขนาด |
+| | `CameraRentalSystem/service/adminSeed.js` | สร้าง admin คนแรกจาก env ถ้ายังไม่มี admin |
+| | `CameraRentalSystem/service/pgRealtime.js` | API SQL เสริม (ปิดค่าเริ่มต้น, ต้อง `ENABLE_PG_REALTIME=true`) |
+| View (EJS) | `CameraRentalSystem/view/*.ejs` | รวม **14 ไฟล์**: `main`, `signin`, `signup`, `browse_camera`, `booking_confirm`, `payment`, `payment_success`, `cart`, `profile`, `admin`, `admin_accounts`, `admin_media`, `admin_payment_slips` |
+| Config DB | `config/db.js` | Sequelize **PostgreSQL เท่านั้น** (`DB_DIALECT` อื่นถูกปฏิเสธ) |
+| Models | `models/*.js` | โมเดล Sequelize + `models/index.js` ผูก association |
+| ทดสอบ | `tests/*.test.js` | Jest: auth, booking, camera, payment, promotion, user, database, `cameraController.booking` |
+| Util | `utils/logic.js` | `calculatePrice`, `applyMembershipDiscount`, `validateBookingDates` (ใช้กับเทส/สคริปต์ ไม่ได้ผูก flow หลักของเว็บ) |
+| สคริปต์ | `scripts/profile.js` | วัด performance ของฟังก์ชันใน `utils/logic.js` |
+| รากอื่น | `profile-test.js` | สคริปต์วัด memory/time กับ Sequelize operations |
+| เอกสาร | `progress_note.md`, `finalrequirement.md`, `README.md`, `reports/reports-01.md` | ข้อกำหนด / รายงาน |
+
+**หมายเหตุชื่อโฟลเดอร์:** เอกสารต้นฉบับบางส่วนเรียก `model/`, `view/`, `controller/` แยกที่ราก — ในรีโป้จริง **โมเดลอยู่ที่ `models/` (ราก)** และ **view/controller อยู่ใต้ `CameraRentalSystem/`** ไม่ได้อยู่คู่กับ `models/` ในโฟลเดอร์เดียว
+
+### B) ตารางและโมเดล Sequelize (สถานะการใช้งาน)
+
+| ตาราง/โมเดล | ใช้ในแอปหลัก | หมายเหตุ |
+|-------------|---------------|----------|
+| `Category`, `Equipment` | ✅ | แหล่งสินค้า + seed เริ่มต้น |
+| `Customer` | ✅ | ผู้ใช้ + role + password hash + avatar path |
+| `Rental`, `RentalDetail` | ✅ | การจองและช่วงวันที่ |
+| `Payment` | ✅ | สลิปโอนเงิน + สถานะ `pending`/`approved`/`rejected` — **มี unique index บน `RentalID` → หนึ่ง rental มีได้มากสุดหนึ่งแถว payment (1:1 ในทางปฏิบัติ)** แม้ใน `index.js` จะประกาศ `hasMany` |
+| `Return` | ⚠️ มีตาราง/โมเดล | **ยังไม่มีหน้าเว็บหรือ controller** สำหรับบันทึกคืนอุปกรณ์ / ค่าปรับ / ค่าเสียหาย |
+| `SyncLog` | ⚠️ มีตาราง/โมเดล | **ไม่พบการ `create` SyncLog ใน runtime** จากแอปหลัก — ใช้สำหรับ schema sync เท่านั้น การ “ดูสถานะ sync” ในเว็บยังไม่มี |
+| `Promotion` (`models/promotion.js`) | ❌ ไม่ได้ register ใน `models/index.js` | โมเดลค้าง/เตรียมไว้ — **ไม่มี route หรือ UI** |
+| Alias | `User`→`Customer`, `Camera`→`Equipment`, `Booking`→`Rental` | ใน `models/index.js` เพื่อความเข้ากันได้ย้อนหลัง |
+| `models/booking.js`, `camera.js`, `user.js` | Re-export | ชี้ไป `rental`, `equipment`, `customer` ตามลำดับ |
+
+### C) เส้นทาง HTTP ที่มีใน `app.js` (สรุปฟังก์ชัน)
+
+- **Auth & หน้าแรก:** `GET /`, `/main`, `/welcome`, `/signin`, `/signup`, `POST /login`, `/register`, `/login/google`, `/logout`, `GET /profile`, `POST /profile/avatar`
+- **สินค้า & จอง:** `GET /browse`, `POST /book`, `GET/POST /booking/:id/confirm`, `GET /booking/:id/payment`, `POST /booking/:id/payment/confirm`, `POST /admin/cameras`
+- **ตะกร้า:** `GET /cart`, `POST /cart/:rentalId/cancel`
+- **แอดมิน:** `GET /admin`, `/admin/accounts`, `/admin/payment-slips`, `/admin/media` และ POST สำหรับ role, สร้าง admin, อนุมัติ/ปฏิเสธสลิป, อัปโหลด media
+- **API เสริม (ถ้าเปิด):** `GET /api/sql/health`, `/api/sql/revenue-daily`, `/api/sql/active-rentals`
+
+### D) สิ่งที่เอกสารส่วนต้นฉบับ (30/3/2026) อธิบายไม่ตรงโค้ดปัจจุบัน — ควรอ่านคู่กับบล็อกนี้
+
+1. **ไม่มี `loginAdmin` แบบ hardcode `admin` / `password123`** — การ login ใช้ตาราง `Customer` + `bcrypt` และ admin คนแรกมาจาก **`adminSeed`** (env `ADMIN_*`) หรือสร้างผ่านหน้า admin
+2. **ไม่มีการเก็บ booking ในอาร์เรย์/JSON ในหน่วยความจำ** — การจองเขียนลง **PostgreSQL** (`Rental` + `RentalDetail`) พร้อม **transaction + ตรวจช่วงวันทับ** (ไม่ใช่ “ยอมจองซ้อนไม่สนใจ” แบบที่เอกสารเก่าบางย่อหน้าเขียน)
+3. **ส่วน G ในอัปเดต 09/04** ที่บอกว่าระบบรองรับ “local JSON ก่อน” — **โค้ดปัจจุบันบังคับ Postgres** (`config/db.js`) ไม่มี fallback SQLite/JSON ในแอปหลัก (อาจมีไฟล์ `database.sqlite` ค้างจากการทดลองเก่าในรีโป้ แต่ไม่ใช่แหล่งข้อมูลของแอปที่รันอยู่)
+4. **อัปเดต 10/04** อ้าง `directPgSync.js` — **ในรีโป้ไม่มีไฟล์นี้** การซิงก์/มิเกรชันอยู่ที่ **`schemaSync.js`** และ `migrateLegacyPostgresTables()` แทน
+5. **ความสัมพันธ์ Rental–Payment:** เอกสารเคยเขียนแบบ 1:N — ใน schema จริง **ห้ามซ้ำ `RentalID` ใน `Payment`** (unique) จึงเป็น **1 rental : 0 หรือ 1 payment**
+
+### E) สิ่งที่ “มีแล้ว” แต่เอกสารส่วนต้นอาจยังไม่ได้เน้น
+
+1. **ระบบสลิปโอนเงินแบบรอแอดมินอนุมัติ:** อัปโหลดสลิป → `Payment` สถานะ `pending` → แอดมิน approve/reject → approve แล้วตั้ง `Rental` เป็น `completed`
+2. **หน้า `/cart`:** แสดงรายการเช่าที่ยัง `pending`/`active` แยกจากประวัติ, ยกเลิกได้ถ้ายังไม่ส่ง payment
+3. **กรองประเภทกล้องใน browse:** query `type=digital|film` (heuristic จาก brand/model)
+4. **ความปลอดภัย:** CSRF บนฟอร์ม POST สำคัญ, session hardening, mock Google จำกัด env
+5. **Optional `pg` API:** รายงาน revenue / active rentals สำหรับ demo SQL (แยก pool, rate limit)
+
+### F) ช่องว่าง / ยังไม่ครบ / orphan (รายการให้เอาไปทำต่อ)
+
+| ลำดับ | หัวข้อ | รายละเอียด |
+|-------|--------|------------|
+| 1 | **หน้า `payment_success.ejs`** | มีไฟล์ใน `view/` แต่ **ไม่มี route ใน `app.js` ที่เรียก `render('payment_success')`** — จึงยังไม่ถูกใช้งานจริง (dead view) |
+| 2 | **โมเดล `Return`** | ไม่มี flow คืนอุปกรณ์ / คิดค่าปรับ / บันทึก `LateFee`, `DamageFee` ผ่าน UI |
+| 3 | **`SyncLog`** | ตารางมี แต่ **ไม่มีการเขียน log จากแอป** และไม่มีหน้า admin ดูสถานะ — เอกสาร checklist SQL อาจได้ 0 แถวถ้าไม่มี job อื่นเขียน |
+| 4 | **`Promotion`** | ไม่ได้เชื่อม ORM หลัก + ไม่มีหน้าใช้โค้ดส่วนลด |
+| 5 | **`utils/logic.js` (ส่วนลดสมาชิก)** | ไม่ได้ถูกเรียกจาก `cameraController` ตอนคิดราคา — มีแค่เทสและ `scripts/profile.js` |
+| 6 | **แก้ไขโปรไฟล์ครบฟิลด์** | signup เก็บชื่อ/เบอร์/ที่อยู่ใน DB แล้ว แต่ **`profile.ejs` แสดงเฉพาะ username, email, role, avatar** — ไม่มีฟอร์มแก้ชื่อจริง/นามสกุล/โทร/ที่อยู่ |
+| 7 | **ความขัดแย้งกับ `finalrequirement.md` ข้อ 5** | requirement เขียน “ไม่ต้องเช็คว่าถูกจองแล้ว (allow overbooked)” — **โค้ดปัจจุบันป้องกันช่วงวันซ้อน** สำหรับชิ้น equipment เดียวกัน — ถ้าจะตรง requirement ต้องปรับธุรกิจหรือเอกสาร requirement |
+| 8 | **Requirement admin hardcode** | requirement เดิมขอ admin/password hardcode — **ระบบจริงใช้ DB + bcrypt** (ดีกว่าด้านความปลอดภัย แต่ต่างจากข้อความ requirement เดิม) |
+| 9 | **Monitoring / health ใน UI** | ไม่มีหน้า dashboard สุขภาพระบบนอกเหนือ `/admin` และ API เสริม |
+
+### G) รายการไฟล์ EJS และสถานะการอ้างอิงจาก route
+
+| ไฟล์ | ใช้งานผ่าน controller |
+|------|-------------------------|
+| `main.ejs` | ✅ `showMain`, `showLanding` |
+| `signin.ejs`, `signup.ejs` | ✅ |
+| `browse_camera.ejs` | ✅ |
+| `booking_confirm.ejs` | ✅ |
+| `payment.ejs` | ✅ |
+| `cart.ejs`, `profile.ejs` | ✅ |
+| `admin.ejs`, `admin_accounts.ejs`, `admin_media.ejs`, `admin_payment_slips.ejs` | ✅ |
+| `payment_success.ejs` | ❌ ไม่พบใน `app.js` (orphan) |
+
+### H) แนวทางอัปเดตเอกสาร/โค้ดถัดไป (ถ้าต้องการ “ครบ” ตามรีวิวนี้)
+
+1. **เลือกอย่างใดอย่างหนึ่ง:** ลบหรือผูก route ให้ `payment_success.ejs` หรือลบไฟล์ถ้าไม่ใช้
+2. **ถ้าต้องการใช้ `Return`:** เพิ่ม route + view สำหรับคืนอุปกรณ์และบันทึกค่าธรรมเนียม
+3. **ถ้าต้องการ `SyncLog` มีความหมาย:** เพิ่มการเขียน log หลัง migrate หรือหลัง import — หรือเอา checklist SQL ออกจากเอกสารถ้าไม่มีข้อมูล
+4. **อัปเดต `finalrequirement.md` / checklist** ให้ตรงพฤติกรรมจริง (overlap booking, auth admin)
+5. **แก้เอกสารต้นฉบับส่วนบน** หรือใส่คำเตือน “ล้าสมัย — อ่านบล็อก 11/04/2026” เพื่อไม่ให้ทีมงง
+
+---
+
 ## 🧾 หมายเหตุการใช้งานเอกสารฉบับนี้
-- ส่วนหัวเอกสาร (ก่อนหน้านี้) เป็น baseline เดิมช่วงเริ่มทำโปรเจกต์
-- ให้ใช้หัวข้อ **อัปเดตล่าสุด (10/04/2026)** เป็นหลักฐานยืนยันความถูกต้องของโครงสร้างปัจจุบัน
+- ส่วนหัวเอกสาร (ก่อนหน้านี้) เป็น baseline เดิมช่วงเริ่มทำโปรเจกต์ — มีรายละเอียดที่ไม่ตรงโค้ดปัจจุบัน
+- ให้ใช้หัวข้อ **อัปเดตล่าสุด (11/04/2026)** เป็นหลักอ้างอิงความถูกต้องของโครงสร้างและพฤติกรรมระบบ ณ วันดังกล่าว (ทับความเก่าที่ขัดแย้ง)
+- หัวข้อ **อัปเดต (09/04/2026)** และ **(10/04/2026)** ยังมีค่าทางประวัติ แต่ถ้าขัดกับบล็อก **11/04/2026** ให้ยึด **11/04/2026**
