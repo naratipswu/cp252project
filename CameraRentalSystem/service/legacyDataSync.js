@@ -11,7 +11,7 @@ const {
 const { cameras, users, bookings } = require('../model/data');
 
 function usePostgres() {
-  return process.env.DB_DIALECT === 'postgres';
+  return sequelize.getDialect() === 'postgres';
 }
 
 function splitName(username) {

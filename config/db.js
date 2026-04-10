@@ -1,6 +1,8 @@
 const { Sequelize } = require('sequelize');
 
-const dialect = process.env.DB_DIALECT || 'sqlite';
+const hasPostgresEnv =
+  Boolean(process.env.PGHOST || process.env.PGDATABASE || process.env.DB_HOST || process.env.DB_NAME);
+const dialect = process.env.DB_DIALECT || (hasPostgresEnv ? 'postgres' : 'sqlite');
 
 function buildConfig() {
   if (dialect === 'postgres') {

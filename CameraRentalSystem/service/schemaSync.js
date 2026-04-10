@@ -11,7 +11,156 @@ const {
 } = require('../../models');
 
 function usePostgres() {
-  return process.env.DB_DIALECT === 'postgres';
+  return sequelize.getDialect() === 'postgres';
+}
+
+function normalizeTableName(table) {
+  if (typeof table === 'string') return table;
+  if (table && typeof table.tableName === 'string') return table.tableName;
+  return String(table || '');
+}
+
+async function getExistingTablesSet() {
+  const queryInterface = sequelize.getQueryInterface();
+  const tables = await queryInterface.showAllTables();
+  return new Set(tables.map(normalizeTableName));
+}
+
+async function migrateLegacyPostgresTables() {
+  const tables = await getExistingTablesSet();
+  const hasUsers = tables.has('Users');
+  const hasCameras = tables.has('Cameras');
+  const hasBookings = tables.has('Bookings');
+  const hasPayments = tables.has('Payments');
+
+  // Nothing to migrate.
+  if (!hasUsers && !hasCameras && !hasBookings && !hasPayments) return;
+
+  await sequelize.query(`
+    INSERT INTO "Category" ("CategoryName")
+    VALUES ('General')
+    ON CONFLICT DO NOTHING
+  `);
+
+  if (hasUsers) {
+    await sequelize.query(`
+      INSERT INTO "Customer" ("FirstName", "LastName", "Phone", "Email", "Address")
+      SELECT
+        COALESCE(NULLIF(TRIM(u."firstName"), ''), COALESCE(NULLIF(TRIM(u."username"), ''), 'User')),
+        COALESCE(NULLIF(TRIM(u."lastName"), ''), 'User'),
+        COALESCE(NULLIF(TRIM(u."phone"), ''), '0000000000'),
+        LOWER(COALESCE(NULLIF(TRIM(u."email"), ''), CONCAT(COALESCE(NULLIF(TRIM(u."username"), ''), 'user'), '@legacy.local'))),
+        COALESCE(NULLIF(TRIM(u."address"), ''), 'Imported from legacy SQL')
+      FROM "Users" u
+      ON CONFLICT ("Email")
+      DO UPDATE SET
+        "FirstName" = EXCLUDED."FirstName",
+        "LastName" = EXCLUDED."LastName",
+        "Phone" = EXCLUDED."Phone",
+        "Address" = EXCLUDED."Address"
+    `);
+  }
+
+  if (hasCameras) {
+    await sequelize.query(`
+      INSERT INTO "Equipment" ("ModelName", "Brand", "SerialNumber", "DailyRate", "ImageURL", "Status", "CategoryID")
+      SELECT
+        COALESCE(NULLIF(TRIM(c."model"), ''), 'Unknown'),
+        COALESCE(NULLIF(TRIM(c."brand"), ''), 'Unknown'),
+        CONCAT('legacy-camera-', c."id"),
+        COALESCE(c."pricePerDay", 0),
+        c."image",
+        CASE WHEN COALESCE(c."stock", 0) > 0 THEN 'available' ELSE 'maintenance' END,
+        1
+      FROM "Cameras" c
+      ON CONFLICT ("SerialNumber")
+      DO UPDATE SET
+        "ModelName" = EXCLUDED."ModelName",
+        "Brand" = EXCLUDED."Brand",
+        "DailyRate" = EXCLUDED."DailyRate",
+        "ImageURL" = EXCLUDED."ImageURL",
+        "Status" = EXCLUDED."Status"
+    `);
+  }
+
+  if (hasBookings) {
+    const bookingCustomerJoinSql = hasUsers
+      ? 'JOIN "Users" u ON u."username" = b."user" JOIN "Customer" c ON c."Email" = LOWER(COALESCE(NULLIF(TRIM(u."email"), \'\'), CONCAT(COALESCE(NULLIF(TRIM(u."username"), \'\'), \'user\'), \'@legacy.local\')))'
+      : 'JOIN "Customer" c ON c."Email" = LOWER(COALESCE(NULLIF(TRIM(b."user"), \'\'), \'unknown@legacy.local\'))';
+
+    await sequelize.query(`
+      INSERT INTO "Rental" ("RentalDate", "TotalAmount", "RentalStatus", "CustomerID")
+      SELECT
+        COALESCE(b."createdAt", NOW()),
+        COALESCE(b."totalPrice", 0),
+        CASE
+          WHEN b."paymentStatus" = 'cancelled' OR b."bookingStatus" = 'cancelled' THEN 'cancelled'
+          WHEN b."paymentStatus" = 'paid' OR b."bookingStatus" = 'completed' THEN 'completed'
+          WHEN b."bookingStatus" = 'confirmed' THEN 'active'
+          ELSE 'pending'
+        END,
+        c."CustomerID"
+      FROM "Bookings" b
+      ${bookingCustomerJoinSql}
+      WHERE NOT EXISTS (
+        SELECT 1 FROM "Rental" r
+        WHERE r."CustomerID" = c."CustomerID"
+          AND r."RentalDate" = COALESCE(b."createdAt", NOW())
+          AND r."TotalAmount" = COALESCE(b."totalPrice", 0)
+      )
+    `);
+
+    await sequelize.query(`
+      INSERT INTO "RentalDetail" ("RentalID", "EquipmentID", "StartDate", "EndDate", "SubTotal")
+      SELECT
+        r."RentalID",
+        e."EquipmentID",
+        b."startDate",
+        b."endDate",
+        COALESCE(b."totalPrice", 0)
+      FROM "Bookings" b
+      ${bookingCustomerJoinSql}
+      JOIN "Equipment" e ON e."SerialNumber" = CONCAT('legacy-camera-', b."cameraId")
+      JOIN "Rental" r ON r."CustomerID" = c."CustomerID"
+        AND r."TotalAmount" = COALESCE(b."totalPrice", 0)
+        AND r."RentalDate" = COALESCE(b."createdAt", NOW())
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM "RentalDetail" rd
+        WHERE rd."RentalID" = r."RentalID"
+          AND rd."EquipmentID" = e."EquipmentID"
+          AND rd."StartDate" = b."startDate"
+          AND rd."EndDate" = b."endDate"
+      )
+    `);
+  }
+
+  if (hasPayments && hasBookings) {
+    const paymentCustomerJoinSql = hasUsers
+      ? 'JOIN "Users" u ON u."username" = b."user" JOIN "Customer" c ON c."Email" = LOWER(COALESCE(NULLIF(TRIM(u."email"), \'\'), CONCAT(COALESCE(NULLIF(TRIM(u."username"), \'\'), \'user\'), \'@legacy.local\')))'
+      : 'JOIN "Customer" c ON c."Email" = LOWER(COALESCE(NULLIF(TRIM(b."user"), \'\'), \'unknown@legacy.local\'))';
+
+    await sequelize.query(`
+      INSERT INTO "Payment" ("RentalID", "PaymentMethod", "Amount", "PaymentDate")
+      SELECT
+        r."RentalID",
+        COALESCE(NULLIF(TRIM(p."PaymentMethod"), ''), 'legacy-payment'),
+        COALESCE(p."Amount", 0),
+        COALESCE(p."PaymentDate", NOW())
+      FROM "Payments" p
+      JOIN "Bookings" b ON b."id" = p."BookingID"
+      ${paymentCustomerJoinSql}
+      JOIN "Rental" r ON r."CustomerID" = c."CustomerID"
+        AND r."TotalAmount" = COALESCE(b."totalPrice", 0)
+        AND r."RentalDate" = COALESCE(b."createdAt", NOW())
+      WHERE NOT EXISTS (
+        SELECT 1 FROM "Payment" np
+        WHERE np."RentalID" = r."RentalID"
+          AND np."Amount" = COALESCE(p."Amount", 0)
+          AND np."PaymentDate" = COALESCE(p."PaymentDate", NOW())
+      )
+    `);
+  }
 }
 
 async function ensureFullSchemaReady() {
@@ -28,6 +177,9 @@ async function ensureFullSchemaReady() {
   await Payment.sync();
   await Return.sync();
   await SyncLog.sync();
+
+  // If older class schema exists, migrate it into ERD tables.
+  await migrateLegacyPostgresTables();
 }
 
 module.exports = {

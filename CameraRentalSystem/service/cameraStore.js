@@ -6,7 +6,7 @@ const Category = require('../../models/category');
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=400';
 
 function usePostgresCameraStore() {
-  return process.env.DB_DIALECT === 'postgres';
+  return sequelize.getDialect() === 'postgres';
 }
 
 async function ensureCameraStoreReady() {

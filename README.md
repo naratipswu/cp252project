@@ -9,6 +9,76 @@
 
 * 3.**นาย ปกรณ์เกียรติ จิมแสง 67102010520**
 
+## 🗺️ Database ER Diagram
+```mermaid
+erDiagram
+    Category ||--o{ Equipment : "has"
+    Customer ||--o{ Rental : "makes"
+    Rental ||--o{ RentalDetail : "contains"
+    Equipment ||--o{ RentalDetail : "is rented in"
+    Rental ||--o{ Payment : "is paid by"
+    RentalDetail ||--o1 Return : "is returned as"
+
+    Category {
+        integer CategoryID PK
+        varchar CategoryName
+    }
+
+    Equipment {
+        integer EquipmentID PK
+        varchar ModelName
+        varchar Brand
+        varchar SerialNumber
+        decimal DailyRate
+        varchar ImageURL
+        varchar Status
+        integer CategoryID FK
+    }
+
+    Customer {
+        integer CustomerID PK
+        varchar FirstName
+        varchar LastName
+        varchar Phone
+        varchar Email
+        text Address
+    }
+
+    Rental {
+        integer RentalID PK
+        integer CustomerID FK
+        timestamp RentalDate
+        decimal TotalAmount
+        varchar RentalStatus
+    }
+
+    RentalDetail {
+        integer RentalDetailID PK
+        integer RentalID FK
+        integer EquipmentID FK
+        date StartDate
+        date EndDate
+        decimal SubTotal
+    }
+
+    Payment {
+        integer PaymentID PK
+        integer RentalID FK
+        varchar PaymentMethod
+        decimal Amount
+        timestamp PaymentDate
+    }
+
+    Return {
+        integer ReturnID PK
+        integer RentalDetailID FK
+        timestamp ActualReturnDate
+        decimal LateFee
+        decimal DamageFee
+        text Notes
+    }
+```
+
 ## 1. ที่มาของปัญหาและความสำคัญ (Background & Significance)
 - ในปัจจุบันคนสมัยใหม่นิยมถ่ายรูปด้วยกล้องดิจิทัล กล้องฟิล์ม และโทรศัพท์มือถือรุ่นเก่า เพื่อให้ได้สไตล์ภาพที่แตกต่าง แต่กล้องหลายรุ่นมีราคาสูงหรือหายาก การเช่ากล้องจึงเป็นทางเลือกที่ได้รับความนิยม อย่างไรก็ตาม ร้านเช่ากล้องหลายแห่งยังมีปัญหาในการจัดการข้อมูลการเช่า–คืนและสถานะอุปกรณ์ จึงจำเป็นต้องมีระบบจัดการที่ช่วยให้การทำงานเป็นระเบียบ สะดวก และลดความผิดพลาดในการให้บริการ
 ## 2. จุดประสงค์ของ Project (Objectives)
@@ -38,8 +108,11 @@ Data Integrity : มีระบบป้องกันการจองซ้
 Security : มีการเข้ารหัสรหัสผ่าน (Encryption/Hashing) และรับส่งข้อมูลผ่าน HTTPS โดยจำกัดสิทธิ์ให้เฉพาะ Admin เท่านั้นที่เข้าถึงระบบหลังบ้านได้
 ### 3.4 เครื่องมือและการพัฒนา (Tools & Methodology)
 * ใช้กระบวนการพัฒนาแบบ Agile (Scrum)
-Design Tools: Figma, Canva
-Development Tools: VS Code, Git, GitHub Projects 
+* **Backend**: Node.js, Express.js
+* **Frontend**: EJS, TailwindCSS, Vanilla JS
+* **Database**: PostgreSQL / SQLite (via Sequelize ORM)
+* **Design Tools**: Figma, Canva
+* **Development Tools**: VS Code, Git, GitHub Projects 
 
 ### 4. Requirement
 #### Functional Requirements
