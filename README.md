@@ -17,7 +17,7 @@ erDiagram
     Rental ||--o{ RentalDetail : "contains"
     Equipment ||--o{ RentalDetail : "is rented in"
     Rental ||--o{ Payment : "is paid by"
-    RentalDetail ||--o1 Return : "is returned as"
+    RentalDetail ||--o| Return : "is returned as"
 
     Category {
         integer CategoryID PK
