@@ -7,14 +7,16 @@ async function getCustomerForSession(req) {
   return Customer.findOne({ where: { Username: username } });
 }
 
-function toCartItem(detail, paidRentalIds) {
+function toCartItem(detail, paymentByRentalId) {
   const rental = detail.Rental;
   const equipment = detail.Equipment;
-  const isPaid = paidRentalIds.has(detail.RentalID);
+  const payment = paymentByRentalId.get(detail.RentalID) || null;
+  const isPaid = Boolean(payment);
   return {
     rentalId: detail.RentalID,
     rentalStatus: rental.RentalStatus,
     paymentStatus: isPaid ? 'paid' : 'unpaid',
+    slipPath: payment ? payment.SlipPath || null : null,
     startDate: detail.StartDate,
     endDate: detail.EndDate,
     totalAmount: Number(rental.TotalAmount),
@@ -43,14 +45,16 @@ exports.showCart = async (req, res) => {
   const payments = rentalIds.length > 0
     ? await Payment.findAll({ where: { RentalID: { [Op.in]: rentalIds } } })
     : [];
-  const paidRentalIds = new Set(payments.map((p) => p.RentalID));
+  const paymentByRentalId = new Map(payments.map((p) => [p.RentalID, p]));
 
-  const items = details.map((d) => toCartItem(d, paidRentalIds));
+  const items = details.map((d) => toCartItem(d, paymentByRentalId));
   const openItems = items.filter((i) => i.rentalStatus === 'pending' || i.rentalStatus === 'active');
+  const historyItems = items.filter((i) => i.rentalStatus !== 'pending' && i.rentalStatus !== 'active');
 
   return res.render('cart', {
     user: req.session.user,
-    items: openItems
+    items: openItems,
+    historyItems
   });
 };
 

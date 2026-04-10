@@ -42,7 +42,11 @@ exports.showMain = (req, res) => {
         if(req.session.user.role === 'admin') return res.redirect('/admin');
         return res.redirect('/browse');
     }
-    res.render('main', { error: null });
+    res.render('main', { error: null, user: null });
+};
+
+exports.showLanding = (req, res) => {
+    res.render('main', { error: null, user: req.session.user || null });
 };
 
 exports.showSignIn = (req, res) => {
@@ -62,44 +66,13 @@ exports.showProfile = (req, res) => {
     return Customer.findOne({ where: { Username: currentUsername } })
         .then((user) => {
             if (!user) return res.status(404).send('User not found');
-            const { RentalDetail, Rental, Equipment, Payment } = require('../../models');
-            return RentalDetail.findAll({
-                include: [
-                    { model: Rental, required: true, where: { CustomerID: user.CustomerID } },
-                    { model: Equipment, required: true }
-                ],
-                order: [['RentalDetailID', 'DESC']]
-            }).then((details) => {
-                const rentalIds = details.map((d) => d.RentalID);
-                if (rentalIds.length === 0) {
-                    return res.render('profile', {
-                        user: {
-                            username: user.Username,
-                            email: user.Email,
-                            role: user.Role,
-                            avatar: user.AvatarPath || null
-                        },
-                        bookings: []
-                    });
+            return res.render('profile', {
+                user: {
+                    username: user.Username,
+                    email: user.Email,
+                    role: user.Role,
+                    avatar: user.AvatarPath || null
                 }
-                return Payment.findAll({ where: { RentalID: rentalIds } })
-                    .then((payments) => new Set(payments.map((p) => p.RentalID)))
-                    .then((paidRentalIds) => res.render('profile', {
-                        user: {
-                            username: user.Username,
-                            email: user.Email,
-                            role: user.Role,
-                            avatar: user.AvatarPath || null
-                        },
-                        bookings: details.map((d) => ({
-                            cameraModel: `${d.Equipment.Brand} ${d.Equipment.ModelName}`,
-                            startDate: d.StartDate,
-                            endDate: d.EndDate,
-                            totalPrice: Number(d.Rental.TotalAmount),
-                            bookingStatus: d.Rental.RentalStatus,
-                            paymentStatus: paidRentalIds.has(d.RentalID) ? 'paid' : 'unpaid'
-                        }))
-                    }));
             });
         })
         .catch(() => res.status(500).send('Failed to load profile'));

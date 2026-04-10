@@ -20,13 +20,23 @@ const Payment = sequelize.define('Payment', {
     allowNull: false,
     defaultValue: DataTypes.NOW
   },
+  SlipPath: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   RentalID: {
     type: DataTypes.INTEGER,
     allowNull: false
   }
 }, {
   tableName: 'Payment',
-  timestamps: false
+  timestamps: false,
+  indexes: [
+    {
+      unique: true,
+      fields: ['RentalID']
+    }
+  ]
 });
 
 module.exports = Payment;

@@ -21,10 +21,20 @@
             <p class="text-3xl font-bold text-green-700"><%= booking.totalPrice %> THB</p>
         </div>
 
-        <form action="/booking/<%= booking.id %>/payment/confirm" method="POST">
+        <form action="/booking/<%= booking.id %>/payment/confirm" method="POST" enctype="multipart/form-data" class="text-left">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="category" value="slips">
+            <label for="slipFile" class="block text-sm font-medium text-gray-700 mb-2">แนบสลิปการโอน</label>
+            <input
+                id="slipFile"
+                name="slipFile"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.gif"
+                class="block w-full text-sm text-gray-700 mb-4 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                required
+            >
             <button type="submit" class="w-full py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition">
-                Confirm Payment
+                Confirm Payment with Slip
             </button>
         </form>
 

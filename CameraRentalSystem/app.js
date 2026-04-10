@@ -16,7 +16,7 @@ const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 const sessionSecret = process.env.SESSION_SECRET;
 const forceSecureCookie = process.env.SESSION_COOKIE_SECURE === 'true';
-const useSecureCookie = forceSecureCookie;
+const useSecureCookie = forceSecureCookie ? true : (isProduction ? 'auto' : false);
 
 if (!sessionSecret || sessionSecret === 'change-this-session-secret') {
   throw new Error('SESSION_SECRET must be set to a strong value');
@@ -25,7 +25,7 @@ if (isProduction && process.env.ENABLE_MOCK_GOOGLE_LOGIN === 'true') {
   throw new Error('ENABLE_MOCK_GOOGLE_LOGIN must be disabled in production');
 }
 
-if (forceSecureCookie) {
+if (isProduction || forceSecureCookie) {
   app.set('trust proxy', 1);
 }
 
@@ -61,6 +61,7 @@ app.use(authController.attachCsrfToken);
 // 1. Auth & Main
 app.get('/', authController.showMain);
 app.get('/main', authController.showMain);
+app.get('/welcome', authController.showLanding);
 
 app.get('/signin', authController.showSignIn);
 app.get('/signup', authController.showSignUp);
@@ -87,7 +88,13 @@ app.post('/book', authController.requireAuth, authController.requireCsrf, camera
 app.get('/booking/:bookingId/confirm', authController.requireAuth, cameraController.showBookingConfirm);
 app.post('/booking/:bookingId/confirm', authController.requireAuth, authController.requireCsrf, cameraController.confirmBooking);
 app.get('/booking/:bookingId/payment', authController.requireAuth, cameraController.showPaymentPage);
-app.post('/booking/:bookingId/payment/confirm', authController.requireAuth, authController.requireCsrf, cameraController.confirmPayment);
+app.post(
+  '/booking/:bookingId/payment/confirm',
+  authController.requireAuth,
+  authController.requireCsrf,
+  uploadImage.single('slipFile'),
+  cameraController.confirmPayment
+);
 
 // Admin dashboard 
 app.get('/admin', authController.requireAdmin, cameraController.showAdminDashboard);

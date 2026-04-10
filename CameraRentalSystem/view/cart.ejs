@@ -104,6 +104,62 @@
         <% }) %>
       </div>
     <% } %>
+
+    <section class="mt-10">
+      <div class="flex items-end justify-between mb-4">
+        <div>
+          <h2 class="text-xl font-bold text-gray-900">Booking History</h2>
+          <p class="text-sm text-gray-500">รายการที่เสร็จสิ้นหรือถูกยกเลิก</p>
+        </div>
+      </div>
+
+      <% if (!historyItems || historyItems.length === 0) { %>
+        <div class="bg-white border rounded-lg p-8 text-center text-gray-600">
+          ยังไม่มีประวัติการจอง
+        </div>
+      <% } else { %>
+        <div class="bg-white border rounded-2xl shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-50 text-gray-600">
+                <tr>
+                  <th class="text-left px-4 py-3 border-b">Rental</th>
+                  <th class="text-left px-4 py-3 border-b">Camera</th>
+                  <th class="text-left px-4 py-3 border-b">Dates</th>
+                  <th class="text-left px-4 py-3 border-b">Total</th>
+                  <th class="text-left px-4 py-3 border-b">Booking</th>
+                  <th class="text-left px-4 py-3 border-b">Payment</th>
+                  <th class="text-left px-4 py-3 border-b">Slip</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% historyItems.forEach((item) => { %>
+                  <tr class="odd:bg-white even:bg-gray-50/70">
+                    <td class="px-4 py-3 border-b border-gray-100 font-medium text-gray-800">#<%= item.rentalId %></td>
+                    <td class="px-4 py-3 border-b border-gray-100 text-gray-800"><%= item.camera.brand %> <%= item.camera.model %></td>
+                    <td class="px-4 py-3 border-b border-gray-100 text-gray-700"><%= item.startDate %> - <%= item.endDate %></td>
+                    <td class="px-4 py-3 border-b border-gray-100 font-semibold text-gray-900"><%= item.totalAmount %> THB</td>
+                    <td class="px-4 py-3 border-b border-gray-100">
+                      <span class="px-2 py-1 rounded-full text-xs <%= item.rentalStatus === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800' %>">
+                        <%= item.rentalStatus %>
+                      </span>
+                    </td>
+                    <td class="px-4 py-3 border-b border-gray-100 text-gray-700"><%= item.paymentStatus %></td>
+                    <td class="px-4 py-3 border-b border-gray-100">
+                      <% if (item.slipPath) { %>
+                        <a href="<%= item.slipPath %>" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 underline">View slip</a>
+                      <% } else { %>
+                        <span class="text-gray-400">-</span>
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } %>
+    </section>
   </main>
 </body>
 </html>
