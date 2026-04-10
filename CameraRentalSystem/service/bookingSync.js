@@ -1,8 +1,9 @@
+const sequelize = require('../../config/db');
 const { SyncLog, Customer, Equipment, Rental, RentalDetail, Payment } = require('../../models');
 const { users, cameras } = require('../model/data');
 
 function usePostgres() {
-  return process.env.DB_DIALECT === 'postgres';
+  return sequelize.getDialect() === 'postgres';
 }
 
 function deriveRentalStatus(booking) {
@@ -73,7 +74,13 @@ async function syncBookingToPostgres(booking) {
     let rental;
     if (detail) {
       rental = await Rental.findByPk(detail.RentalID);
-    } else {
+      // Prevent cross-customer collisions for same equipment/date range.
+      if (!rental || Number(rental.CustomerID) !== Number(customer.CustomerID)) {
+        detail = null;
+        rental = null;
+      }
+    }
+    if (!detail) {
       rental = await Rental.create({
         RentalDate: booking.createdAt ? new Date(booking.createdAt) : new Date(),
         TotalAmount: booking.totalPrice || 0,

@@ -11,7 +11,7 @@ const {
 const { cameras, users, bookings } = require('../model/data');
 
 function usePostgres() {
-  return process.env.DB_DIALECT === 'postgres';
+  return sequelize.getDialect() === 'postgres';
 }
 
 function splitName(username) {
@@ -82,9 +82,10 @@ async function syncLegacyDataToPostgres() {
         customer = await Customer.create({
           FirstName: name.firstName,
           LastName: name.lastName,
+          Username: user.username,
           Phone: '0000000000',
           Email: normalizedEmail,
-          Address: 'Imported from legacy JSON'
+          Address: null
         });
         stats.importedCustomers += 1;
       }

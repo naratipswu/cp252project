@@ -21,24 +21,27 @@ async function upsertCustomerDirectPg(user) {
   const firstName = String(user.firstName || chunks[0] || 'User').trim();
   const lastName = String(user.lastName || (chunks.length > 1 ? chunks.slice(1).join(' ') : 'User')).trim();
   const phone = String(user.phone || '0000000000').trim();
-  const address = String(user.address || 'Created from app registration').trim();
+  const addressRaw = String(user.address || '').trim();
+  const address = addressRaw || null;
   const email = String(user.email || `${username}@legacy.local`).toLowerCase();
 
   const sql = `
-    INSERT INTO "Customer" ("FirstName", "LastName", "Phone", "Email", "Address")
-    VALUES ($1, $2, $3, $4, $5)
+    INSERT INTO "Customer" ("FirstName", "LastName", "Username", "Phone", "Email", "Address")
+    VALUES ($1, $2, $3, $4, $5, $6)
     ON CONFLICT ("Email")
     DO UPDATE SET
       "FirstName" = EXCLUDED."FirstName",
       "LastName" = EXCLUDED."LastName",
+      "Username" = EXCLUDED."Username",
       "Phone" = EXCLUDED."Phone",
       "Address" = EXCLUDED."Address"
   `;
 
   try {
-    await getPool().query(sql, [firstName, lastName, phone, email, address]);
+    await getPool().query(sql, [firstName, lastName, username, phone, email, address]);
     return true;
   } catch (error) {
+    console.error('Direct PostgreSQL Sync Error:', error.message);
     return false;
   }
 }

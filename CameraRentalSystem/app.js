@@ -20,6 +20,9 @@ const useSecureCookie = forceSecureCookie;
 if (isProduction && (!sessionSecret || sessionSecret === 'change-this-session-secret')) {
   throw new Error('SESSION_SECRET must be set to a strong value in production');
 }
+if (isProduction && process.env.ENABLE_MOCK_GOOGLE_LOGIN === 'true') {
+  throw new Error('ENABLE_MOCK_GOOGLE_LOGIN must be disabled in production');
+}
 
 if (forceSecureCookie) {
   app.set('trust proxy', 1);
@@ -29,18 +32,18 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'view'));
 ensureUploadDirectories();
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
-ensureFullSchemaReady().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error('Schema sync failed:', error.message);
-});
-ensureCameraStoreReady().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error('Camera store initialization failed:', error.message);
-});
-syncLegacyDataToPostgres().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error('Legacy data sync failed:', error.message);
-});
+async function initializeApp() {
+  try {
+    await ensureFullSchemaReady();
+    await ensureCameraStoreReady();
+    await syncLegacyDataToPostgres();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Initialization failed:', error.message);
+  }
+}
+
+initializeApp();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -71,8 +74,8 @@ app.get('/profile', authController.requireAuth, authController.showProfile);
 app.post(
   '/profile/avatar',
   authController.requireAuth,
-  uploadImage.single('avatarFile'),
   authController.requireCsrf,
+  uploadImage.single('avatarFile'),
   authController.updateProfileAvatar
 );
 
@@ -83,7 +86,7 @@ app.post('/logout', authController.requireAuth, authController.requireCsrf, auth
 
 // 2. Camera Browsing & Booking
 app.get('/browse', cameraController.browseCameras);
-app.post('/admin/cameras', authController.requireAdmin, uploadImage.single('imageFile'), authController.requireCsrf, cameraController.addCamera);
+app.post('/admin/cameras', authController.requireAdmin, authController.requireCsrf, uploadImage.single('imageFile'), cameraController.addCamera);
 app.post('/book', authController.requireAuth, authController.requireCsrf, cameraController.bookCamera);
 app.get('/booking/:bookingId/confirm', authController.requireAuth, cameraController.showBookingConfirm);
 app.post('/booking/:bookingId/confirm', authController.requireAuth, authController.requireCsrf, cameraController.confirmBooking);
@@ -99,8 +102,8 @@ app.get('/admin/media', authController.requireAdmin, mediaController.showMediaMa
 app.post(
   '/admin/media/upload',
   authController.requireAdmin,
-  uploadImage.single('imageFile'),
   authController.requireCsrf,
+  uploadImage.single('imageFile'),
   mediaController.uploadMedia
 );
 

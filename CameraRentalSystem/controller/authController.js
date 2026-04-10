@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { users, bookings, persistData } = require('../model/data');
 const { upsertCustomerDirectPg } = require('../service/directPgSync');
+const sequelize = require('../../config/db');
 const PASSWORD_HASH_ROUNDS = Number(process.env.PASSWORD_HASH_ROUNDS || 10);
 
 function isHash(value) {
@@ -9,7 +10,7 @@ function isHash(value) {
 }
 
 function shouldSyncToPostgres() {
-    return process.env.DB_DIALECT === 'postgres';
+    return sequelize.getDialect() === 'postgres';
 }
 
 function splitName(username) {
@@ -24,8 +25,16 @@ function normalizePersonFields(input) {
     const firstName = typeof input.firstName === 'string' ? input.firstName.trim() : '';
     const lastName = typeof input.lastName === 'string' ? input.lastName.trim() : '';
     const phone = typeof input.phone === 'string' ? input.phone.trim() : '';
-    const address = typeof input.address === 'string' ? input.address.trim() : '';
+    const addressRaw = typeof input.address === 'string' ? input.address.trim() : '';
+    const address = addressRaw || null;
     return { firstName, lastName, phone, address };
+}
+
+function isValidEmail(email) {
+    if (typeof email !== 'string') return false;
+    const normalized = email.trim().toLowerCase();
+    if (!normalized || normalized.length > 254) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
 }
 
 async function upsertCustomerFromUser(user) {
@@ -46,9 +55,10 @@ async function upsertCustomerFromUser(user) {
     await Customer.create({
         FirstName: person.firstName || fallbackName.firstName,
         LastName: person.lastName || fallbackName.lastName,
+        Username: user.username,
         Phone: person.phone || '0000000000',
         Email: email,
-        Address: person.address || 'Created from app registration'
+        Address: person.address || null
     });
 }
 
@@ -161,6 +171,13 @@ exports.createAdminAccount = async (req, res) => {
             success: null
         });
     }
+    if (!isValidEmail(normalizedEmail)) {
+        return res.status(400).render('admin_accounts', {
+            users,
+            error: 'Please provide a valid email address',
+            success: null
+        });
+    }
     if (normalizedPassword.length < 8) {
         return res.status(400).render('admin_accounts', {
             users,
@@ -227,13 +244,18 @@ exports.login = async (req, res) => {
 // Mock Google Login
 exports.loginGoogle = async (req, res) => {
     const isMockGoogleEnabled = process.env.ENABLE_MOCK_GOOGLE_LOGIN === 'true';
+    const nodeEnv = String(process.env.NODE_ENV || '').toLowerCase();
+    const isSafeEnv = nodeEnv === 'development' || nodeEnv === 'dev' || nodeEnv === 'test';
     if (!isMockGoogleEnabled) {
         return res.status(403).send('Google login is disabled');
+    }
+    if (!isSafeEnv) {
+        return res.status(403).send('Google mock login is only available in development/test');
     }
 
     const { email } = req.body;
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+    if (!isValidEmail(normalizedEmail)) {
         return res.render('signin', { error: 'Please provide a valid email' });
     }
 
@@ -267,6 +289,9 @@ exports.register = async (req, res) => {
     if (!normalizedUsername || !normalizedPassword || !normalizedEmail || !normalizedFirstName || !normalizedLastName || !normalizedPhone) {
         return res.render('signup', { error: 'All fields are required' });
     }
+    if (!isValidEmail(normalizedEmail)) {
+        return res.render('signup', { error: 'Please provide a valid email address' });
+    }
 
     if (normalizedPassword.length < 8) {
         return res.render('signup', { error: 'Password must be at least 8 characters' });
@@ -286,7 +311,7 @@ exports.register = async (req, res) => {
         firstName: normalizedFirstName,
         lastName: normalizedLastName,
         phone: normalizedPhone,
-        address: normalizedAddress,
+        address: normalizedAddress || null,
         role: 'user',
         avatar: null
     };

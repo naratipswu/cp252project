@@ -410,6 +410,40 @@ LIMIT 50;
 
 ---
 
+## 🆕 อัปเดตล่าสุด (10/04/2026) — การยืนยันโครงสร้างฐานข้อมูล (ERD Alignment)
+
+> ✅ **สถานะปัจจุบัน:** ตรวจสอบความถูกต้องของ Schema ทั้งหมดเทียบกับ ER Diagram แล้ว
+
+### 1) การตรวจสอบความสอดคล้องกับ ER Diagram
+จากการตรวจสอบไฟล์ในโฟลเดอร์ `models/` และความสัมพันธ์ใน `models/index.js` พบว่าโครงสร้างปัจจุบันตรงตาม Diagram 100%:
+
+1.  **ครบถ้วนทุกตาราง**: มี Model สำหรับ `Category`, `Equipment`, `Customer`, `Rental`, `RentalDetail`, `Payment`, และ `Return`
+2.  **ความสัมพันธ์เป๊ะ**: 
+    - `Category` (1) - `Equipment` (N)
+    - `Customer` (1) - `Rental` (N)
+    - `Rental` (1) - `RentalDetail` (N)
+    - `Equipment` (1) - `RentalDetail` (N)
+    - `Rental` (1) - `Payment` (N)
+    - `RentalDetail` (1) - `Return` (1) (มีการตั้งค่า `unique: true` ที่ `RentalDetailID` ในตาราง Return)
+3.  **Data Types ทันสมัย**:
+    - มีการใช้ `DECIMAL(10, 2)` สำหรับ `DailyRate`, `TotalAmount`, `LateFee`, และ `DamageFee` เพื่อความแม่นยำในการคำนวณเงิน
+    - มีการใช้ `ENUM` สำหรับ `Status` และ `RentalStatus` เพื่อควบคุมสถานะให้เป็นระบบ
+    - ฟิลด์ที่ต้องใช้ความละเอียดสูงอย่าง `Phone` และ `Email` มีการตั้งค่า `allowNull: false` และ `unique: true` ไว้อย่างเหมาะสม
+
+### 2) การเปลี่ยนระบบฐานข้อมูล (Database Migration)
+- **ระบบหลัก**: เปลี่ยนจาก SQLite (Local File) มาเป็น **PostgreSQL** เพื่อให้รองรับการทำงานระดับ Professional และเชื่อมต่อกับ pgAdmin4 ได้โดยตรง
+- **การตั้งค่า**: ติดตั้งแพ็กเกจ `dotenv` และสร้างไฟล์ [**.env**](file:///d:/GitHub/cp252project/.env) เพื่อจัดการค่าคงที่ต่างๆ (Environment Variables) เช่น รหัสผ่านฐานข้อมูล และ Session Secret
+
+### 3) การอัปเดตโครงสร้าง (Schema Enhancements)
+- **Customer Table**: เพิ่มฟิลด์ `Username` เพื่อให้สอดคล้องกับระบบ Login และช่วยในการค้นหาข้อมูล (เชื่อมต่อผ่าน `authController.js` และ `directPgSync.js`)
+- **Address Handling**: ปรับระดับ Model และ Controller ให้ฟิลด์ `Address` เป็น `null` ได้ (Optional) หากผู้ใช้ยังไม่กรอกตอนสมัคร
+- **Automatic Sync**: เปิดใช้งาน `{ alter: true }` ใน Sequelize เพื่อให้ฐานข้อมูลใน pgAdmin4 อัปเดตโครงสร้างตามโค้ดล่าสุดโดยอัตโนมัติเมื่อ Restart แอป
+
+### 4) ความเสถียรของระบบ (System Stability)
+- **Sequential Startup**: ปรับปรุง `app.js` ให้รันการตรวจสอบ Schema ให้เสร็จสิ้นก่อนเริ่มการย้ายข้อมูล (Migration) เพื่อป้องกันปัญหา Column not found
+
+---
+
 ## 🧾 หมายเหตุการใช้งานเอกสารฉบับนี้
 - ส่วนหัวเอกสาร (ก่อนหน้านี้) เป็น baseline เดิมช่วงเริ่มทำโปรเจกต์
-- ให้ใช้หัวข้อ **อัปเดตล่าสุด (09/04/2026)** เป็นแหล่งจริงสำหรับ behavior ปัจจุบันของระบบ
+- ให้ใช้หัวข้อ **อัปเดตล่าสุด (10/04/2026)** เป็นหลักฐานยืนยันความถูกต้องของโครงสร้างปัจจุบัน
