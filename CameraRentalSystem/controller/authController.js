@@ -1,16 +1,10 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { users, bookings, persistData } = require('../model/data');
-const { upsertCustomerDirectPg } = require('../service/directPgSync');
-const sequelize = require('../../config/db');
+const Customer = require('../../models/customer');
 const PASSWORD_HASH_ROUNDS = Number(process.env.PASSWORD_HASH_ROUNDS || 10);
 
 function isHash(value) {
     return typeof value === 'string' && value.startsWith('$2');
-}
-
-function shouldSyncToPostgres() {
-    return sequelize.getDialect() === 'postgres';
 }
 
 function splitName(username) {
@@ -21,15 +15,6 @@ function splitName(username) {
     return { firstName: chunks[0], lastName: chunks.slice(1).join(' ') };
 }
 
-function normalizePersonFields(input) {
-    const firstName = typeof input.firstName === 'string' ? input.firstName.trim() : '';
-    const lastName = typeof input.lastName === 'string' ? input.lastName.trim() : '';
-    const phone = typeof input.phone === 'string' ? input.phone.trim() : '';
-    const addressRaw = typeof input.address === 'string' ? input.address.trim() : '';
-    const address = addressRaw || null;
-    return { firstName, lastName, phone, address };
-}
-
 function isValidEmail(email) {
     if (typeof email !== 'string') return false;
     const normalized = email.trim().toLowerCase();
@@ -37,28 +22,17 @@ function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
 }
 
-async function upsertCustomerFromUser(user) {
-    // Always try direct PostgreSQL upsert first for real-time sync in pgAdmin.
-    // If PG is unavailable, this quietly fails and app keeps working in JSON mode.
-    await upsertCustomerDirectPg(user);
-
-    if (!shouldSyncToPostgres()) return;
-    // Lazy-load DB model only when PostgreSQL sync is enabled.
-    // This keeps tests/local JSON mode free from DB open handles.
-    // eslint-disable-next-line global-require
-    const Customer = require('../../models/customer');
-    const email = (user.email || `${user.username}@legacy.local`).toLowerCase();
-    const person = normalizePersonFields(user);
-    const existing = await Customer.findOne({ where: { Email: email } });
-    if (existing) return;
-    const fallbackName = splitName(user.username);
-    await Customer.create({
-        FirstName: person.firstName || fallbackName.firstName,
-        LastName: person.lastName || fallbackName.lastName,
-        Username: user.username,
-        Phone: person.phone || '0000000000',
-        Email: email,
-        Address: person.address || null
+async function renderAdminAccounts(res, { status = 200, error = null, success = null } = {}) {
+    const rows = await Customer.findAll({ order: [['CustomerID', 'ASC']] });
+    return res.status(status).render('admin_accounts', {
+        users: rows.map((r) => ({
+            username: r.Username,
+            email: r.Email,
+            role: r.Role,
+            avatar: r.AvatarPath || null
+        })),
+        error,
+        success
     });
 }
 
@@ -80,48 +54,70 @@ exports.showSignUp = (req, res) => {
 };
 
 exports.showAdminAccounts = (req, res) => {
-    return res.render('admin_accounts', {
-        users,
-        error: null,
-        success: null
-    });
+    return renderAdminAccounts(res).catch(() => res.status(500).send('Failed to load accounts'));
 };
 
 exports.showProfile = (req, res) => {
     const currentUsername = req.session.user && req.session.user.username;
-    const user = users.find((item) => item.username === currentUsername);
-    if (!user) {
-        return res.status(404).send('User not found');
-    }
-
-    const userBookings = bookings
-        .filter((booking) => booking.user === currentUsername)
-        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-
-    return res.render('profile', {
-        user: {
-            username: user.username,
-            email: user.email,
-            role: user.role,
-            avatar: user.avatar || null
-        },
-        bookings: userBookings
-    });
+    return Customer.findOne({ where: { Username: currentUsername } })
+        .then((user) => {
+            if (!user) return res.status(404).send('User not found');
+            const { RentalDetail, Rental, Equipment, Payment } = require('../../models');
+            return RentalDetail.findAll({
+                include: [
+                    { model: Rental, required: true, where: { CustomerID: user.CustomerID } },
+                    { model: Equipment, required: true }
+                ],
+                order: [['RentalDetailID', 'DESC']]
+            }).then((details) => {
+                const rentalIds = details.map((d) => d.RentalID);
+                if (rentalIds.length === 0) {
+                    return res.render('profile', {
+                        user: {
+                            username: user.Username,
+                            email: user.Email,
+                            role: user.Role,
+                            avatar: user.AvatarPath || null
+                        },
+                        bookings: []
+                    });
+                }
+                return Payment.findAll({ where: { RentalID: rentalIds } })
+                    .then((payments) => new Set(payments.map((p) => p.RentalID)))
+                    .then((paidRentalIds) => res.render('profile', {
+                        user: {
+                            username: user.Username,
+                            email: user.Email,
+                            role: user.Role,
+                            avatar: user.AvatarPath || null
+                        },
+                        bookings: details.map((d) => ({
+                            cameraModel: `${d.Equipment.Brand} ${d.Equipment.ModelName}`,
+                            startDate: d.StartDate,
+                            endDate: d.EndDate,
+                            totalPrice: Number(d.Rental.TotalAmount),
+                            bookingStatus: d.Rental.RentalStatus,
+                            paymentStatus: paidRentalIds.has(d.RentalID) ? 'paid' : 'unpaid'
+                        }))
+                    }));
+            });
+        })
+        .catch(() => res.status(500).send('Failed to load profile'));
 };
 
 exports.updateProfileAvatar = (req, res) => {
     const currentUsername = req.session.user && req.session.user.username;
-    const user = users.find((item) => item.username === currentUsername);
-    if (!user) {
-        return res.status(404).send('User not found');
-    }
     if (!req.file) {
         return res.status(400).send('Please upload an image');
     }
 
-    user.avatar = `/uploads/avatars/${req.file.filename}`;
-    persistData();
-    return res.redirect('/profile');
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    return Customer.update(
+        { AvatarPath: avatarPath },
+        { where: { Username: currentUsername } }
+    )
+        .then(() => res.redirect('/profile'))
+        .catch(() => res.status(500).send('Failed to update avatar'));
 };
 
 exports.updateUserRole = (req, res) => {
@@ -129,35 +125,29 @@ exports.updateUserRole = (req, res) => {
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
     const normalizedRole = role === 'admin' ? 'admin' : 'user';
 
-    const targetUser = users.find((item) => item.username === normalizedUsername);
-    if (!targetUser) {
-        return res.status(404).render('admin_accounts', {
-            users,
-            error: 'User not found',
-            success: null
-        });
-    }
-
-    if (targetUser.role === 'admin' && normalizedRole === 'user') {
-        const adminCount = users.filter((item) => item.role === 'admin').length;
-        if (adminCount <= 1) {
-            return res.status(400).render('admin_accounts', {
-                users,
-                error: 'Cannot demote the last admin account',
-                success: null
+    return Customer.count({ where: { Role: 'admin' } })
+        .then((adminCount) => Customer.findOne({ where: { Username: normalizedUsername } })
+            .then((targetUser) => {
+                if (!targetUser) return { error: 'User not found', code: 404 };
+                if (targetUser.Role === 'admin' && normalizedRole === 'user' && adminCount <= 1) {
+                    return { error: 'Cannot demote the last admin account', code: 400 };
+                }
+                return targetUser.update({ Role: normalizedRole }).then(() => ({ code: 200 }));
+            }))
+        .then((result) => {
+            if (result && result.error) {
+                return renderAdminAccounts(res, { status: result.code, error: result.error, success: null });
+            }
+            return renderAdminAccounts(res, {
+                status: 200,
+                error: null,
+                success: `Updated role for ${normalizedUsername} to ${normalizedRole}`
             });
-        }
-    }
-
-    targetUser.role = normalizedRole;
-    persistData();
-    return res.render('admin_accounts', {
-        users,
-        error: null,
-        success: `Updated role for ${targetUser.username} to ${normalizedRole}`
-    });
+        })
+        .catch(() => res.status(500).send('Failed to update role'));
 };
 
+// eslint-disable-next-line complexity
 exports.createAdminAccount = async (req, res) => {
     const { username, email, password } = req.body;
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
@@ -165,53 +155,38 @@ exports.createAdminAccount = async (req, res) => {
     const normalizedPassword = typeof password === 'string' ? password : '';
 
     if (!normalizedUsername || !normalizedEmail || !normalizedPassword) {
-        return res.status(400).render('admin_accounts', {
-            users,
-            error: 'Username, email and password are required',
-            success: null
-        });
+        return renderAdminAccounts(res, { status: 400, error: 'Username, email and password are required' });
     }
     if (!isValidEmail(normalizedEmail)) {
-        return res.status(400).render('admin_accounts', {
-            users,
-            error: 'Please provide a valid email address',
-            success: null
-        });
+        return renderAdminAccounts(res, { status: 400, error: 'Please provide a valid email address' });
     }
     if (normalizedPassword.length < 8) {
-        return res.status(400).render('admin_accounts', {
-            users,
-            error: 'Password must be at least 8 characters',
-            success: null
-        });
+        return renderAdminAccounts(res, { status: 400, error: 'Password must be at least 8 characters' });
     }
-    const duplicateUser = users.find(
-        (item) => item.username === normalizedUsername || item.email === normalizedEmail
-    );
-    if (duplicateUser) {
-        return res.status(400).render('admin_accounts', {
-            users,
-            error: 'Username or email already exists',
-            success: null
-        });
-    }
-
-    const newAdmin = {
-        username: normalizedUsername,
-        email: normalizedEmail,
-        password: bcrypt.hashSync(normalizedPassword, PASSWORD_HASH_ROUNDS),
-        role: 'admin',
-        avatar: null
-    };
-    users.push(newAdmin);
-    persistData();
-    await upsertCustomerFromUser(newAdmin);
-
-    return res.render('admin_accounts', {
-        users,
-        error: null,
-        success: `Created admin account: ${normalizedUsername}`
+    const duplicate = await Customer.findOne({
+        where: { Email: normalizedEmail }
     });
+    const duplicateUsername = await Customer.findOne({
+        where: { Username: normalizedUsername }
+    });
+    if (duplicate || duplicateUsername) {
+        return renderAdminAccounts(res, { status: 400, error: 'Username or email already exists' });
+    }
+
+    const name = splitName(normalizedUsername);
+    await Customer.create({
+        FirstName: name.firstName,
+        LastName: name.lastName,
+        Username: normalizedUsername,
+        Phone: '0000000000',
+        Email: normalizedEmail,
+        Address: null,
+        PasswordHash: bcrypt.hashSync(normalizedPassword, PASSWORD_HASH_ROUNDS),
+        Role: 'admin',
+        AvatarPath: null
+    });
+
+    return renderAdminAccounts(res, { success: `Created admin account: ${normalizedUsername}` });
 };
 
 exports.login = async (req, res) => {
@@ -219,23 +194,23 @@ exports.login = async (req, res) => {
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
     const normalizedPassword = typeof password === 'string' ? password : '';
 
-    const matchedUser = users.find((user) => user.username === normalizedUsername);
-    if (!matchedUser || !matchedUser.password) {
+    const matchedUser = await Customer.findOne({ where: { Username: normalizedUsername } });
+    if (!matchedUser || !matchedUser.PasswordHash) {
         return res.render('signin', { error: 'Invalid username or password' });
     }
 
-    const passwordMatches = isHash(matchedUser.password)
-        ? await bcrypt.compare(normalizedPassword, matchedUser.password)
-        : matchedUser.password === normalizedPassword;
+    const passwordMatches = isHash(matchedUser.PasswordHash)
+        ? await bcrypt.compare(normalizedPassword, matchedUser.PasswordHash)
+        : matchedUser.PasswordHash === normalizedPassword;
 
     if (passwordMatches) {
         // Opportunistically migrate legacy plaintext passwords.
-        if (!isHash(matchedUser.password)) {
-            matchedUser.password = await bcrypt.hash(normalizedPassword, PASSWORD_HASH_ROUNDS);
-            persistData();
+        if (!isHash(matchedUser.PasswordHash)) {
+            matchedUser.PasswordHash = await bcrypt.hash(normalizedPassword, PASSWORD_HASH_ROUNDS);
+            await matchedUser.save();
         }
-        req.session.user = { username: matchedUser.username, role: matchedUser.role };
-        if (matchedUser.role === 'admin') return res.redirect('/admin');
+        req.session.user = { username: matchedUser.Username, role: matchedUser.Role };
+        if (matchedUser.Role === 'admin') return res.redirect('/admin');
         return res.redirect('/browse');
     }
     res.render('signin', { error: 'Invalid username or password' });
@@ -259,23 +234,27 @@ exports.loginGoogle = async (req, res) => {
         return res.render('signin', { error: 'Please provide a valid email' });
     }
 
-    let matchedUser = users.find((user) => user.email === normalizedEmail);
+    let matchedUser = await Customer.findOne({ where: { Email: normalizedEmail } });
     if (!matchedUser) {
-        matchedUser = {
-            username: normalizedEmail,
-            password: null,
-            email: normalizedEmail,
-            role: 'user'
-        };
-        users.push(matchedUser);
-        persistData();
-        await upsertCustomerFromUser(matchedUser);
+        const name = splitName(normalizedEmail);
+        matchedUser = await Customer.create({
+            FirstName: name.firstName,
+            LastName: name.lastName,
+            Username: normalizedEmail,
+            Phone: '0000000000',
+            Email: normalizedEmail,
+            Address: null,
+            PasswordHash: null,
+            Role: 'user',
+            AvatarPath: null
+        });
     }
 
-    req.session.user = { username: matchedUser.username, role: matchedUser.role };
+    req.session.user = { username: matchedUser.Username, role: matchedUser.Role };
     return res.redirect('/browse');
 };
 
+// eslint-disable-next-line complexity
 exports.register = async (req, res) => {
     const { username, password, email, firstName, lastName, phone, address } = req.body;
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
@@ -297,27 +276,23 @@ exports.register = async (req, res) => {
         return res.render('signup', { error: 'Password must be at least 8 characters' });
     }
 
-    const duplicateUser = users.find(
-        (user) => user.username === normalizedUsername || user.email === normalizedEmail
-    );
-    if (duplicateUser) {
+    const duplicateUser = await Customer.findOne({ where: { Username: normalizedUsername } });
+    const duplicateEmail = await Customer.findOne({ where: { Email: normalizedEmail } });
+    if (duplicateUser || duplicateEmail) {
         return res.render('signup', { error: 'Username or email already exists' });
     }
 
-    const newUser = {
-        username: normalizedUsername,
-        password: bcrypt.hashSync(normalizedPassword, PASSWORD_HASH_ROUNDS),
-        email: normalizedEmail,
-        firstName: normalizedFirstName,
-        lastName: normalizedLastName,
-        phone: normalizedPhone,
-        address: normalizedAddress || null,
-        role: 'user',
-        avatar: null
-    };
-    users.push(newUser);
-    persistData();
-    await upsertCustomerFromUser(newUser);
+    await Customer.create({
+        FirstName: normalizedFirstName,
+        LastName: normalizedLastName,
+        Username: normalizedUsername,
+        Phone: normalizedPhone,
+        Email: normalizedEmail,
+        Address: normalizedAddress || null,
+        PasswordHash: bcrypt.hashSync(normalizedPassword, PASSWORD_HASH_ROUNDS),
+        Role: 'user',
+        AvatarPath: null
+    });
 
     req.session.user = { username: normalizedUsername, role: 'user' };
     return res.redirect('/browse');

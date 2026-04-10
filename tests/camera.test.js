@@ -1,5 +1,3 @@
-const Camera = require('../models/camera');
-
 describe('Camera Model & Stock Logic', () => {
   // TC-06: Stock Check
   test('TC-06: ควรจองไม่ได้ถ้าสถานะกล้องเป็น maintenance', () => {

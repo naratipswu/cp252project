@@ -1,7 +1,6 @@
-const { cameras, bookings, persistData } = require('../model/data');
-const crypto = require('crypto');
+const { Op } = require('sequelize');
 const { getAllCameras, addCamera, DEFAULT_IMAGE } = require('../service/cameraStore');
-const { syncBookingToPostgres } = require('../service/bookingSync');
+const { Customer, Equipment, Rental, RentalDetail, Payment } = require('../../models');
 
 function getDateOrNull(dateString) {
     const parsed = new Date(dateString);
@@ -10,17 +9,26 @@ function getDateOrNull(dateString) {
     return parsed;
 }
 
-function hasDateOverlap(startA, endA, startB, endB) {
-    return startA <= endB && startB <= endA;
-}
-
-function isBlockingBooking(booking) {
-    return booking.paymentStatus !== 'cancelled';
-}
-
 async function getCameraById(cameraId) {
     const allCameras = await getAllCameras();
     return allCameras.find((item) => item.id === cameraId) || null;
+}
+
+async function getCustomerForSession(req) {
+    const username = req.session.user && req.session.user.username;
+    if (!username) return null;
+    return Customer.findOne({ where: { Username: username } });
+}
+
+function deriveBookingStatusFromRental(rentalStatus) {
+    if (rentalStatus === 'cancelled') return 'cancelled';
+    if (rentalStatus === 'completed') return 'completed';
+    if (rentalStatus === 'active') return 'confirmed';
+    return 'awaiting_confirmation';
+}
+
+function derivePaymentStatus(hasPayment) {
+    return hasPayment ? 'paid' : 'unpaid';
 }
 
 exports.browseCameras = async (req, res) => {
@@ -43,6 +51,7 @@ exports.browseCameras = async (req, res) => {
     });
 };
 
+// eslint-disable-next-line complexity
 exports.addCamera = async (req, res) => {
     const { brand, model, stock, pricePerDay, imageUrl } = req.body;
     const normalizedBrand = typeof brand === 'string' ? brand.trim() : '';
@@ -76,8 +85,8 @@ exports.addCamera = async (req, res) => {
 exports.bookCamera = async (req, res) => {
     const { cameraId, startDate, endDate } = req.body;
     const normalizedCameraId = Number(cameraId);
-    const camera = await getCameraById(normalizedCameraId);
-    if (!camera) return res.status(404).send('Camera not found');
+    const equipment = await Equipment.findByPk(normalizedCameraId);
+    if (!equipment) return res.status(404).send('Camera not found');
 
     const start = getDateOrNull(startDate);
     const end = getDateOrNull(endDate);
@@ -85,113 +94,192 @@ exports.bookCamera = async (req, res) => {
         return res.status(400).send('Invalid booking dates');
     }
 
-    if (camera.stock <= 0) {
+    if (equipment.Status !== 'available') {
         return res.status(400).send('Camera is out of stock');
     }
 
-    const overlappingBookingCount = bookings.filter((booking) => {
-        if (booking.cameraId !== camera.id) return false;
-        if (!isBlockingBooking(booking)) return false;
-        const bookedStart = getDateOrNull(booking.startDate);
-        const bookedEnd = getDateOrNull(booking.endDate);
-        if (!bookedStart || !bookedEnd) return false;
-        return hasDateOverlap(start, end, bookedStart, bookedEnd);
-    }).length;
+    const overlap = await RentalDetail.findOne({
+        where: {
+            EquipmentID: equipment.EquipmentID,
+            StartDate: { [Op.lte]: end.toISOString().slice(0, 10) },
+            EndDate: { [Op.gte]: start.toISOString().slice(0, 10) }
+        },
+        include: [{
+            model: Rental,
+            required: true,
+            where: { RentalStatus: { [Op.ne]: 'cancelled' } }
+        }]
+    });
 
-    if (overlappingBookingCount >= camera.stock) {
+    if (overlap) {
         return res.status(409).send('Selected camera is already booked for these dates');
     }
 
     const rentalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    const totalPrice = rentalDays * camera.pricePerDay;
+    const totalPrice = rentalDays * Number(equipment.DailyRate);
+    const customer = await getCustomerForSession(req);
+    if (!customer) return res.status(401).send('Unauthorized');
 
-    bookings.push({
-        id: crypto.randomUUID(),
-        cameraId: camera.id,
-        cameraModel: camera.model,
-        user: req.session.user.username,
-        startDate: start.toISOString().slice(0, 10),
-        endDate: end.toISOString().slice(0, 10),
-        totalPrice,
-        bookingStatus: 'awaiting_confirmation',
-        paymentStatus: 'unpaid',
-        createdAt: new Date().toISOString()
+    const rental = await Rental.create({
+        RentalDate: new Date(),
+        TotalAmount: totalPrice,
+        RentalStatus: 'pending',
+        CustomerID: customer.CustomerID
     });
-    persistData();
-    await syncBookingToPostgres(bookings[bookings.length - 1]);
+    await RentalDetail.create({
+        RentalID: rental.RentalID,
+        EquipmentID: equipment.EquipmentID,
+        StartDate: start.toISOString().slice(0, 10),
+        EndDate: end.toISOString().slice(0, 10),
+        SubTotal: totalPrice
+    });
 
-    res.redirect(`/booking/${bookings[bookings.length - 1].id}/confirm`);
+    return res.redirect(`/booking/${rental.RentalID}/confirm`);
 };
 
 exports.showAdminDashboard = (req, res) => {
-    res.render('admin', { bookings, user: req.session.user });
+    return RentalDetail.findAll({
+        include: [
+            { model: Rental, required: true, include: [{ model: Customer, required: true }] },
+            { model: Equipment, required: true }
+        ],
+        order: [['RentalDetailID', 'DESC']],
+        limit: 50
+    })
+        .then((rows) => rows.map((row) => row.toJSON()))
+        .then((rows) => res.render('admin', {
+            bookings: rows.map((row) => ({
+                id: row.Rental.RentalID,
+                user: row.Rental.Customer.Email || row.Rental.Customer.Username,
+                cameraModel: `${row.Equipment.Brand} ${row.Equipment.ModelName}`,
+                startDate: row.StartDate,
+                endDate: row.EndDate,
+                totalPrice: Number(row.Rental.TotalAmount)
+            })),
+            user: req.session.user
+        }))
+        .catch(() => res.status(500).send('Failed to load dashboard'));
 };
 
 exports.showBookingConfirm = async (req, res) => {
     const { bookingId } = req.params;
-    const booking = bookings.find((item) => item.id === bookingId);
-    if (!booking) return res.status(404).send('Booking not found');
-    if (booking.user !== req.session.user.username && req.session.user.role !== 'admin') {
+    const rentalId = Number(bookingId);
+    const rental = await Rental.findByPk(rentalId);
+    if (!rental) return res.status(404).send('Booking not found');
+    const customer = await Customer.findByPk(rental.CustomerID);
+    if (!customer) return res.status(404).send('Booking not found');
+    if (customer.Username !== req.session.user.username && req.session.user.role !== 'admin') {
         return res.status(403).send('Forbidden');
     }
 
-    const camera = await getCameraById(booking.cameraId);
+    // If already confirmed/completed/cancelled, don't show a raw error page.
+    if (rental.RentalStatus !== 'pending') {
+        if (rental.RentalStatus === 'active') {
+            return res.redirect(`/booking/${rental.RentalID}/payment`);
+        }
+        return res.redirect('/browse');
+    }
+
+    const detail = await RentalDetail.findOne({ where: { RentalID: rental.RentalID } });
+    if (!detail) return res.status(404).send('Booking not found');
+    const camera = await getCameraById(detail.EquipmentID);
     if (!camera) return res.status(404).send('Camera not found');
 
     res.render('booking_confirm', {
-        booking,
+        booking: {
+            id: rental.RentalID,
+            cameraId: detail.EquipmentID,
+            cameraModel: camera.model,
+            user: customer.Username,
+            startDate: detail.StartDate,
+            endDate: detail.EndDate,
+            totalPrice: Number(rental.TotalAmount),
+            bookingStatus: deriveBookingStatusFromRental(rental.RentalStatus),
+            paymentStatus: 'unpaid'
+        },
         camera
     });
 };
 
 exports.confirmBooking = async (req, res) => {
     const { bookingId } = req.params;
-    const booking = bookings.find((item) => item.id === bookingId);
-    if (!booking) return res.status(404).send('Booking not found');
-    if (booking.user !== req.session.user.username && req.session.user.role !== 'admin') {
+    const rentalId = Number(bookingId);
+    const rental = await Rental.findByPk(rentalId);
+    if (!rental) return res.status(404).send('Booking not found');
+    const customer = await Customer.findByPk(rental.CustomerID);
+    if (!customer) return res.status(404).send('Booking not found');
+    if (customer.Username !== req.session.user.username && req.session.user.role !== 'admin') {
         return res.status(403).send('Forbidden');
     }
 
-    if (booking.bookingStatus !== 'awaiting_confirmation' || booking.paymentStatus !== 'unpaid') {
-        return res.status(409).send('Booking cannot be confirmed from its current state');
+    const payment = await Payment.findOne({ where: { RentalID: rental.RentalID } });
+    if (rental.RentalStatus !== 'pending' || payment) {
+        // If already confirmed, just go to the first page.
+        return res.redirect('/browse');
     }
 
-    booking.bookingStatus = 'confirmed';
-    persistData();
-    await syncBookingToPostgres(booking);
-    res.redirect(`/booking/${booking.id}/payment`);
+    rental.RentalStatus = 'active';
+    await rental.save();
+    // User requested: after confirm, warp back to the first page.
+    return res.redirect('/browse');
 };
 
 exports.showPaymentPage = (req, res) => {
     const { bookingId } = req.params;
-    const booking = bookings.find((item) => item.id === bookingId);
-    if (!booking) return res.status(404).send('Booking not found');
-    if (booking.user !== req.session.user.username && req.session.user.role !== 'admin') {
-        return res.status(403).send('Forbidden');
-    }
-
-    res.render('payment', {
-        booking
-    });
+    const rentalId = Number(bookingId);
+    return Rental.findByPk(rentalId)
+        .then((rental) => {
+            if (!rental) return res.status(404).send('Booking not found');
+            return Customer.findByPk(rental.CustomerID).then((customer) => {
+                if (!customer) return res.status(404).send('Booking not found');
+                if (customer.Username !== req.session.user.username && req.session.user.role !== 'admin') {
+                    return res.status(403).send('Forbidden');
+                }
+                return Payment.findOne({ where: { RentalID: rental.RentalID } }).then((payment) => {
+                    if (payment) return res.status(409).send('Payment cannot be confirmed from its current state');
+                    return res.render('payment', {
+                        booking: {
+                            id: rental.RentalID,
+                            totalPrice: Number(rental.TotalAmount)
+                        }
+                    });
+                });
+            });
+        })
+        .catch(() => res.status(500).send('Failed to load payment page'));
 };
 
 exports.confirmPayment = async (req, res) => {
     const { bookingId } = req.params;
-    const booking = bookings.find((item) => item.id === bookingId);
-    if (!booking) return res.status(404).send('Booking not found');
-    if (booking.user !== req.session.user.username && req.session.user.role !== 'admin') {
+    const rentalId = Number(bookingId);
+    const rental = await Rental.findByPk(rentalId);
+    if (!rental) return res.status(404).send('Booking not found');
+    const customer = await Customer.findByPk(rental.CustomerID);
+    if (!customer) return res.status(404).send('Booking not found');
+    if (customer.Username !== req.session.user.username && req.session.user.role !== 'admin') {
         return res.status(403).send('Forbidden');
     }
 
-    if (booking.bookingStatus !== 'confirmed' || booking.paymentStatus !== 'unpaid') {
+    const payment = await Payment.findOne({ where: { RentalID: rental.RentalID } });
+    if (rental.RentalStatus !== 'active' || payment) {
         return res.status(409).send('Payment cannot be confirmed from its current state');
     }
 
-    booking.paymentStatus = 'paid';
-    booking.bookingStatus = 'completed';
-    booking.paidAt = new Date().toISOString();
-    persistData();
-    await syncBookingToPostgres(booking);
+    await Payment.create({
+        RentalID: rental.RentalID,
+        PaymentMethod: 'app-payment',
+        Amount: rental.TotalAmount,
+        PaymentDate: new Date()
+    });
+    rental.RentalStatus = 'completed';
+    await rental.save();
 
-    res.render('payment_success', { booking });
+    return res.render('payment_success', {
+        booking: {
+            id: rental.RentalID,
+            bookingStatus: deriveBookingStatusFromRental(rental.RentalStatus),
+            paymentStatus: derivePaymentStatus(true),
+            totalPrice: Number(rental.TotalAmount)
+        }
+    });
 };

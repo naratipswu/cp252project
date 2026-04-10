@@ -1,17 +1,19 @@
-jest.mock('../CameraRentalSystem/model/data', () => ({
-  cameras: [],
-  bookings: [],
-  persistData: jest.fn()
-}));
 jest.mock('../CameraRentalSystem/service/cameraStore', () => ({
   DEFAULT_IMAGE: 'https://example.com/default.jpg',
   getAllCameras: jest.fn(),
   addCamera: jest.fn()
 }));
+jest.mock('../models', () => ({
+  Customer: { findOne: jest.fn(), findByPk: jest.fn() },
+  Equipment: { findByPk: jest.fn(), update: jest.fn() },
+  Rental: { create: jest.fn(), findByPk: jest.fn() },
+  RentalDetail: { create: jest.fn(), findOne: jest.fn(), findAll: jest.fn() },
+  Payment: { findOne: jest.fn(), create: jest.fn(), findAll: jest.fn() }
+}));
 
 const cameraController = require('../CameraRentalSystem/controller/cameraController');
-const { cameras, bookings, persistData } = require('../CameraRentalSystem/model/data');
 const { getAllCameras } = require('../CameraRentalSystem/service/cameraStore');
+const { Customer, Equipment, Rental, RentalDetail, Payment } = require('../models');
 
 function createResponse() {
   return {
@@ -38,95 +40,68 @@ function createResponse() {
 
 describe('Camera Controller Booking Rules', () => {
   beforeEach(() => {
-    cameras.splice(0, cameras.length, {
-      id: 1,
-      brand: 'Sony',
-      model: 'A7III',
-      stock: 2,
-      pricePerDay: 1000
-    });
-    bookings.splice(0, bookings.length);
-    persistData.mockClear();
-    getAllCameras.mockResolvedValue(cameras);
+    getAllCameras.mockResolvedValue([
+      { id: 1, brand: 'Sony', model: 'A7III', stock: 1, pricePerDay: 1000 }
+    ]);
+    Equipment.findByPk.mockReset();
+    RentalDetail.findOne.mockReset();
+    Customer.findOne.mockReset();
+    Rental.create.mockReset();
+    RentalDetail.create.mockReset();
+    Rental.findByPk.mockReset();
+    Customer.findByPk.mockReset();
+    Payment.findOne.mockReset();
   });
 
-  test('allows overlap when stock still available', async () => {
-    bookings.push({
-      id: 'existing-1',
-      cameraId: 1,
-      user: 'bob',
-      startDate: '2026-04-10',
-      endDate: '2026-04-12',
-      bookingStatus: 'confirmed',
-      paymentStatus: 'unpaid'
-    });
-
+  test('creates a rental when no overlap exists', async () => {
     const req = {
       body: { cameraId: 1, startDate: '2026-04-11', endDate: '2026-04-12' },
       session: { user: { username: 'alice' } }
     };
     const res = createResponse();
+
+    Equipment.findByPk.mockResolvedValue({ EquipmentID: 1, Status: 'available', DailyRate: 1000 });
+    RentalDetail.findOne.mockResolvedValue(null);
+    Customer.findOne.mockResolvedValue({ CustomerID: 10 });
+    Rental.create.mockResolvedValue({ RentalID: 99 });
+    RentalDetail.create.mockResolvedValue({ RentalDetailID: 1 });
 
     await cameraController.bookCamera(req, res);
 
     expect(res.statusCode).toBe(200);
     expect(res.redirectedTo).toMatch(/^\/booking\/.+\/confirm$/);
-    expect(bookings).toHaveLength(2);
-    expect(persistData).toHaveBeenCalled();
+    expect(Rental.create).toHaveBeenCalledTimes(1);
+    expect(RentalDetail.create).toHaveBeenCalledTimes(1);
   });
 
-  test('blocks overlap when overlapping bookings reach stock', async () => {
-    bookings.push(
-      {
-        id: 'existing-1',
-        cameraId: 1,
-        user: 'bob',
-        startDate: '2026-04-10',
-        endDate: '2026-04-12',
-        bookingStatus: 'confirmed',
-        paymentStatus: 'unpaid'
-      },
-      {
-        id: 'existing-2',
-        cameraId: 1,
-        user: 'eve',
-        startDate: '2026-04-11',
-        endDate: '2026-04-12',
-        bookingStatus: 'awaiting_confirmation',
-        paymentStatus: 'unpaid'
-      }
-    );
-
+  test('blocks overlap when an overlapping rental exists', async () => {
     const req = {
       body: { cameraId: 1, startDate: '2026-04-11', endDate: '2026-04-12' },
       session: { user: { username: 'alice' } }
     };
     const res = createResponse();
 
+    Equipment.findByPk.mockResolvedValue({ EquipmentID: 1, Status: 'available', DailyRate: 1000 });
+    RentalDetail.findOne.mockResolvedValue({ RentalDetailID: 123 });
+
     await cameraController.bookCamera(req, res);
 
     expect(res.statusCode).toBe(409);
     expect(res.sent).toBe('Selected camera is already booked for these dates');
-    expect(bookings).toHaveLength(2);
   });
 
-  test('rejects invalid state transition in confirmPayment', () => {
-    bookings.push({
-      id: 'booking-1',
-      cameraId: 1,
-      user: 'alice',
-      startDate: '2026-04-10',
-      endDate: '2026-04-12',
-      bookingStatus: 'awaiting_confirmation',
-      paymentStatus: 'unpaid'
-    });
+  test('rejects invalid state transition in confirmPayment', async () => {
     const req = {
-      params: { bookingId: 'booking-1' },
+      params: { bookingId: '1' },
       session: { user: { username: 'alice', role: 'user' } }
     };
     const res = createResponse();
 
-    cameraController.confirmPayment(req, res);
+    Rental.findByPk.mockResolvedValue({ RentalID: 1, CustomerID: 10, RentalStatus: 'pending' });
+    Customer.findByPk.mockResolvedValue({ CustomerID: 10, Username: 'alice' });
+    Payment.findOne.mockResolvedValue(null);
+
+    await cameraController.confirmPayment(req, res);
 
     expect(res.statusCode).toBe(409);
     expect(res.sent).toBe('Payment cannot be confirmed from its current state');

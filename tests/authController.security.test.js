@@ -1,10 +1,13 @@
-jest.mock('../CameraRentalSystem/model/data', () => ({
-  users: [],
-  persistData: jest.fn()
+jest.mock('../models/customer', () => ({
+  findOne: jest.fn(),
+  create: jest.fn(),
+  findAll: jest.fn(),
+  update: jest.fn(),
+  count: jest.fn()
 }));
 
 const authController = require('../CameraRentalSystem/controller/authController');
-const { users, persistData } = require('../CameraRentalSystem/model/data');
+const Customer = require('../models/customer');
 const bcrypt = require('bcryptjs');
 
 function createResponse() {
@@ -34,8 +37,8 @@ function createResponse() {
 
 describe('Auth Controller Security', () => {
   beforeEach(() => {
-    users.splice(0, users.length);
-    persistData.mockClear();
+    Customer.findOne.mockReset();
+    Customer.create.mockReset();
     delete process.env.ENABLE_MOCK_GOOGLE_LOGIN;
   });
 
@@ -54,21 +57,22 @@ describe('Auth Controller Security', () => {
     };
     const res = createResponse();
 
+    Customer.findOne.mockResolvedValue(null);
     await authController.register(req, res);
 
-    expect(users).toHaveLength(1);
-    expect(users[0].password).not.toBe('Secret123!');
-    expect(users[0].password.startsWith('$2')).toBe(true);
-    expect(persistData).toHaveBeenCalled();
+    expect(Customer.create).toHaveBeenCalledTimes(1);
+    const createdPayload = Customer.create.mock.calls[0][0];
+    expect(createdPayload.PasswordHash).not.toBe('Secret123!');
+    expect(createdPayload.PasswordHash.startsWith('$2')).toBe(true);
     expect(res.redirectedTo).toBe('/browse');
   });
 
   test('login accepts hashed password and sets session', async () => {
-    users.push({
-      username: 'admin',
-      password: bcrypt.hashSync('Secret123!', 10),
-      email: 'admin@site.com',
-      role: 'admin'
+    Customer.findOne.mockResolvedValue({
+      Username: 'admin',
+      PasswordHash: bcrypt.hashSync('Secret123!', 10),
+      Role: 'admin',
+      save: jest.fn()
     });
 
     const req = {

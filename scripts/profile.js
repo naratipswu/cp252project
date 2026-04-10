@@ -4,7 +4,7 @@ function profileFunction(name, fn, ...args) {
     const startMemory = process.memoryUsage().heapUsed;
     const startTime = process.hrtime.bigint();
 
-    const result = fn(...args);
+    fn(...args);
 
     const endTime = process.hrtime.bigint();
     const endMemory = process.memoryUsage().heapUsed;

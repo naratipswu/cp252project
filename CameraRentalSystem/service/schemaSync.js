@@ -1,4 +1,5 @@
 const sequelize = require('../../config/db');
+const { DataTypes } = require('sequelize');
 const {
   Category,
   Equipment,
@@ -9,10 +10,6 @@ const {
   Return,
   SyncLog
 } = require('../../models');
-
-function usePostgres() {
-  return sequelize.getDialect() === 'postgres';
-}
 
 function normalizeTableName(table) {
   if (typeof table === 'string') return table;
@@ -26,6 +23,7 @@ async function getExistingTablesSet() {
   return new Set(tables.map(normalizeTableName));
 }
 
+// eslint-disable-next-line complexity
 async function migrateLegacyPostgresTables() {
   const tables = await getExistingTablesSet();
   const hasUsers = tables.has('Users');
@@ -165,20 +163,49 @@ async function migrateLegacyPostgresTables() {
   }
 }
 
-async function ensureFullSchemaReady() {
-  if (!usePostgres()) return;
+async function ensureCustomerAuthColumns() {
+  const qi = sequelize.getQueryInterface();
+  const columns = await qi.describeTable('Customer');
+  const ops = [];
 
+  if (!columns.PasswordHash) {
+    ops.push(qi.addColumn('Customer', 'PasswordHash', { type: DataTypes.STRING, allowNull: true }));
+  }
+  if (!columns.AvatarPath) {
+    ops.push(qi.addColumn('Customer', 'AvatarPath', { type: DataTypes.STRING, allowNull: true }));
+  }
+  if (!columns.Role) {
+    ops.push(qi.addColumn('Customer', 'Role', {
+      type: DataTypes.ENUM('user', 'admin'),
+      allowNull: false,
+      defaultValue: 'user'
+    }));
+  }
+
+  if (ops.length > 0) {
+    await Promise.all(ops);
+    // Ensure existing rows have a role.
+    await sequelize.query(`UPDATE "Customer" SET "Role" = 'user' WHERE "Role" IS NULL`);
+  }
+}
+
+async function ensureFullSchemaReady() {
   await sequelize.authenticate();
 
   // Sync in dependency order to avoid FK creation issues.
-  await Category.sync({ alter: true });
-  await Equipment.sync({ alter: true });
-  await Customer.sync({ alter: true });
-  await Rental.sync({ alter: true });
-  await RentalDetail.sync({ alter: true });
-  await Payment.sync({ alter: true });
-  await Return.sync({ alter: true });
-  await SyncLog.sync({ alter: true });
+  const allowAlter = String(process.env.DB_SYNC_ALTER || '').toLowerCase() === 'true';
+  const syncOptions = allowAlter ? { alter: true } : {};
+  await Category.sync(syncOptions);
+  await Equipment.sync(syncOptions);
+  await Customer.sync(syncOptions);
+  await Rental.sync(syncOptions);
+  await RentalDetail.sync(syncOptions);
+  await Payment.sync(syncOptions);
+  await Return.sync(syncOptions);
+  await SyncLog.sync(syncOptions);
+
+  // Guardrail: ensure auth-related columns exist even on older schemas.
+  await ensureCustomerAuthColumns();
 
   // If older class schema exists, migrate it into ERD tables.
   await migrateLegacyPostgresTables();
