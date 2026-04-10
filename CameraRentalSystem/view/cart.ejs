@@ -88,14 +88,24 @@
                       </form>
                     <% } %>
 
-                    <% if (item.rentalStatus === 'active') { %>
+                    <% if (item.rentalStatus === 'active' && item.paymentStatus === 'unpaid') { %>
                       <a href="/booking/<%= item.rentalId %>/payment" class="px-3 py-2 rounded bg-emerald-600 text-white text-sm hover:bg-emerald-500 transition">Pay</a>
                     <% } %>
 
-                    <form action="/cart/<%= item.rentalId %>/cancel" method="POST" onsubmit="return confirm('Cancel this booking?');">
-                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                      <button type="submit" class="px-3 py-2 rounded border border-gray-300 text-gray-700 text-sm hover:bg-gray-50 transition">Cancel</button>
-                    </form>
+                    <% if (item.rentalStatus === 'active' && item.paymentStatus === 'pending') { %>
+                      <span class="px-3 py-2 rounded bg-amber-100 text-amber-800 text-sm">Pending approval</span>
+                    <% } %>
+
+                    <% if (item.rentalStatus === 'active' && item.paymentStatus === 'rejected') { %>
+                      <a href="/booking/<%= item.rentalId %>/payment" class="px-3 py-2 rounded bg-red-600 text-white text-sm hover:bg-red-500 transition">Re-upload Slip</a>
+                    <% } %>
+
+                    <% if (item.paymentStatus === 'unpaid') { %>
+                      <form action="/cart/<%= item.rentalId %>/cancel" method="POST" onsubmit="return confirm('Cancel this booking?');">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button type="submit" class="px-3 py-2 rounded border border-gray-300 text-gray-700 text-sm hover:bg-gray-50 transition">Cancel</button>
+                      </form>
+                    <% } %>
                   </div>
                 </div>
               </div>

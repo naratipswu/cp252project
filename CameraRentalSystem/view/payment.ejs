@@ -21,6 +21,12 @@
             <p class="text-3xl font-bold text-green-700"><%= booking.totalPrice %> THB</p>
         </div>
 
+        <% if (booking.previousSlipRejected) { %>
+            <div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700 text-left">
+                สลิปก่อนหน้าถูกปฏิเสธ กรุณาอัปโหลดสลิปใหม่ที่ถูกต้อง
+            </div>
+        <% } %>
+
         <form action="/booking/<%= booking.id %>/payment/confirm" method="POST" enctype="multipart/form-data" class="text-left">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="category" value="slips">

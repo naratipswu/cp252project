@@ -11,11 +11,11 @@ function toCartItem(detail, paymentByRentalId) {
   const rental = detail.Rental;
   const equipment = detail.Equipment;
   const payment = paymentByRentalId.get(detail.RentalID) || null;
-  const isPaid = Boolean(payment);
+  const paymentStatus = payment ? (payment.PaymentStatus || 'approved') : 'unpaid';
   return {
     rentalId: detail.RentalID,
     rentalStatus: rental.RentalStatus,
-    paymentStatus: isPaid ? 'paid' : 'unpaid',
+    paymentStatus: paymentStatus === 'approved' ? 'paid' : paymentStatus,
     slipPath: payment ? payment.SlipPath || null : null,
     startDate: detail.StartDate,
     endDate: detail.EndDate,
@@ -72,7 +72,7 @@ exports.cancelCartItem = async (req, res) => {
   }
 
   const payment = await Payment.findOne({ where: { RentalID: rental.RentalID } });
-  if (payment) return res.status(409).send('Cannot cancel a paid booking');
+  if (payment) return res.status(409).send('Cannot cancel booking after payment submission');
 
   rental.RentalStatus = 'cancelled';
   await rental.save();

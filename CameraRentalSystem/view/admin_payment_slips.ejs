@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Slip Review</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <nav class="bg-gray-900 shadow">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <div class="flex items-center gap-3">
+          <a href="/admin" class="text-white font-semibold hover:text-gray-200">Back to Dashboard</a>
+          <span class="text-gray-400 text-sm">Slip Review</span>
+        </div>
+        <div class="text-sm text-gray-300">Admin: <%= user.username %></div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto p-6">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Payment Slips</h1>
+
+    <% if (!slips || slips.length === 0) { %>
+      <div class="bg-white rounded-xl border p-10 text-center text-gray-600">No payment slips submitted yet.</div>
+    <% } else { %>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <% slips.forEach((slip) => { %>
+          <section class="bg-white border rounded-2xl shadow-sm overflow-hidden">
+            <div class="p-4 border-b bg-gray-50 flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-500">Payment #<%= slip.paymentId %> | Booking #<%= slip.rentalId %></p>
+                <p class="text-sm text-gray-500">Date: <%= slip.paymentDate %></p>
+              </div>
+              <span class="px-3 py-1 text-xs rounded-full <%= slip.paymentStatus === 'pending' ? 'bg-amber-100 text-amber-800' : (slip.paymentStatus === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800') %>">
+                <%= slip.paymentStatus %>
+              </span>
+            </div>
+
+            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="space-y-2 text-sm">
+                <p><span class="text-gray-500">Renter:</span> <span class="font-medium"><%= slip.customer.username %></span></p>
+                <p><span class="text-gray-500">Email:</span> <span class="font-medium"><%= slip.customer.email %></span></p>
+                <p><span class="text-gray-500">Camera:</span> <span class="font-medium"><%= slip.booking.cameraModel %></span></p>
+                <p><span class="text-gray-500">Dates:</span> <span class="font-medium"><%= slip.booking.startDate %> - <%= slip.booking.endDate %></span></p>
+                <p><span class="text-gray-500">Amount:</span> <span class="font-semibold"><%= slip.amount %> THB</span></p>
+                <p><span class="text-gray-500">Rental Status:</span> <span class="font-medium"><%= slip.rentalStatus %></span></p>
+              </div>
+
+              <div class="flex items-center justify-center bg-gray-100 rounded-lg min-h-44">
+                <% if (slip.slipPath) { %>
+                  <a href="<%= slip.slipPath %>" target="_blank" rel="noopener" class="block w-full h-full">
+                    <img src="<%= slip.slipPath %>" alt="Slip" class="w-full h-full object-cover rounded-lg">
+                  </a>
+                <% } else { %>
+                  <span class="text-gray-500 text-sm">No slip file</span>
+                <% } %>
+              </div>
+            </div>
+
+            <% if (slip.paymentStatus === 'pending') { %>
+              <div class="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+                <form action="/admin/payment-slips/<%= slip.paymentId %>/approve" method="POST" onsubmit="return confirm('Approve this payment slip?');">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit" class="w-full py-2.5 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-500 transition">
+                    Approve Slip
+                  </button>
+                </form>
+                <form action="/admin/payment-slips/<%= slip.paymentId %>/reject" method="POST" onsubmit="return confirm('Reject this slip (suspected fake)?');">
+                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                  <button type="submit" class="w-full py-2.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-500 transition">
+                    Reject Slip
+                  </button>
+                </form>
+              </div>
+            <% } %>
+          </section>
+        <% }) %>
+      </div>
+    <% } %>
+  </main>
+</body>
+</html>

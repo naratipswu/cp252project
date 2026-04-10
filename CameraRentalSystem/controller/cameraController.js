@@ -28,10 +28,6 @@ function deriveBookingStatusFromRental(rentalStatus) {
     return 'awaiting_confirmation';
 }
 
-function derivePaymentStatus(hasPayment) {
-    return hasPayment ? 'paid' : 'unpaid';
-}
-
 function isFilmLikeCamera(brand, text) {
     if (text.includes('film')) return true;
     if (text.includes('instax')) return true;
@@ -291,7 +287,21 @@ exports.showPaymentPage = (req, res) => {
                     return res.status(403).send('Forbidden');
                 }
                 return Payment.findOne({ where: { RentalID: rental.RentalID } }).then((payment) => {
-                    if (payment) return res.status(409).send('Payment cannot be confirmed from its current state');
+                    if (payment) {
+                        if (payment.PaymentStatus === 'pending') {
+                            return res.status(409).send('Your slip is pending admin approval');
+                        }
+                        if (payment.PaymentStatus === 'approved') {
+                            return res.status(409).send('Payment has already been approved');
+                        }
+                        return res.render('payment', {
+                            booking: {
+                                id: rental.RentalID,
+                                totalPrice: Number(rental.TotalAmount),
+                                previousSlipRejected: true
+                            }
+                        });
+                    }
                     return res.render('payment', {
                         booking: {
                             id: rental.RentalID,
@@ -334,7 +344,7 @@ exports.confirmPayment = async (req, res) => {
                     transaction,
                     lock: transaction.LOCK.UPDATE
                 });
-                if (lockedRental.RentalStatus !== 'active' || payment) {
+                if (lockedRental.RentalStatus !== 'active') {
                     const error = new Error('Payment cannot be confirmed from its current state');
                     error.statusCode = 409;
                     throw error;
@@ -345,16 +355,26 @@ exports.confirmPayment = async (req, res) => {
                     throw error;
                 }
 
-                await Payment.create({
-                    RentalID: lockedRental.RentalID,
-                    PaymentMethod: 'app-payment',
-                    Amount: lockedRental.TotalAmount,
-                    PaymentDate: new Date(),
-                    SlipPath: `/uploads/slips/${req.file.filename}`
-                }, { transaction });
-                lockedRental.RentalStatus = 'completed';
-                await lockedRental.save({ transaction });
-                rental.RentalStatus = lockedRental.RentalStatus;
+                if (!payment) {
+                    await Payment.create({
+                        RentalID: lockedRental.RentalID,
+                        PaymentMethod: 'app-payment',
+                        Amount: lockedRental.TotalAmount,
+                        PaymentDate: new Date(),
+                        SlipPath: `/uploads/slips/${req.file.filename}`,
+                        PaymentStatus: 'pending'
+                    }, { transaction });
+                } else if (payment.PaymentStatus === 'rejected') {
+                    payment.PaymentDate = new Date();
+                    payment.Amount = lockedRental.TotalAmount;
+                    payment.SlipPath = `/uploads/slips/${req.file.filename}`;
+                    payment.PaymentStatus = 'pending';
+                    await payment.save({ transaction });
+                } else {
+                    const error = new Error('Payment cannot be confirmed from its current state');
+                    error.statusCode = 409;
+                    throw error;
+                }
             }
         );
     } catch (error) {
@@ -367,12 +387,97 @@ exports.confirmPayment = async (req, res) => {
         return res.status(500).send('Failed to confirm payment');
     }
 
-    return res.render('payment_success', {
-        booking: {
-            id: rental.RentalID,
-            bookingStatus: deriveBookingStatusFromRental(rental.RentalStatus),
-            paymentStatus: derivePaymentStatus(true),
-            totalPrice: Number(rental.TotalAmount)
-        }
+    return res.redirect('/cart');
+};
+
+exports.showAdminPaymentSlips = async (req, res) => {
+    const payments = await Payment.findAll({
+        include: [
+            {
+                model: Rental,
+                required: true,
+                include: [
+                    { model: Customer, required: true },
+                    {
+                        model: RentalDetail,
+                        required: false,
+                        include: [{ model: Equipment, required: false }]
+                    }
+                ]
+            }
+        ],
+        order: [['PaymentDate', 'DESC']]
     });
+
+    return res.render('admin_payment_slips', {
+        user: req.session.user,
+        slips: payments.map((payment) => {
+            const rental = payment.Rental;
+            const detail = rental.RentalDetails && rental.RentalDetails.length > 0 ? rental.RentalDetails[0] : null;
+            const equipment = detail ? detail.Equipment : null;
+            return {
+                paymentId: payment.PaymentID,
+                paymentStatus: payment.PaymentStatus || 'approved',
+                paymentDate: payment.PaymentDate,
+                amount: Number(payment.Amount),
+                slipPath: payment.SlipPath || null,
+                rentalId: rental.RentalID,
+                rentalStatus: rental.RentalStatus,
+                customer: {
+                    username: rental.Customer.Username,
+                    email: rental.Customer.Email
+                },
+                booking: {
+                    startDate: detail ? detail.StartDate : '-',
+                    endDate: detail ? detail.EndDate : '-',
+                    cameraModel: equipment ? `${equipment.Brand} ${equipment.ModelName}` : '-'
+                }
+            };
+        })
+    });
+};
+
+exports.approvePaymentSlip = async (req, res) => {
+    const paymentId = Number(req.params.paymentId);
+    if (!Number.isFinite(paymentId) || paymentId <= 0) {
+        return res.status(400).send('Invalid payment id');
+    }
+
+    const payment = await Payment.findByPk(paymentId);
+    if (!payment) return res.status(404).send('Payment not found');
+    if (payment.PaymentStatus !== 'pending') {
+        return res.status(409).send('This slip is not pending approval');
+    }
+
+    const rental = await Rental.findByPk(payment.RentalID);
+    if (!rental) return res.status(404).send('Booking not found');
+
+    payment.PaymentStatus = 'approved';
+    await payment.save();
+    rental.RentalStatus = 'completed';
+    await rental.save();
+    return res.redirect('/admin/payment-slips');
+};
+
+exports.rejectPaymentSlip = async (req, res) => {
+    const paymentId = Number(req.params.paymentId);
+    if (!Number.isFinite(paymentId) || paymentId <= 0) {
+        return res.status(400).send('Invalid payment id');
+    }
+
+    const payment = await Payment.findByPk(paymentId);
+    if (!payment) return res.status(404).send('Payment not found');
+    if (payment.PaymentStatus !== 'pending') {
+        return res.status(409).send('This slip is not pending review');
+    }
+
+    payment.PaymentStatus = 'rejected';
+    await payment.save();
+
+    const rental = await Rental.findByPk(payment.RentalID);
+    if (rental && rental.RentalStatus === 'completed') {
+        rental.RentalStatus = 'active';
+        await rental.save();
+    }
+    return res.redirect('/admin/payment-slips');
 };

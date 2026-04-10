@@ -91,8 +91,8 @@ app.get('/booking/:bookingId/payment', authController.requireAuth, cameraControl
 app.post(
   '/booking/:bookingId/payment/confirm',
   authController.requireAuth,
-  authController.requireCsrf,
   uploadImage.single('slipFile'),
+  authController.requireCsrf,
   cameraController.confirmPayment
 );
 
@@ -101,6 +101,9 @@ app.get('/admin', authController.requireAdmin, cameraController.showAdminDashboa
 app.get('/admin/accounts', authController.requireAdmin, authController.showAdminAccounts);
 app.post('/admin/accounts/role', authController.requireAdmin, authController.requireCsrf, authController.updateUserRole);
 app.post('/admin/accounts/create-admin', authController.requireAdmin, authController.requireCsrf, authController.createAdminAccount);
+app.get('/admin/payment-slips', authController.requireAdmin, cameraController.showAdminPaymentSlips);
+app.post('/admin/payment-slips/:paymentId/approve', authController.requireAdmin, authController.requireCsrf, cameraController.approvePaymentSlip);
+app.post('/admin/payment-slips/:paymentId/reject', authController.requireAdmin, authController.requireCsrf, cameraController.rejectPaymentSlip);
 app.get('/admin/media', authController.requireAdmin, mediaController.showMediaManager);
 app.post(
   '/admin/media/upload',

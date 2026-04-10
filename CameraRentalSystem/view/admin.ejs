@@ -18,6 +18,7 @@
                     <a href="/main" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Go to Main</a>
                     <a href="/browse" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Go to Browse</a>
                     <a href="/admin/accounts" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Accounts</a>
+                    <a href="/admin/payment-slips" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Review Slips</a>
                     <a href="/admin/media" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Media</a>
                     <form action="/logout" method="POST" class="inline">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -28,9 +29,27 @@
         </div>
     </nav>
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Admin Command Center</h2>
+            <p class="text-gray-600 mb-4">เลือกเมนูที่ต้องการจัดการจากศูนย์รวมคำสั่งแอดมิน</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <a href="/admin/accounts" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
+                    <h3 class="font-semibold text-gray-900">Manage Accounts</h3>
+                    <p class="text-sm text-gray-600 mt-1">จัดการสิทธิ์ผู้ใช้งานและสร้างแอดมิน</p>
+                </a>
+                <a href="/admin/payment-slips" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
+                    <h3 class="font-semibold text-gray-900">Review Payment Slips</h3>
+                    <p class="text-sm text-gray-600 mt-1">ตรวจสลิปและอนุมัติการชำระเงิน</p>
+                </a>
+                <a href="/admin/media" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
+                    <h3 class="font-semibold text-gray-900">Manage Media</h3>
+                    <p class="text-sm text-gray-600 mt-1">จัดการรูปภาพเว็บไซต์และไฟล์อัปโหลด</p>
+                </a>
+            </div>
+        </section>
+
         <h2 class="text-2xl font-bold text-gray-900 mb-6">Recent Bookings</h2>
-        
+
         <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
