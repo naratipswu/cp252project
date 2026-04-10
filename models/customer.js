@@ -29,6 +29,19 @@ const Customer = sequelize.define('Customer', {
     allowNull: false,
     unique: true
   },
+  PasswordHash: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
+  Role: {
+    type: DataTypes.ENUM('user', 'admin'),
+    allowNull: false,
+    defaultValue: 'user'
+  },
+  AvatarPath: {
+    type: DataTypes.STRING,
+    allowNull: true
+  },
   Address: {
     type: DataTypes.TEXT,
     allowNull: true

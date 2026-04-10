@@ -1,5 +1,4 @@
 const { applyMembershipDiscount } = require('../utils/logic');
-const Booking = require('../models/promotion');
 
 describe('Promotion & Membership Logic', () => {
   // TC-05: Member Discount

@@ -2,7 +2,9 @@
   "scripts": {
     "test": "jest",
     "test:cov": "jest --coverage",
-    "lint": "eslint . --fix"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "start": "node CameraRentalSystem/app.js"
   },
   "jest": {
     "collectCoverageFrom": [

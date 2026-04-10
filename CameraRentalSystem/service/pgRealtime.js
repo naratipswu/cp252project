@@ -18,7 +18,6 @@ function registerPgRealtimeRoutes(app, requireAdmin) {
 
   // Lazy-load pg only when this feature is enabled.
   // This keeps local app development simple when pg is not installed yet.
-  // eslint-disable-next-line global-require
   const { Pool } = require('pg');
   const pool = new Pool({
     host: process.env.PGHOST || 'localhost',
@@ -34,6 +33,16 @@ function registerPgRealtimeRoutes(app, requireAdmin) {
     const currentMinute = Math.floor(Date.now() / 60000);
     const key = `${ip}:${currentMinute}`;
     const current = requestCounter.get(key) || 0;
+    // Prevent unbounded growth: keep only a small window of minutes.
+    if (requestCounter.size > 500) {
+      const cutoffMinute = currentMinute - 2;
+      for (const existingKey of requestCounter.keys()) {
+        const minutePart = Number(existingKey.split(':').pop());
+        if (Number.isFinite(minutePart) && minutePart <= cutoffMinute) {
+          requestCounter.delete(existingKey);
+        }
+      }
+    }
     if (current >= 60) {
       return res.status(429).json({ error: 'Too many SQL API requests' });
     }

@@ -1,5 +1,3 @@
-const { User } = require('../models/user'); // สมมติว่า export มาจาก model
-
 describe('User Model Validation', () => {
   // TC-01: Email Validation
   test('TC-01: Should fail if email is invalid (no @ symbol)', () => {

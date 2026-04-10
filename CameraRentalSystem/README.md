@@ -1,59 +1,79 @@
-# Update1
 # Camera Rental System
 
-A simple web application for renting cameras built with Node.js and Express.
+Web application for renting cameras built with Node.js + Express (EJS) using **PostgreSQL 100%** (Sequelize).
 
-## How to Run
+## How to Run (Postgres-only)
 
-1.  **Install dependencies:**
-    Open your terminal in the `CameraRentalSystem` directory and run:
-    ```bash
-    npm install
-    ```
+### 1) Prerequisites
+- **Node.js** (LTS recommended)
+- **PostgreSQL** running locally (or reachable)
 
-2.  **Start the server:**
-    Run the following command:
-    ```bash
-    node app.js
-    ```
+### 2) Create database
+Create a database (example name: `camera_rental`).
 
-3.  **Access the application:**
-    Open your browser and go to:
-    [http://localhost:3000](http://localhost:3000)
+### 3) Configure environment variables
+This app reads config from **repo root** `.env` (not inside `CameraRentalSystem/`).
+
+1. Copy `.env.example` at repo root to `.env`
+2. Fill these values (minimum required):
+
+```env
+DB_DIALECT=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=camera_rental
+DB_USER=postgres
+DB_PASSWORD=YOUR_PG_PASSWORD
+
+SESSION_SECRET=replace-with-a-long-random-string
+
+# First run only (seeds initial admin if none exists)
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@camera.com
+ADMIN_PASSWORD=change-this-strong-password
+```
+
+> First time you run after schema changes, you may temporarily set `DB_SYNC_ALTER=true` in `.env` to let Sequelize add columns automatically. Keep it `false` afterwards.
+
+### 4) Install dependencies
+Install dependencies at the **repo root**:
+
+```bash
+cd ..
+npm install
+```
+
+### 5) Start the server
+Option A (recommended, from repo root):
+
+```bash
+npm start
+```
+
+Option B (from `CameraRentalSystem/`, still requires root deps installed):
+
+```bash
+node app.js
+```
+
+### 6) Open the app
+Go to `http://localhost:3000`
 
 ## Features
-- Main page for browsing cameras
-- Sign-in / Sign-up (Mock)
-- Camera booking (Mock)
-- Admin dashboard (Mock)
+- Browse/search cameras
+- Sign-in / Sign-up
+- Booking flow (confirm + payment confirm)
+- Admin dashboard + account management + media manager
 
-//
+## PostgreSQL SQL API (Optional - disabled by default)
 
-## PostgreSQL Realtime Mode (Optional - Disabled by default)
+This is for pgAdmin/SQL demo endpoints. Enable with:
 
-> โหมดนี้ไว้สำหรับเดโม่กับ pgAdmin4 และการเขียน SQL ดึงข้อมูลแบบ realtime (ฝั่ง API)
-> ตอนนี้ระบบหลักยังพัฒนาแบบเดิมได้ปกติ เพราะโหมดนี้จะไม่ทำงานถ้าไม่เปิดเอง
+```bash
+set ENABLE_PG_REALTIME=true
+```
 
-1. ติดตั้ง dependency ในโฟลเดอร์ `CameraRentalSystem`
-   ```bash
-   npm install
-   ```
-2. ตั้งค่า environment variables ก่อนรัน
-   ```bash
-   set ENABLE_PG_REALTIME=true
-   set PGHOST=localhost
-   set PGPORT=5432
-   set PGDATABASE=camera_rental
-   set PGUSER=postgres
-   set PGPASSWORD=your_password
-   ```
-3. รันแอป
-   ```bash
-   node app.js
-   ```
-4. ทดสอบ endpoint SQL
-   - `GET /api/sql/health`
-   - `GET /api/sql/revenue-daily`
-   - `GET /api/sql/active-rentals`
-
-> ถ้ายังไม่อยากใช้ PostgreSQL ให้ไม่ต้องตั้ง `ENABLE_PG_REALTIME` (หรือให้เป็น `false`) ระบบจะปิดโหมดนี้อัตโนมัติ
+Endpoints (admin-only):
+- `GET /api/sql/health`
+- `GET /api/sql/revenue-daily`
+- `GET /api/sql/active-rentals`

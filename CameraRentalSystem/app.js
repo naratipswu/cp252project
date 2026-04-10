@@ -5,11 +5,12 @@ const path = require('path');
 const authController = require('./controller/authController');
 const cameraController = require('./controller/cameraController');
 const mediaController = require('./controller/mediaController');
+const cartController = require('./controller/cartController');
 const { registerPgRealtimeRoutes } = require('./service/pgRealtime');
 const { ensureUploadDirectories, uploadImage } = require('./service/uploadService');
 const { ensureCameraStoreReady } = require('./service/cameraStore');
 const { ensureFullSchemaReady } = require('./service/schemaSync');
-const { syncLegacyDataToPostgres } = require('./service/legacyDataSync');
+const { ensureAdminSeed } = require('./service/adminSeed');
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -17,8 +18,8 @@ const sessionSecret = process.env.SESSION_SECRET;
 const forceSecureCookie = process.env.SESSION_COOKIE_SECURE === 'true';
 const useSecureCookie = forceSecureCookie;
 
-if (isProduction && (!sessionSecret || sessionSecret === 'change-this-session-secret')) {
-  throw new Error('SESSION_SECRET must be set to a strong value in production');
+if (!sessionSecret || sessionSecret === 'change-this-session-secret') {
+  throw new Error('SESSION_SECRET must be set to a strong value');
 }
 if (isProduction && process.env.ENABLE_MOCK_GOOGLE_LOGIN === 'true') {
   throw new Error('ENABLE_MOCK_GOOGLE_LOGIN must be disabled in production');
@@ -33,22 +34,15 @@ app.set('views', path.join(__dirname, 'view'));
 ensureUploadDirectories();
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 async function initializeApp() {
-  try {
-    await ensureFullSchemaReady();
-    await ensureCameraStoreReady();
-    await syncLegacyDataToPostgres();
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Initialization failed:', error.message);
-  }
+  await ensureFullSchemaReady();
+  await ensureCameraStoreReady();
+  await ensureAdminSeed();
 }
-
-initializeApp();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(session({
-  secret: sessionSecret || 'change-this-session-secret',
+  secret: sessionSecret,
   store: new MemoryStore({
     checkPeriod: 1000 * 60 * 60
   }),
@@ -86,6 +80,8 @@ app.post('/logout', authController.requireAuth, authController.requireCsrf, auth
 
 // 2. Camera Browsing & Booking
 app.get('/browse', cameraController.browseCameras);
+app.get('/cart', authController.requireAuth, cartController.showCart);
+app.post('/cart/:rentalId/cancel', authController.requireAuth, authController.requireCsrf, cartController.cancelCartItem);
 app.post('/admin/cameras', authController.requireAdmin, authController.requireCsrf, uploadImage.single('imageFile'), cameraController.addCamera);
 app.post('/book', authController.requireAuth, authController.requireCsrf, cameraController.bookCamera);
 app.get('/booking/:bookingId/confirm', authController.requireAuth, cameraController.showBookingConfirm);
@@ -113,7 +109,15 @@ registerPgRealtimeRoutes(app, authController.requireAdmin);
 
 const port = Number(process.env.PORT || 3000);
 if (require.main === module) {
-  app.listen(port, () => console.log(`Server running on http://localhost:${port}`));
+  initializeApp()
+    .then(() => {
+      app.listen(port, () => console.log(`Server running on http://localhost:${port}`));
+    })
+    .catch((error) => {
+      // Print full error details (Sequelize validation often hides root cause in .errors).
+      console.error('Initialization failed:', error);
+      process.exit(1);
+    });
 }
 
 module.exports = app;

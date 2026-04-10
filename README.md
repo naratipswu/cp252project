@@ -42,6 +42,9 @@ erDiagram
         varchar Username
         varchar Phone
         varchar Email
+        varchar PasswordHash
+        varchar Role
+        varchar AvatarPath
         text Address
     }
 
@@ -111,7 +114,7 @@ Security : มีการเข้ารหัสรหัสผ่าน (Encr
 * ใช้กระบวนการพัฒนาแบบ Agile (Scrum)
 * **Backend**: Node.js, Express.js
 * **Frontend**: EJS, TailwindCSS, Vanilla JS
-* **Database**: PostgreSQL (Primary) / SQLite (Fallback) via Sequelize ORM
+* **Database**: PostgreSQL via Sequelize ORM
 * **Design Tools**: Figma, Canva
 * **Development Tools**: VS Code, Git, GitHub Projects 
 
@@ -271,7 +274,7 @@ https://www.figma.com/proto/YVqTr3EiIpPg1v7y9oaU4G/CP252-Project?node-id=0-1&t=k
 - **PostgreSQL**: ติดตั้งและสร้าง Database ชื่อ `camera_rental`
 
 ### 2. Configuration
-สร้างไฟล์ `.env` ที่ Root เพื่อเชื่อมต่อฐานข้อมูล:
+สร้างไฟล์ `.env` ที่ Root เพื่อเชื่อมต่อฐานข้อมูล (ดูตัวอย่างจาก `.env.example`):
 ```env
 DB_DIALECT=postgres
 DB_HOST=localhost
@@ -279,6 +282,14 @@ DB_PORT=5432
 DB_NAME=camera_rental
 DB_USER=postgres
 DB_PASSWORD=YOUR_PASSWORD
+
+# Required: used to sign session cookies
+SESSION_SECRET=replace-with-a-long-random-string
+
+# Initial admin seed (required on first run if no admin exists)
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@camera.com
+ADMIN_PASSWORD=change-this-strong-password
 ```
 
 ### 3. Installation
@@ -288,6 +299,7 @@ npm install
 
 ### 4. Start Application
 ```powershell
+cd CameraRentalSystem
 node app.js
 ```
 เปิดบราวเซอร์ไปที่: **http://localhost:3000**

@@ -31,11 +31,8 @@
 
 ## 💾 3. เจาะลึกระบบข้อมูล (Model Layer)
 
-### 📄 `model/data.js` (Mock Database ในหน่วยความจำ)
-เนื่องจากเรายังไม่ได้ต่อฐานข้อมูลรัดกุม (เช่น SQL) เราจึงจำลองฐานข้อมูลขึ้นมาเป็นตัวแปร Array วิ่งอยู่บน RAM ของเซิร์ฟเวอร์:
-- **`const cameras`:** ตัวแปรเก็บรายการกล้อง ภายในประกอบเป็น Object ที่มีโครงสร้างระบุ: 
-  `id` (รหัสกล้อง), `brand` (ยี่ห้อ), `model` (ชื่อรุ่น), `stock` (จำนวนคลัง), `pricePerDay` (ราคามาตรฐาน/วัน), `image` (ลิงก์รูป)
-- **`const bookings`:** ตะกร้าสะสมประวัติการจอง เป็น Array ว่างเปล่า `[]` ในช่วงแรก เมื่อมีการทำธุรกรรมใดๆ ข้อมูลการจองจะถูก `push()` เอามายัดใส่ตัวแปรนี้เรื่อยๆ ชั่วคราว (ถ้าปิดเซิร์ฟเวอร์ ข้อมูลตรงนี้จะหายไป ถือว่าเป็น Mock)
+### 📄 PostgreSQL (Production-style Database)
+ระบบใช้ PostgreSQL เป็นแหล่งข้อมูลหลักผ่าน Sequelize ORM โดยตารางสำคัญอยู่ใน `models/` (เช่น `Equipment`, `Customer`, `Rental`, `RentalDetail`, `Payment`)
 
 ---
 
@@ -98,7 +95,7 @@
 ## ✅ บทสรุปความเชื่อมโยง (How they interact together)
 **ตัวอย่างการทำงานเต็มรูป (Full Flow):**
 1. **User (ผู้ใช้งาน)** เข้ามาที่ `http://localhost:3000/` → `app.js` ชี้ไปที่ `authController.showMain` → โหลด `main.ejs` ให้นั่งดูวิว
-2. กดปุ่ม `Browse` → `app.js` ชี้ไปที่ `cameraController.browseCameras` → เซิร์ฟเวอร์อ่าน `model/data.js` เจอข้อมูลกล้อง 4 ตัว → ส่งไปเรนเดอร์ใน `browse_camera.ejs` ลูปกรอบ 4 รูปแล้วเด้งออกไปที่หน้าจอเบราว์เซอร์
+2. กดปุ่ม `Browse` → `app.js` ชี้ไปที่ `cameraController.browseCameras` → เซิร์ฟเวอร์อ่านข้อมูลจากตาราง `Equipment` → ส่งไปเรนเดอร์ใน `browse_camera.ejs`
 3. User เลือกปฏิทิน -> สคริปต์หน้าบ้าน `calculatePrice` รับสัมผัสและคำนวณราคาสรุปออกมา 1500 บาท
 4. User ยังไม่ล็อกอิน กดจอง (Submit) → ส่ง POST `/book` → วิ่งชน Middleware `authController.requireAuth` → ยามจับได้ว่าไม่มี Session → ถูกกระแทกเด้ง `res.redirect('/signin')`!
 5. User กรอกล็อกอินผ่าน → กลับมาหน้า `/browse` กดปุ่มจองอีกครั้ง → วิ่งชน Middleware แบบเดิมแต่คราวนี้ผ่าน → เข้าสู่กระบวนการ `bookCamera` → Controller หยิบข้อมูลยัดใส่กล่อง `bookings` ในหน่วยความจำ แล้วเตะกลับหน้า Browse พร้อมประวัติที่ถูกเก็บไว้ในเซิร์ฟเวอร์
@@ -138,14 +135,10 @@
    - `app.listen` แยกด้วย `if (require.main === module)`
    - `module.exports = app` เพื่อรองรับ integration test
 
-### 2) Data Layer เปลี่ยนจาก Mock-only เป็น Hybrid + PostgreSQL Sync
+### 2) Data Layer: PostgreSQL 100%
 
-1. **ยังมี JSON fallback (เพื่อให้เพื่อนที่ยังไม่ต่อ DB ทำงานได้)**
-   - ข้อมูล local อยู่ที่ `CameraRentalSystem/model/data-store.json`
-
-2. **โหมด PostgreSQL ถูกผูกแล้ว**
-   - `config/db.js` รองรับ env-driven (`sqlite`/`postgres`)
-   - เมื่อ `DB_DIALECT=postgres` จะ sync schema และใช้งาน DB ได้
+1. **ยกเลิก JSON/SQLite fallback**
+   - ระบบบังคับใช้ Postgres-only ผ่าน `config/db.js`
 
 3. **Sync schema ตาม ERD ครบ 7 ตารางหลัก**
    - `Category`, `Equipment`, `Customer`, `Rental`, `RentalDetail`, `Payment`, `Return`
@@ -155,23 +148,9 @@
    - เก็บสถานะ sync (`success`/`failed`) และจำนวนรายการที่นำเข้า
    - โมเดลอยู่ที่ `models/syncLog.js`
 
-### 3) Realtime/Batch Sync ที่เพิ่งเพิ่ม
+### 3) Sync/Migration
 
-1. **Legacy Batch Sync (JSON -> PostgreSQL)**
-   - `CameraRentalSystem/service/legacyDataSync.js`
-   - import `cameras/users/bookings` ไปตารางเดิมตาม ERD
-   - เขียนผลเข้า `SyncLog`
-
-2. **Direct realtime customer sync ตอนสมัคร/สร้างบัญชี**
-   - `CameraRentalSystem/service/directPgSync.js`
-   - ตอน `register`, `createAdminAccount`, และกรณีสร้าง user จาก `loginGoogle`
-   - พยายาม upsert เข้า `Customer` ทันทีผ่าน pg client
-   - ถ้า DB ไม่พร้อม แอปไม่ล่ม (ยัง fallback โหมด JSON)
-
-3. **Booking realtime sync**
-   - `CameraRentalSystem/service/bookingSync.js`
-   - หลังทำรายการจอง/confirm/payment จะพยายาม sync เข้า `Rental`, `RentalDetail`, `Payment`
-   - เขียน status ลง `SyncLog` ด้วย
+- ระบบไม่ sync จาก JSON runtime อีกต่อไป เพื่อความปลอดภัยและความชัดเจนของแหล่งข้อมูล (Single Source of Truth = PostgreSQL)
 
 ### 4) Product/Camera Management ล่าสุด
 
