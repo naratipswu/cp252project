@@ -195,6 +195,18 @@ async function ensurePaymentSlipColumn() {
   if (!columns.SlipPath) {
     await qi.addColumn('Payment', 'SlipPath', { type: DataTypes.STRING, allowNull: true });
   }
+  if (!columns.PaymentStatus) {
+    await qi.addColumn('Payment', 'PaymentStatus', {
+      type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+      allowNull: false,
+      defaultValue: 'approved'
+    });
+  }
+  await sequelize.query(`
+    UPDATE "Payment"
+    SET "PaymentStatus" = 'approved'
+    WHERE "PaymentStatus" IS NULL
+  `);
 }
 
 async function ensureFullSchemaReady() {

@@ -24,6 +24,11 @@ const Payment = sequelize.define('Payment', {
     type: DataTypes.STRING,
     allowNull: true
   },
+  PaymentStatus: {
+    type: DataTypes.ENUM('pending', 'approved', 'rejected'),
+    allowNull: false,
+    defaultValue: 'approved'
+  },
   RentalID: {
     type: DataTypes.INTEGER,
     allowNull: false
