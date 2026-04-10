@@ -1,4 +1,5 @@
-const { Op } = require('sequelize');
+const { Op, Transaction } = require('sequelize');
+const sequelize = require('../../config/db');
 const { getAllCameras, addCamera, DEFAULT_IMAGE } = require('../service/cameraStore');
 const { Customer, Equipment, Rental, RentalDetail, Payment } = require('../../models');
 
@@ -31,11 +32,36 @@ function derivePaymentStatus(hasPayment) {
     return hasPayment ? 'paid' : 'unpaid';
 }
 
+function isFilmLikeCamera(brand, text) {
+    if (text.includes('film')) return true;
+    if (text.includes('instax')) return true;
+    if (brand.includes('kodak')) return true;
+    if (brand.includes('fujifilm')) return true;
+    return false;
+}
+
+function cameraMatchesType(camera, type) {
+    const normalizedType = String(type || '').toLowerCase();
+    if (!normalizedType) return true;
+    const brand = String(camera.brand || '').toLowerCase();
+    const model = String(camera.model || '').toLowerCase();
+    const text = `${brand} ${model}`;
+    const isFilmLike = isFilmLikeCamera(brand, text);
+
+    if (normalizedType === 'film') return isFilmLike;
+    if (normalizedType === 'digital') return !isFilmLike;
+    return true;
+}
+
 exports.browseCameras = async (req, res) => {
     const searchQuery = req.query.search || '';
+    const selectedType = String(req.query.type || '').toLowerCase();
 
     // Filter by brand or model
     let filteredCameras = await getAllCameras();
+    if (selectedType) {
+        filteredCameras = filteredCameras.filter((camera) => cameraMatchesType(camera, selectedType));
+    }
     if (searchQuery) {
         const lowerQuery = searchQuery.toLowerCase();
         filteredCameras = filteredCameras.filter(c =>
@@ -47,7 +73,8 @@ exports.browseCameras = async (req, res) => {
     res.render('browse_camera', { 
         cameras: filteredCameras, 
         user: req.session.user,
-        searchQuery
+        searchQuery,
+        selectedType
     });
 };
 
@@ -85,56 +112,84 @@ exports.addCamera = async (req, res) => {
 exports.bookCamera = async (req, res) => {
     const { cameraId, startDate, endDate } = req.body;
     const normalizedCameraId = Number(cameraId);
-    const equipment = await Equipment.findByPk(normalizedCameraId);
-    if (!equipment) return res.status(404).send('Camera not found');
-
     const start = getDateOrNull(startDate);
     const end = getDateOrNull(endDate);
     if (!start || !end || start > end) {
         return res.status(400).send('Invalid booking dates');
     }
-
-    if (equipment.Status !== 'available') {
-        return res.status(400).send('Camera is out of stock');
-    }
-
-    const overlap = await RentalDetail.findOne({
-        where: {
-            EquipmentID: equipment.EquipmentID,
-            StartDate: { [Op.lte]: end.toISOString().slice(0, 10) },
-            EndDate: { [Op.gte]: start.toISOString().slice(0, 10) }
-        },
-        include: [{
-            model: Rental,
-            required: true,
-            where: { RentalStatus: { [Op.ne]: 'cancelled' } }
-        }]
-    });
-
-    if (overlap) {
-        return res.status(409).send('Selected camera is already booked for these dates');
-    }
-
-    const rentalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    const totalPrice = rentalDays * Number(equipment.DailyRate);
+    const startDateOnly = start.toISOString().slice(0, 10);
+    const endDateOnly = end.toISOString().slice(0, 10);
     const customer = await getCustomerForSession(req);
-    if (!customer) return res.status(401).send('Unauthorized');
 
-    const rental = await Rental.create({
-        RentalDate: new Date(),
-        TotalAmount: totalPrice,
-        RentalStatus: 'pending',
-        CustomerID: customer.CustomerID
-    });
-    await RentalDetail.create({
-        RentalID: rental.RentalID,
-        EquipmentID: equipment.EquipmentID,
-        StartDate: start.toISOString().slice(0, 10),
-        EndDate: end.toISOString().slice(0, 10),
-        SubTotal: totalPrice
-    });
+    try {
+        const rental = await sequelize.transaction(
+            { isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE },
+            async (transaction) => {
+                const equipment = await Equipment.findByPk(normalizedCameraId, {
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+                if (!equipment) {
+                    const error = new Error('Camera not found');
+                    error.statusCode = 404;
+                    throw error;
+                }
+                if (equipment.Status !== 'available') {
+                    const error = new Error('Camera is out of stock');
+                    error.statusCode = 400;
+                    throw error;
+                }
 
-    return res.redirect(`/booking/${rental.RentalID}/confirm`);
+                const overlap = await RentalDetail.findOne({
+                    where: {
+                        EquipmentID: equipment.EquipmentID,
+                        StartDate: { [Op.lte]: endDateOnly },
+                        EndDate: { [Op.gte]: startDateOnly }
+                    },
+                    include: [{
+                        model: Rental,
+                        required: true,
+                        where: { RentalStatus: { [Op.ne]: 'cancelled' } }
+                    }],
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+                if (overlap) {
+                    const error = new Error('Selected camera is already booked for these dates');
+                    error.statusCode = 409;
+                    throw error;
+                }
+                if (!customer) {
+                    const error = new Error('Unauthorized');
+                    error.statusCode = 401;
+                    throw error;
+                }
+
+                const rentalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                const totalPrice = rentalDays * Number(equipment.DailyRate);
+                const createdRental = await Rental.create({
+                    RentalDate: new Date(),
+                    TotalAmount: totalPrice,
+                    RentalStatus: 'pending',
+                    CustomerID: customer.CustomerID
+                }, { transaction });
+                await RentalDetail.create({
+                    RentalID: createdRental.RentalID,
+                    EquipmentID: equipment.EquipmentID,
+                    StartDate: startDateOnly,
+                    EndDate: endDateOnly,
+                    SubTotal: totalPrice
+                }, { transaction });
+                return createdRental;
+            }
+        );
+        return res.redirect(`/booking/${rental.RentalID}/confirm`);
+    } catch (error) {
+        if (error && error.statusCode) {
+            return res.status(error.statusCode).send(error.message);
+        }
+        return res.status(500).send('Failed to create booking');
+    }
 };
 
 exports.showAdminDashboard = (req, res) => {
@@ -260,19 +315,57 @@ exports.confirmPayment = async (req, res) => {
         return res.status(403).send('Forbidden');
     }
 
-    const payment = await Payment.findOne({ where: { RentalID: rental.RentalID } });
-    if (rental.RentalStatus !== 'active' || payment) {
-        return res.status(409).send('Payment cannot be confirmed from its current state');
-    }
+    try {
+        await sequelize.transaction(
+            { isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE },
+            async (transaction) => {
+                const lockedRental = await Rental.findByPk(rentalId, {
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+                if (!lockedRental) {
+                    const error = new Error('Booking not found');
+                    error.statusCode = 404;
+                    throw error;
+                }
 
-    await Payment.create({
-        RentalID: rental.RentalID,
-        PaymentMethod: 'app-payment',
-        Amount: rental.TotalAmount,
-        PaymentDate: new Date()
-    });
-    rental.RentalStatus = 'completed';
-    await rental.save();
+                const payment = await Payment.findOne({
+                    where: { RentalID: lockedRental.RentalID },
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+                if (lockedRental.RentalStatus !== 'active' || payment) {
+                    const error = new Error('Payment cannot be confirmed from its current state');
+                    error.statusCode = 409;
+                    throw error;
+                }
+                if (!req.file) {
+                    const error = new Error('Please upload a payment slip');
+                    error.statusCode = 400;
+                    throw error;
+                }
+
+                await Payment.create({
+                    RentalID: lockedRental.RentalID,
+                    PaymentMethod: 'app-payment',
+                    Amount: lockedRental.TotalAmount,
+                    PaymentDate: new Date(),
+                    SlipPath: `/uploads/slips/${req.file.filename}`
+                }, { transaction });
+                lockedRental.RentalStatus = 'completed';
+                await lockedRental.save({ transaction });
+                rental.RentalStatus = lockedRental.RentalStatus;
+            }
+        );
+    } catch (error) {
+        if (error && error.statusCode) {
+            return res.status(error.statusCode).send(error.message);
+        }
+        if (error && error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(409).send('Payment cannot be confirmed from its current state');
+        }
+        return res.status(500).send('Failed to confirm payment');
+    }
 
     return res.render('payment_success', {
         booking: {

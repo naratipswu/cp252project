@@ -189,6 +189,14 @@ async function ensureCustomerAuthColumns() {
   }
 }
 
+async function ensurePaymentSlipColumn() {
+  const qi = sequelize.getQueryInterface();
+  const columns = await qi.describeTable('Payment');
+  if (!columns.SlipPath) {
+    await qi.addColumn('Payment', 'SlipPath', { type: DataTypes.STRING, allowNull: true });
+  }
+}
+
 async function ensureFullSchemaReady() {
   await sequelize.authenticate();
 
@@ -206,6 +214,7 @@ async function ensureFullSchemaReady() {
 
   // Guardrail: ensure auth-related columns exist even on older schemas.
   await ensureCustomerAuthColumns();
+  await ensurePaymentSlipColumn();
 
   // If older class schema exists, migrate it into ERD tables.
   await migrateLegacyPostgresTables();
