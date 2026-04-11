@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Camera Stock</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-gray-900 shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-2">
+                    <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <h1 class="text-xl font-bold text-white">Manage Camera Stock</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="/admin" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Back to Dashboard</a>
+                    <a href="/browse" class="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Storefront</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+        <section>
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Equipment Inventory</h2>
+            
+            <% if (error) { %>
+                <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                    <p class="text-sm text-red-700"><%= error %></p>
+                </div>
+            <% } %>
+
+            <div class="bg-white shadow rounded-lg overflow-x-auto border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Image</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Brand/Model</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial Number</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rate/Day</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <% cameras.forEach(cam => { %>
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <img src="<%= cam.ImageURL %>" alt="cam" class="w-12 h-12 rounded object-cover">
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="font-bold text-gray-900"><%= cam.ModelName %></div>
+                                    <div class="text-gray-500 text-sm"><%= cam.Brand %></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <%= cam.SerialNumber %>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
+                                    <%= Number(cam.DailyRate) %> ฿
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <%= cam.Category ? cam.Category.CategoryName : 'General' %>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <form action="/admin/cameras/<%= cam.EquipmentID %>/status" method="POST">
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                        <select name="status" onchange="this.form.submit()" class="<%= cam.Status === 'available' ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50' %> rounded border-gray-300 text-xs px-2 py-1 focus:ring-yellow-500 font-bold">
+                                            <option value="available" <%= cam.Status === 'available' ? 'selected' : '' %>>Available</option>
+                                            <option value="maintenance" <%= cam.Status === 'maintenance' ? 'selected' : '' %>>Maintenance</option>
+                                        </select>
+                                    </form>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <form action="/admin/cameras/<%= cam.EquipmentID %>/delete" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this camera? This could fail if there are existing bookings for it.');">
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                        <button type="submit" class="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 px-3 py-1 rounded transition">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <% }) %>
+                        <% if(cameras.length === 0) { %>
+                            <tr><td colspan="7" class="px-6 py-10 text-center text-gray-500">No cameras found. Add them from the Browse page.</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
