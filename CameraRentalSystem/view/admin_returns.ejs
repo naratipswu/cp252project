@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Returns</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-gray-900 shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-2">
+                    <svg class="w-6 h-6 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    <h1 class="text-xl font-bold text-white">Manage Returns</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span class="text-gray-300 text-sm">Logged in as <%= user.username %></span>
+                    <a href="/admin" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Back to Dashboard</a>
+                    <form action="/logout" method="POST" class="inline">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button type="submit" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Logout</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+        <section>
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Pending Returns</h2>
+            <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device & User</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Booking</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process Return</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <% pendingReturns.forEach(item => { %>
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <div class="font-bold"><%= item.camera %></div>
+                                    <div class="text-gray-500 text-xs">Customer: <%= item.customer %></div>
+                                    <div class="text-gray-500 text-xs">Rental #<%= item.rentalId %></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <%= item.startDate %> <br/>
+                                    to <br/>
+                                    <%= item.endDate %>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
+                                    <%= item.totalAmount %> ฿
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">
+                                    <form action="/admin/returns/<%= item.rentalDetailId %>" method="POST" class="flex flex-col gap-2 max-w-xs">
+                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700">Late Fee (฿)</label>
+                                            <input type="number" name="lateFee" value="0" min="0" step="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm px-2 py-1 border">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700">Damage Fee (฿)</label>
+                                            <input type="number" name="damageFee" value="0" min="0" step="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm px-2 py-1 border">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700">Notes (Optional)</label>
+                                            <input type="text" name="notes" placeholder="Condition details..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm px-2 py-1 border">
+                                        </div>
+                                        <button type="submit" class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded mt-1 transition w-full text-xs" onclick="return confirm('Confirm processing this return?');">
+                                            Confirm Return
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <% }) %>
+                        <% if(pendingReturns.length === 0) { %>
+                            <tr><td colspan="4" class="px-6 py-10 text-center text-gray-500">No pending returns found.</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section>
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Completed Returns (History)</h2>
+            <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device & User</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actual Return Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fees</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <% completedReturns.forEach(item => { %>
+                            <tr class="bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <div class="font-bold"><%= item.camera %></div>
+                                    <div class="text-gray-500 text-xs">Customer: <%= item.customer %></div>
+                                    <div class="text-gray-500 text-xs">Rental #<%= item.rentalId %></div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <%= new Date(item.actualReturnDate).toLocaleDateString() %> <br/>
+                                    <%= new Date(item.actualReturnDate).toLocaleTimeString() %>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <div class="text-amber-600">Late: <%= item.lateFee %> ฿</div>
+                                    <div class="text-red-600">Damage: <%= item.damageFee %> ฿</div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600 max-w-xs break-words whitespace-normal">
+                                    <%= item.notes || '-' %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                        <% if(completedReturns.length === 0) { %>
+                            <tr><td colspan="4" class="px-6 py-10 text-center text-gray-500">No history of returned items.</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
