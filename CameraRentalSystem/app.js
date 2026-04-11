@@ -7,6 +7,7 @@ const cameraController = require('./controller/cameraController');
 const mediaController = require('./controller/mediaController');
 const cartController = require('./controller/cartController');
 const returnController = require('./controller/returnController');
+const logController = require('./controller/logController');
 const { registerPgRealtimeRoutes } = require('./service/pgRealtime');
 const { ensureUploadDirectories, uploadImage } = require('./service/uploadService');
 const { ensureCameraStoreReady } = require('./service/cameraStore');
@@ -108,6 +109,7 @@ app.post('/admin/payment-slips/:paymentId/reject', authController.requireAdmin, 
 app.get('/admin/media', authController.requireAdmin, mediaController.showMediaManager);
 app.get('/admin/returns', authController.requireAdmin, returnController.showAdminReturns);
 app.post('/admin/returns/:rentalDetailId', authController.requireAdmin, authController.requireCsrf, returnController.processReturn);
+app.get('/admin/logs', authController.requireAdmin, logController.showAdminLogs);
 app.post(
   '/admin/media/upload',
   authController.requireAdmin,
