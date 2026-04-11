@@ -20,6 +20,7 @@
                     <a href="/admin/accounts" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Accounts</a>
                     <a href="/admin/payment-slips" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Review Slips</a>
                     <a href="/admin/media" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Media</a>
+                    <a href="/admin/cameras" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Cameras</a>
                     <a href="/admin/returns" class="bg-pink-600 hover:bg-pink-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Returns</a>
                     <a href="/admin/logs" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">System Logs</a>
                     <form action="/logout" method="POST" class="inline">
@@ -31,10 +32,38 @@
         </div>
     </nav>
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <% if (locals.stats) { %>
+        <section class="mb-10">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Dashboard Overview</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-green-500">
+                    <p class="text-sm text-gray-500 mb-1">Monthly Income (Approved)</p>
+                    <h3 class="text-3xl font-black text-gray-900"><%= Number(stats.monthlyIncome).toLocaleString() %> ฿</h3>
+                </div>
+                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-yellow-500">
+                    <p class="text-sm text-gray-500 mb-1">Pending Payments</p>
+                    <h3 class="text-3xl font-black text-gray-900"><%= stats.pendingPayments %></h3>
+                </div>
+                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-blue-500">
+                    <p class="text-sm text-gray-500 mb-1">Active Deliveries Today</p>
+                    <h3 class="text-3xl font-black text-gray-900"><%= stats.deliveriesToday %></h3>
+                </div>
+                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-pink-500">
+                    <p class="text-sm text-gray-500 mb-1">Expected Returns Today</p>
+                    <h3 class="text-3xl font-black text-gray-900"><%= stats.returnsToday %></h3>
+                </div>
+            </div>
+        </section>
+        <% } %>
+
         <section class="mb-8">
             <h2 class="text-2xl font-bold text-gray-900 mb-2">Admin Command Center</h2>
             <p class="text-gray-600 mb-4">เลือกเมนูที่ต้องการจัดการจากศูนย์รวมคำสั่งแอดมิน</p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <a href="/admin/cameras" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
+                    <h3 class="font-semibold text-gray-900">Manage Cameras</h3>
+                    <p class="text-sm text-gray-600 mt-1">จัดการคลังสินค้า เปลี่ยนสถานะ และลบอุปกรณ์</p>
+                </a>
                 <a href="/admin/accounts" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
                     <h3 class="font-semibold text-gray-900">Manage Accounts</h3>
                     <p class="text-sm text-gray-600 mt-1">จัดการสิทธิ์ผู้ใช้งานและสร้างแอดมิน</p>

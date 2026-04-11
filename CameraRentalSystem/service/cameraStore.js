@@ -16,13 +16,21 @@ async function ensureCameraStoreReady() {
   await Category.sync();
   await Equipment.sync();
   const existingCount = await Equipment.count();
-  let defaultCategory = await Category.findByPk(1);
-  if (!defaultCategory) {
-    defaultCategory = await Category.create({
-      CategoryID: 1,
-      CategoryName: 'General'
-    });
+  const cNames = ['DSLR', 'Mirrorless', 'Lens', 'Action Camera', 'General'];
+  for (const cName of cNames) {
+    try {
+      const existing = await Category.findOne({ where: { CategoryName: cName } });
+      if (!existing) {
+        // Find max ID and increment to avoid sequence issues
+        const maxCat = await Category.max('CategoryID') || 0;
+        await Category.create({ CategoryID: maxCat + 1, CategoryName: cName });
+      }
+    } catch(err) {
+      console.log('Category seed error for', cName, err.message);
+    }
   }
+
+  let defaultCategory = await Category.findOne({ where: { CategoryName: 'Mirrorless' } }) || await Category.findOne();
   if (existingCount === 0 && SEED_EQUIPMENT.length > 0) {
     const now = Date.now();
     const toCreate = [];
@@ -45,7 +53,10 @@ async function ensureCameraStoreReady() {
 }
 
 async function getAllCameras() {
-  const rows = await Equipment.findAll({ order: [['EquipmentID', 'ASC']] });
+  const rows = await Equipment.findAll({ 
+      include: [{ model: Category }],
+      order: [['EquipmentID', 'ASC']] 
+  });
   return rows.map((item) => {
     const row = item.toJSON();
     return {
@@ -54,7 +65,10 @@ async function getAllCameras() {
       brand: row.Brand,
       pricePerDay: Number(row.DailyRate),
       stock: row.Status === 'available' ? 1 : 0,
-      image: row.ImageURL || DEFAULT_IMAGE
+      status: row.Status,
+      image: row.ImageURL || DEFAULT_IMAGE,
+      categoryId: row.CategoryID,
+      categoryName: row.Category ? row.Category.CategoryName : 'General'
     };
   });
 }
@@ -68,13 +82,8 @@ async function addCamera(cameraInput) {
     image: cameraInput.image || DEFAULT_IMAGE
   };
 
-  let defaultCategory = await Category.findByPk(1);
-  if (!defaultCategory) {
-    defaultCategory = await Category.create({
-      CategoryID: 1,
-      CategoryName: 'General'
-    });
-  }
+  const catId = cameraInput.categoryId;
+  let defaultCategory = await Category.findByPk(catId || 1) || await Category.findOne();
   const now = Date.now();
   const count = Number.isInteger(payload.stock) && payload.stock > 0 ? payload.stock : 1;
   const createdRows = [];

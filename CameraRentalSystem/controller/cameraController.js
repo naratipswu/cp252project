@@ -1,7 +1,7 @@
 const { Op, Transaction } = require('sequelize');
 const sequelize = require('../../config/db');
 const { getAllCameras, addCamera, DEFAULT_IMAGE } = require('../service/cameraStore');
-const { Customer, Equipment, Rental, RentalDetail, Payment, SyncLog } = require('../../models');
+const { Customer, Equipment, Rental, RentalDetail, Payment } = require('../../models');
 
 function getDateOrNull(dateString) {
     const parsed = new Date(dateString);
@@ -61,13 +61,13 @@ exports.browseCameras = async (req, res) => {
     if (searchQuery) {
         const lowerQuery = searchQuery.toLowerCase();
         filteredCameras = filteredCameras.filter(c =>
-            c.brand.toLowerCase().includes(lowerQuery) || 
+            c.brand.toLowerCase().includes(lowerQuery) ||
             c.model.toLowerCase().includes(lowerQuery)
         );
     }
 
-    res.render('browse_camera', { 
-        cameras: filteredCameras, 
+    res.render('browse_camera', {
+        cameras: filteredCameras,
         user: req.session.user,
         searchQuery,
         selectedType
@@ -184,7 +184,6 @@ exports.bookCamera = async (req, res) => {
         if (error && error.statusCode) {
             return res.status(error.statusCode).send(error.message);
         }
-        try { await SyncLog.create({ Source: 'bookCamera', Status: 'failed', Message: error ? (error.message || String(error)) : 'Unknown error' }); } catch(logErr) {}
         return res.status(500).send('Failed to create booking');
     }
 };
@@ -385,7 +384,6 @@ exports.confirmPayment = async (req, res) => {
         if (error && error.name === 'SequelizeUniqueConstraintError') {
             return res.status(409).send('Payment cannot be confirmed from its current state');
         }
-        try { await SyncLog.create({ Source: 'confirmPayment', Status: 'failed', Message: error ? (error.message || String(error)) : 'Unknown error' }); } catch(logErr) {}
         return res.status(500).send('Failed to confirm payment');
     }
 
