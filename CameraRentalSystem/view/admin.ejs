@@ -21,6 +21,7 @@
                     <a href="/admin/payment-slips" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Review Slips</a>
                     <a href="/admin/media" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Media</a>
                     <a href="/admin/returns" class="bg-pink-600 hover:bg-pink-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Returns</a>
+                    <a href="/admin/logs" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">System Logs</a>
                     <form action="/logout" method="POST" class="inline">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <button type="submit" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Logout Admin</button>
@@ -49,6 +50,10 @@
                 <a href="/admin/returns" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
                     <h3 class="font-semibold text-gray-900">Manage Returns</h3>
                     <p class="text-sm text-gray-600 mt-1">รับคืนอุปกรณ์และจัดการค่าปรับ</p>
+                </a>
+                <a href="/admin/logs" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
+                    <h3 class="font-semibold text-gray-900">System Logs</h3>
+                    <p class="text-sm text-gray-600 mt-1">ตรวจสอบประวัติข้อผิดพลาดและการทำงาน</p>
                 </a>
             </div>
         </section>

@@ -1,6 +1,6 @@
 const { Op, Transaction } = require('sequelize');
 const sequelize = require('../../config/db');
-const { Customer, Equipment, Rental, RentalDetail, Return } = require('../../models');
+const { Customer, Equipment, Rental, RentalDetail, Return, SyncLog } = require('../../models');
 
 exports.showAdminReturns = async (req, res) => {
     try {
@@ -116,6 +116,7 @@ exports.processReturn = async (req, res) => {
         if (error && error.statusCode) {
             return res.status(error.statusCode).send(error.message);
         }
+        try { await SyncLog.create({ Source: 'processReturn', Status: 'failed', Message: error ? (error.message || String(error)) : 'Unknown error' }); } catch(logErr) {}
         console.error('Error processing return:', error);
         return res.status(500).send('Failed to process return');
     }
