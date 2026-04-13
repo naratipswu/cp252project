@@ -1,7 +1,7 @@
 const { Op, Transaction } = require('sequelize');
 const sequelize = require('../../config/db');
 const { getAllCameras, addCamera, DEFAULT_IMAGE } = require('../service/cameraStore');
-const { Customer, Equipment, Rental, RentalDetail, Payment } = require('../../models');
+const { Customer, Equipment, Rental, RentalDetail, Payment, Category } = require('../../models');
 
 function getDateOrNull(dateString) {
     const parsed = new Date(dateString);
@@ -54,7 +54,8 @@ exports.browseCameras = async (req, res) => {
     const selectedType = String(req.query.type || '').toLowerCase();
 
     // Filter by brand or model
-    let filteredCameras = await getAllCameras();
+    let allCameras = await getAllCameras();
+    let filteredCameras = allCameras;
     if (selectedType) {
         filteredCameras = filteredCameras.filter((camera) => cameraMatchesType(camera, selectedType));
     }
@@ -66,11 +67,21 @@ exports.browseCameras = async (req, res) => {
         );
     }
 
+    const categoriesFromDB = await Category.findAll();
+    const categories = categoriesFromDB.map(c => ({
+        id: c.CategoryID,
+        name: c.CategoryName
+    }));
+
+    const brands = [...new Set(allCameras.map(c => c.brand).filter(Boolean))];
+
     res.render('browse_camera', {
         cameras: filteredCameras,
         user: req.session.user,
         searchQuery,
-        selectedType
+        selectedType,
+        categories,
+        brands
     });
 };
 
