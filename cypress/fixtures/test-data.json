@@ -1,0 +1,16 @@
+{
+  "user": {
+    "email": "testuser@example.com",
+    "phone": "0812345678",
+    "password": "Test@12345",
+    "confirmPassword": "Test@12345"
+  },
+  "camera": {
+    "brand": "Canon",
+    "model": "EOS R5"
+  },
+  "admin": {
+    "username": "admin",
+    "password": "admin123"
+  }
+}

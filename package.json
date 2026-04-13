@@ -4,7 +4,11 @@
     "test:cov": "jest --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "start": "node CameraRentalSystem/app.js"
+    "start": "node CameraRentalSystem/app.js",
+    "cypress": "cypress open",
+    "cypress:headless": "cypress run",
+    "test:ui": "start-server-and-test start http://localhost:3000 cypress:headless",
+    "seed": "node scripts/seed-data.js"
   },
   "jest": {
     "collectCoverageFrom": [
@@ -16,10 +20,12 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "cypress": "^15.13.1",
     "eslint": "^10.1.0",
     "eslint-plugin-jsdoc": "^62.8.1",
     "globals": "^17.4.0",
-    "jest": "^30.3.0"
+    "jest": "^30.3.0",
+    "start-server-and-test": "^3.0.2"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
