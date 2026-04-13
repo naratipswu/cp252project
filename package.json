@@ -8,7 +8,9 @@
     "cypress": "cypress open",
     "cypress:headless": "cypress run",
     "test:ui": "start-server-and-test start http://localhost:3000 cypress:headless",
-    "seed": "node scripts/seed-data.js"
+    "seed": "node scripts/seed-data.js",
+    "profile": "node performance/profile.js",
+    "profile:report": "node performance/generate-report.js"
   },
   "jest": {
     "collectCoverageFrom": [
@@ -20,6 +22,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "autocannon": "^8.0.0",
     "cypress": "^15.13.1",
     "eslint": "^10.1.0",
     "eslint-plugin-jsdoc": "^62.8.1",
