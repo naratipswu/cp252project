@@ -61,13 +61,13 @@ exports.browseCameras = async (req, res) => {
     if (searchQuery) {
         const lowerQuery = searchQuery.toLowerCase();
         filteredCameras = filteredCameras.filter(c =>
-            c.brand.toLowerCase().includes(lowerQuery) || 
+            c.brand.toLowerCase().includes(lowerQuery) ||
             c.model.toLowerCase().includes(lowerQuery)
         );
     }
 
-    res.render('browse_camera', { 
-        cameras: filteredCameras, 
+    res.render('browse_camera', {
+        cameras: filteredCameras,
         user: req.session.user,
         searchQuery,
         selectedType
