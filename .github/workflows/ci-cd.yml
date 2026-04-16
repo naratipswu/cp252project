@@ -217,7 +217,7 @@ jobs:
           DB_PASSWORD: postgres
           ADMIN_USERNAME: admin_test
           ADMIN_EMAIL: admin@test.com
-          ADMIN_PASSWORD: password123
+          ADMIN_PASSWORD: password123456
 
       - name: ⏳ Wait for server (print logs on failure)
         run: |
