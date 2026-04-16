@@ -492,3 +492,59 @@ exports.rejectPaymentSlip = async (req, res) => {
     }
     return res.redirect('/admin/payment-slips');
 };
+
+exports.showAdminCameras = async (req, res) => {
+    try {
+        const cameras = await Equipment.findAll({
+            include: [{ model: Category, required: false }],
+            order: [['EquipmentID', 'DESC']]
+        });
+        const categories = await Category.findAll();
+
+        res.render('admin_cameras', {
+            cameras: cameras.map(c => c.toJSON()),
+            categories: categories.map(c => c.toJSON()),
+            user: req.session.user,
+            error: req.query.error,
+            csrfToken: req.csrfToken && req.csrfToken()
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error loading cameras');
+    }
+};
+
+exports.toggleCameraStatus = async (req, res) => {
+    try {
+        const cameraId = Number(req.params.id);
+        const newStatus = req.body.status;
+        if (!['available', 'maintenance'].includes(newStatus)) {
+            return res.redirect('/admin/cameras?error=Invalid status');
+        }
+
+        const camera = await Equipment.findByPk(cameraId);
+        if (!camera) return res.redirect('/admin/cameras?error=Camera not found');
+
+        camera.Status = newStatus;
+        await camera.save();
+        return res.redirect('/admin/cameras');
+    } catch (err) {
+        console.error(err);
+        return res.redirect('/admin/cameras?error=Failed to update status');
+    }
+};
+
+exports.deleteCamera = async (req, res) => {
+    try {
+        const cameraId = Number(req.params.id);
+        const camera = await Equipment.findByPk(cameraId);
+        if (!camera) return res.redirect('/admin/cameras?error=Camera not found');
+        
+        await camera.destroy();
+        return res.redirect('/admin/cameras');
+    } catch (err) {
+        console.error(err);
+        // Will fail if there are dependent records, which is expected by the prompt
+        return res.redirect('/admin/cameras?error=Failed to delete camera. Ensure there are no existing bookings.');
+    }
+};

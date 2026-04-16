@@ -5,117 +5,152 @@
     <title>Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <nav class="bg-gray-900 shadow">
+<body class="bg-[#f8f9fa] min-h-screen font-sans text-slate-800">
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
-                <div class="flex items-center gap-2">
-                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                    <h1 class="text-xl font-bold text-white">Admin Dashboard</h1>
+                <div class="flex items-center gap-3">
+                    <div class="bg-slate-900 p-2 rounded-lg">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-slate-900 tracking-tight">Admin Dashboard</h1>
+                        <p class="text-xs text-slate-500 font-medium">Logged in as <%= user.username %></p>
+                    </div>
                 </div>
                 <div class="flex items-center gap-4">
-                    <span class="text-gray-300 text-sm">Logged in as <%= user.username %></span>
-                    <a href="/main" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Go to Main</a>
-                    <a href="/browse" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Go to Browse</a>
-                    <a href="/admin/accounts" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Accounts</a>
-                    <a href="/admin/payment-slips" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Review Slips</a>
-                    <a href="/admin/media" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Media</a>
-                    <a href="/admin/cameras" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Cameras</a>
-                    <a href="/admin/returns" class="bg-pink-600 hover:bg-pink-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Returns</a>
-                    <a href="/admin/logs" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">System Logs</a>
-                    <form action="/logout" method="POST" class="inline">
+                    <a href="/main" class="text-slate-600 hover:text-slate-900 text-sm font-medium transition">Main</a>
+                    <span class="w-px h-4 bg-gray-300"></span>
+                    <a href="/browse" class="text-slate-600 hover:text-slate-900 text-sm font-medium transition">Storefront</a>
+                    <span class="w-px h-4 bg-gray-300"></span>
+                    <form action="/logout" method="POST" class="inline m-0 p-0">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <button type="submit" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Logout Admin</button>
+                        <button type="submit" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-sm font-semibold transition shadow-sm">Logout</button>
                     </form>
                 </div>
             </div>
         </div>
     </nav>
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <% if (locals.stats) { %>
-        <section class="mb-10">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Dashboard Overview</h2>
+        <section class="mb-12">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-900">Overview</h2>
+                    <p class="text-sm text-slate-500 mt-1">Real-time statistics for your rental system</p>
+                </div>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-green-500">
-                    <p class="text-sm text-gray-500 mb-1">Monthly Income (Approved)</p>
-                    <h3 class="text-3xl font-black text-gray-900"><%= Number(stats.monthlyIncome).toLocaleString() %> ฿</h3>
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition duration-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-sm font-semibold text-slate-500">Monthly Income</p>
+                        <div class="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-1">
+                        <h3 class="text-3xl font-bold text-slate-900 tracking-tight"><%= Number(stats.monthlyIncome).toLocaleString() %></h3>
+                        <span class="text-slate-500 font-medium">฿</span>
+                    </div>
                 </div>
-                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-yellow-500">
-                    <p class="text-sm text-gray-500 mb-1">Pending Payments</p>
-                    <h3 class="text-3xl font-black text-gray-900"><%= stats.pendingPayments %></h3>
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition duration-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-sm font-semibold text-slate-500">Pending Payments</p>
+                        <div class="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                    </div>
+                    <h3 class="text-3xl font-bold text-slate-900 tracking-tight"><%= stats.pendingPayments %></h3>
                 </div>
-                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-blue-500">
-                    <p class="text-sm text-gray-500 mb-1">Active Deliveries Today</p>
-                    <h3 class="text-3xl font-black text-gray-900"><%= stats.deliveriesToday %></h3>
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition duration-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-sm font-semibold text-slate-500">Active Deliveries</p>
+                        <div class="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        </div>
+                    </div>
+                    <h3 class="text-3xl font-bold text-slate-900 tracking-tight"><%= stats.deliveriesToday %></h3>
                 </div>
-                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-pink-500">
-                    <p class="text-sm text-gray-500 mb-1">Expected Returns Today</p>
-                    <h3 class="text-3xl font-black text-gray-900"><%= stats.returnsToday %></h3>
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition duration-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-sm font-semibold text-slate-500">Expected Returns</p>
+                        <div class="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"></path></svg>
+                        </div>
+                    </div>
+                    <h3 class="text-3xl font-bold text-slate-900 tracking-tight"><%= stats.returnsToday %></h3>
                 </div>
             </div>
         </section>
         <% } %>
 
-        <section class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">Admin Command Center</h2>
-            <p class="text-gray-600 mb-4">เลือกเมนูที่ต้องการจัดการจากศูนย์รวมคำสั่งแอดมิน</p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <a href="/admin/cameras" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">Manage Cameras</h3>
-                    <p class="text-sm text-gray-600 mt-1">จัดการคลังสินค้า เปลี่ยนสถานะ และลบอุปกรณ์</p>
+        <section class="mb-12">
+            <h2 class="text-xl font-bold text-[#0f172a] tracking-tight">Admin Command Center</h2>
+            <p class="text-[13px] text-slate-500 mb-6 font-medium">เลือกเมนูที่ต้องการจัดการจากศูนย์รวมคำสั่งแอดมิน</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <a href="/admin/cameras" class="bg-white rounded-[10px] p-5 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-gray-100 hover:border-slate-300 hover:shadow-md transition-all duration-200 group">
+                    <h3 class="font-semibold text-[15px] text-[#0f172a] group-hover:text-blue-600 transition-colors">Manage Cameras</h3>
+                    <p class="text-[13px] text-slate-500 mt-1">จัดการคลังสินค้า เปลี่ยนสถานะ และลบอุปกรณ์</p>
                 </a>
-                <a href="/admin/accounts" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">Manage Accounts</h3>
-                    <p class="text-sm text-gray-600 mt-1">จัดการสิทธิ์ผู้ใช้งานและสร้างแอดมิน</p>
+                <a href="/admin/accounts" class="bg-white rounded-[10px] p-5 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-gray-100 hover:border-slate-300 hover:shadow-md transition-all duration-200 group">
+                    <h3 class="font-semibold text-[15px] text-[#0f172a] group-hover:text-blue-600 transition-colors">Manage Accounts</h3>
+                    <p class="text-[13px] text-slate-500 mt-1">จัดการสิทธิ์ผู้ใช้งานและสร้างแอดมิน</p>
                 </a>
-                <a href="/admin/payment-slips" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">Review Payment Slips</h3>
-                    <p class="text-sm text-gray-600 mt-1">ตรวจสลิปและอนุมัติการชำระเงิน</p>
+                <a href="/admin/payment-slips" class="bg-white rounded-[10px] p-5 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-gray-100 hover:border-slate-300 hover:shadow-md transition-all duration-200 group">
+                    <h3 class="font-semibold text-[15px] text-[#0f172a] group-hover:text-blue-600 transition-colors">Review Payment Slips</h3>
+                    <p class="text-[13px] text-slate-500 mt-1">ตรวจสลิปและอนุมัติการชำระเงิน</p>
                 </a>
-                <a href="/admin/media" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">Manage Media</h3>
-                    <p class="text-sm text-gray-600 mt-1">จัดการรูปภาพเว็บไซต์และไฟล์อัปโหลด</p>
+                <a href="/admin/media" class="bg-white rounded-[10px] p-5 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-gray-100 hover:border-slate-300 hover:shadow-md transition-all duration-200 group">
+                    <h3 class="font-semibold text-[15px] text-[#0f172a] group-hover:text-blue-600 transition-colors">Manage Media</h3>
+                    <p class="text-[13px] text-slate-500 mt-1">จัดการรูปภาพเว็บไซต์และไฟล์อัปโหลด</p>
                 </a>
-                <a href="/admin/returns" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">Manage Returns</h3>
-                    <p class="text-sm text-gray-600 mt-1">รับคืนอุปกรณ์และจัดการค่าปรับ</p>
+                <a href="/admin/returns" class="bg-white rounded-[10px] p-5 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-gray-100 hover:border-slate-300 hover:shadow-md transition-all duration-200 group">
+                    <h3 class="font-semibold text-[15px] text-[#0f172a] group-hover:text-blue-600 transition-colors">Manage Returns</h3>
+                    <p class="text-[13px] text-slate-500 mt-1">รับคืนอุปกรณ์และจัดการค่าปรับ</p>
                 </a>
-                <a href="/admin/logs" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">System Logs</h3>
-                    <p class="text-sm text-gray-600 mt-1">ตรวจสอบประวัติข้อผิดพลาดและการทำงาน</p>
+                <a href="/admin/logs" class="bg-white rounded-[10px] p-5 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)] border border-gray-100 hover:border-slate-300 hover:shadow-md transition-all duration-200 group">
+                    <h3 class="font-semibold text-[15px] text-[#0f172a] group-hover:text-blue-600 transition-colors">System Logs</h3>
+                    <p class="text-[13px] text-slate-500 mt-1">ตรวจสอบประวัติข้อผิดพลาดและการทำงาน</p>
                 </a>
             </div>
         </section>
 
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">Recent Bookings</h2>
+        <section>
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 tracking-tight">Recent Bookings</h2>
+                    <p class="text-sm text-slate-500 mt-1">Quick view of the latest rental transactions</p>
+                </div>
+            </div>
 
-        <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User (Gmail)</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Camera</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Price</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <% bookings.forEach(b => { %>
+            <div class="bg-white shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] rounded-2xl overflow-hidden border border-gray-100">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead class="bg-slate-50/50">
                         <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#<%= b.id %></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><%= b.user %></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"><%= b.cameraModel %></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= b.startDate %> to <%= b.endDate %></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600"><%= b.totalPrice %> ฿</td>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Booking ID</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">User (Gmail)</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Camera</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Dates</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Price</th>
                         </tr>
-                    <% }) %>
-                    <% if(bookings.length === 0) { %>
-                        <tr><td colspan="5" class="px-6 py-10 text-center text-gray-500">No bookings have been made yet.</td></tr>
-                    <% } %>
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-50">
+                        <% bookings.forEach(b => { %>
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">#<%= b.id %></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700"><%= b.user %></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500"><%= b.cameraModel %></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500"><%= b.startDate %> <span class="text-gray-400">to</span> <%= b.endDate %></td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600"><%= b.totalPrice %> ฿</td>
+                            </tr>
+                        <% }) %>
+                        <% if(bookings.length === 0) { %>
+                            <tr><td colspan="5" class="px-6 py-12 text-center text-slate-400 font-medium bg-slate-50/30">No bookings have been made yet.</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </main>
 </body>
 </html>
