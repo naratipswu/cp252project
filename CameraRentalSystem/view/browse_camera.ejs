@@ -1,568 +1,580 @@
-<!DOCTYPE html>
-<html lang="en">
+const { Op, Transaction } = require('sequelize');
+const sequelize = require('../../config/db');
+const { getAllCameras, addCamera, DEFAULT_IMAGE } = require('../service/cameraStore');
+const { Customer, Equipment, Rental, RentalDetail, Payment, Category } = require('../../models');
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Browse Cameras</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
-    <!-- Flatpickr -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
+function getDateOrNull(dateString) {
+    const parsed = new Date(dateString);
+    if (Number.isNaN(parsed.getTime())) return null;
+    // Don't use setHours(0,0,0,0) as it uses local time and causes shift
+    return parsed;
+}
 
-        .bg-brand-brown {
-            background-color: #1a150d;
-        }
+async function getCameraById(cameraId) {
+    const allCameras = await getAllCameras();
+    return allCameras.find((item) => item.id === cameraId) || null;
+}
 
-        .text-brand-yellow {
-            color: #d69e2e;
-        }
+async function getCustomerForSession(req) {
+    const username = req.session.user && req.session.user.username;
+    if (!username) return null;
+    return Customer.findOne({ where: { Username: username } });
+}
 
-        .bg-brand-yellow {
-            background-color: #d69e2e;
-        }
+function deriveBookingStatusFromRental(rentalStatus) {
+    if (rentalStatus === 'cancelled') return 'cancelled';
+    if (rentalStatus === 'completed') return 'completed';
+    if (rentalStatus === 'active') return 'confirmed';
+    return 'awaiting_confirmation';
+}
 
-        .bg-card-dark {
-            background-color: #262119;
-        }
+function isFilmLikeCamera(brand, text) {
+    if (text.includes('film')) return true;
+    if (text.includes('instax')) return true;
+    if (brand.includes('kodak')) return true;
+    if (brand.includes('fujifilm')) return true;
+    return false;
+}
 
-        .bg-sidebar-dark {
-            background-color: #1a150d;
-        }
+function cameraMatchesType(camera, type) {
+    const normalizedType = String(type || '').toLowerCase();
+    if (!normalizedType) return true;
+    
+    // Original Film/Digital logic based on model/brand text
+    const brand = String(camera.brand || '').toLowerCase();
+    const model = String(camera.model || '').toLowerCase();
+    const text = `${brand} ${model}`;
+    const isFilmLike = isFilmLikeCamera(brand, text);
 
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            opacity: 1;
-            cursor: pointer;
-        }
+    if (normalizedType === 'film') return isFilmLike;
+    if (normalizedType === 'digital') return !isFilmLike;
 
-        /* Booked dates highlighting */
-        .flatpickr-day.booked {
-            background: #ef4444 !important; /* Tailwind red-500 */
-            border-color: #ef4444 !important;
-            color: white !important;
-            cursor: not-allowed !important;
-        }
-        
-        .flatpickr-calendar {
-            background: #262119 !important;
-            border: 1px solid #4b5563 !important;
-        }
+    // Check against actual Category Name from DB
+    const catName = String(camera.categoryName || '').toLowerCase();
+    return catName === normalizedType;
+}
 
-        .flatpickr-day {
-            color: #d1d5db !important;
-        }
+exports.browseCameras = async (req, res) => {
+    const searchQuery = req.query.search || '';
+    const selectedType = String(req.query.type || '').toLowerCase();
+    const minPrice = req.query.minPrice !== undefined ? Number(req.query.minPrice) : null;
+    const maxPrice = req.query.maxPrice !== undefined ? Number(req.query.maxPrice) : null;
 
-        .flatpickr-day:hover {
-            background: #374151 !important;
-        }
+    // Fetch categories
+    const categoryRecords = await Category.findAll();
+    const categories = categoryRecords.map(cat => ({ name: cat.CategoryName }));
 
-        .flatpickr-day.selected {
-            background: #d69e2e !important;
-            border-color: #d69e2e !important;
-        }
-    </style>
-    <script>
-        function toDateOnlyString(dateObj) {
-            const y = dateObj.getFullYear();
-            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const d = String(dateObj.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
+    // Filter by brand or model
+    let filteredCameras = await getAllCameras();
+    if (selectedType) {
+        filteredCameras = filteredCameras.filter((camera) => cameraMatchesType(camera, selectedType));
+    }
+    if (searchQuery) {
+        const lowerQuery = searchQuery.toLowerCase();
+        filteredCameras = filteredCameras.filter(c =>
+            c.brand.toLowerCase().includes(lowerQuery) ||
+            c.model.toLowerCase().includes(lowerQuery)
+        );
+    }
 
-        const flatpickrInstances = {};
+    // Filter by price
+    if (minPrice !== null) {
+        filteredCameras = filteredCameras.filter(c => c.pricePerDay >= minPrice);
+    }
+    if (maxPrice !== null) {
+        filteredCameras = filteredCameras.filter(c => c.pricePerDay <= maxPrice);
+    }
 
-        async function fetchBookedDates(cameraId) {
-            try {
-                const response = await fetch(`/api/cameras/${cameraId}/booked-dates`);
-                return await response.json();
-            } catch (err) {
-                console.error('Failed to fetch booked dates', err);
-                return [];
-            }
-        }
+    res.render('browse_camera', {
+        cameras: filteredCameras,
+        user: req.session.user,
+        searchQuery,
+        selectedType,
+        minPrice,
+        maxPrice,
+        categories
+    });
+};
 
-        async function initializeBookingInputs() {
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const todayStr = toDateOnlyString(today);
+// eslint-disable-next-line complexity
+exports.addCamera = async (req, res) => {
+    const { brand, model, stock, pricePerDay, imageUrl } = req.body;
+    const normalizedBrand = typeof brand === 'string' ? brand.trim() : '';
+    const normalizedModel = typeof model === 'string' ? model.trim() : '';
+    const normalizedStock = Number(stock);
+    const normalizedPricePerDay = Number(pricePerDay);
+    const normalizedImageUrl = typeof imageUrl === 'string' ? imageUrl.trim() : '';
+    const uploadedImagePath = req.file ? `/uploads/products/${req.file.filename}` : '';
 
-            const maxDate = new Date();
-            maxDate.setMonth(maxDate.getMonth() + 3);
-            
-            const dateInputs = document.querySelectorAll('.date-picker');
-            
-            for (const input of dateInputs) {
-                const cameraId = input.id.split('-')[1];
-                const isStart = input.id.startsWith('start-');
-                
-                const bookedRanges = await fetchBookedDates(cameraId);
-                
-                const fp = flatpickr(input, {
-                    minDate: "today",
-                    maxDate: maxDate,
-                    dateFormat: "Y-m-d",
-                    disable: bookedRanges,
-                    onDayCreate: (dObj, dStr, fp, dayElem) => {
-                        const currentStr = toDateOnlyString(dayElem.dateObj);
-                        const isBooked = bookedRanges.some(range => {
-                            return currentStr >= range.from && currentStr <= range.to;
-                        });
-                        if (isBooked) {
-                            dayElem.classList.add('booked');
-                        }
-                    },
-                    onChange: (selectedDates, dateStr, instance) => {
-                        calculatePrice(cameraId, input.dataset.price);
-                        
-                        // If start date changed, update end date min
-                        if (isStart) {
-                            const endInput = document.getElementById('end-' + cameraId);
-                            if (endInput && endInput._flatpickr) {
-                                endInput._flatpickr.set('minDate', dateStr);
-                            }
-                        }
-                    }
+    if (!normalizedBrand || !normalizedModel) {
+        return res.status(400).send('Brand and model are required');
+    }
+    if (!Number.isInteger(normalizedStock) || normalizedStock < 0) {
+        return res.status(400).send('Stock must be a non-negative integer');
+    }
+    if (!Number.isFinite(normalizedPricePerDay) || normalizedPricePerDay <= 0) {
+        return res.status(400).send('Price per day must be greater than 0');
+    }
+
+    await addCamera({
+        brand: normalizedBrand,
+        model: normalizedModel,
+        stock: normalizedStock,
+        pricePerDay: normalizedPricePerDay,
+        image: uploadedImagePath || normalizedImageUrl || DEFAULT_IMAGE
+    });
+
+    return res.redirect('/browse');
+};
+
+exports.bookCamera = async (req, res) => {
+    const { cameraId, startDate, endDate } = req.body;
+    const normalizedCameraId = Number(cameraId);
+    const start = getDateOrNull(startDate);
+    const end = getDateOrNull(endDate);
+    if (!start || !end || start > end) {
+        return res.status(400).send('Invalid booking dates');
+    }
+    const startDateOnly = start.toISOString().slice(0, 10);
+    const endDateOnly = end.toISOString().slice(0, 10);
+    const customer = await getCustomerForSession(req);
+
+    try {
+        const rental = await sequelize.transaction(
+            { isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE },
+            async (transaction) => {
+                const equipment = await Equipment.findByPk(normalizedCameraId, {
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
                 });
-                
-                if (!flatpickrInstances[cameraId]) flatpickrInstances[cameraId] = {};
-                flatpickrInstances[cameraId][isStart ? 'start' : 'end'] = fp;
+                if (!equipment) {
+                    const error = new Error('Camera not found');
+                    error.statusCode = 404;
+                    throw error;
+                }
+                if (equipment.Status !== 'available') {
+                    const error = new Error('Camera is out of stock');
+                    error.statusCode = 400;
+                    throw error;
+                }
+
+                const overlap = await RentalDetail.findOne({
+                    where: {
+                        EquipmentID: equipment.EquipmentID,
+                        StartDate: { [Op.lte]: endDateOnly },
+                        EndDate: { [Op.gte]: startDateOnly }
+                    },
+                    include: [{
+                        model: Rental,
+                        required: true,
+                        where: { RentalStatus: { [Op.ne]: 'cancelled' } }
+                    }],
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+                if (overlap) {
+                    const error = new Error('Selected camera is already booked for these dates');
+                    error.statusCode = 409;
+                    throw error;
+                }
+                if (!customer) {
+                    const error = new Error('Unauthorized');
+                    error.statusCode = 401;
+                    throw error;
+                }
+
+                const rentalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                const totalPrice = rentalDays * Number(equipment.DailyRate);
+                const createdRental = await Rental.create({
+                    RentalDate: new Date(),
+                    TotalAmount: totalPrice,
+                    RentalStatus: 'pending',
+                    CustomerID: customer.CustomerID
+                }, { transaction });
+                await RentalDetail.create({
+                    RentalID: createdRental.RentalID,
+                    EquipmentID: equipment.EquipmentID,
+                    StartDate: startDateOnly,
+                    EndDate: endDateOnly,
+                    SubTotal: totalPrice
+                }, { transaction });
+
+                equipment.Status = 'rented';
+                await equipment.save({ transaction });
+
+                return createdRental;
             }
+        );
+        return res.redirect(`/booking/${rental.RentalID}/confirm`);
+    } catch (error) {
+        let msg = 'Failed to create booking';
+        if (error && error.statusCode) {
+            msg = error.message;
         }
+        return res.redirect(`/browse?error=${encodeURIComponent(msg)}`);
+    }
+};
 
-        function showAvailability(cameraId) {
-            const startInput = document.getElementById('start-' + cameraId);
-            if (startInput && startInput._flatpickr) {
-                startInput._flatpickr.open();
-            }
+exports.showAdminDashboard = (req, res) => {
+    return RentalDetail.findAll({
+        include: [
+            { model: Rental, required: true, include: [{ model: Customer, required: true }] },
+            { model: Equipment, required: true }
+        ],
+        order: [['RentalDetailID', 'DESC']],
+        limit: 50
+    })
+        .then((rows) => rows.map((row) => row.toJSON()))
+        .then((rows) => res.render('admin', {
+            bookings: rows.map((row) => ({
+                id: row.Rental.RentalID,
+                user: row.Rental.Customer.Email || row.Rental.Customer.Username,
+                cameraModel: `${row.Equipment.Brand} ${row.Equipment.ModelName}`,
+                startDate: row.StartDate,
+                endDate: row.EndDate,
+                totalPrice: Number(row.Rental.TotalAmount)
+            })),
+            user: req.session.user
+        }))
+        .catch(() => res.status(500).send('Failed to load dashboard'));
+};
+
+exports.showBookingConfirm = async (req, res) => {
+    const { bookingId } = req.params;
+    const rentalId = Number(bookingId);
+    const rental = await Rental.findByPk(rentalId);
+    if (!rental) return res.status(404).send('Booking not found');
+    const customer = await Customer.findByPk(rental.CustomerID);
+    if (!customer) return res.status(404).send('Booking not found');
+    if (customer.Username !== req.session.user.username && req.session.user.role !== 'admin') {
+        return res.status(403).send('Forbidden');
+    }
+
+    // If already confirmed/completed/cancelled, don't show a raw error page.
+    if (rental.RentalStatus !== 'pending') {
+        if (rental.RentalStatus === 'active') {
+            return res.redirect(`/booking/${rental.RentalID}/payment`);
         }
+        return res.redirect('/browse');
+    }
 
-        /**
-         * Calculate total price for a camera
-         * @param {string | number} cameraId
-         * @param {number} pricePerDay
-         */
-        function calculatePrice(cameraId, pricePerDay) {
-            /** @type {HTMLInputElement | null} */
-            const startInput = document.getElementById('start-' + cameraId);
-            /** @type {HTMLInputElement | null} */
-            const endInput = document.getElementById('end-' + cameraId);
-            const totalSpan = document.getElementById('total-' + cameraId);
-            /** @type {HTMLInputElement | null} */
-            const bookBtn = document.getElementById('btn-' + cameraId);
-            const statusText = document.getElementById('status-' + cameraId);
-            const daysText = document.getElementById('days-' + cameraId);
+    const detail = await RentalDetail.findOne({ where: { RentalID: rental.RentalID } });
+    if (!detail) return res.status(404).send('Booking not found');
+    const camera = await getCameraById(detail.EquipmentID);
+    if (!camera) return res.status(404).send('Camera not found');
 
-            if (startInput && endInput && totalSpan && bookBtn && statusText && daysText) {
-                if (startInput.value && endInput.value) {
-                    const start = new Date(startInput.value);
-                    const end = new Date(endInput.value);
+    res.render('booking_confirm', {
+        booking: {
+            id: rental.RentalID,
+            cameraId: detail.EquipmentID,
+            cameraModel: camera.model,
+            user: customer.Username,
+            startDate: detail.StartDate,
+            endDate: detail.EndDate,
+            totalPrice: Number(rental.TotalAmount),
+            bookingStatus: deriveBookingStatusFromRental(rental.RentalStatus),
+            paymentStatus: 'unpaid'
+        },
+        camera
+    });
+};
 
-                    start.setHours(0, 0, 0, 0);
-                    end.setHours(0, 0, 0, 0);
+exports.confirmBooking = async (req, res) => {
+    const { bookingId } = req.params;
+    const rentalId = Number(bookingId);
+    const rental = await Rental.findByPk(rentalId);
+    if (!rental) return res.status(404).send('Booking not found');
+    const customer = await Customer.findByPk(rental.CustomerID);
+    if (!customer) return res.status(404).send('Booking not found');
+    if (customer.Username !== req.session.user.username && req.session.user.role !== 'admin') {
+        return res.status(403).send('Forbidden');
+    }
 
-                    if (start <= end) {
-                        const diffTime = Math.abs(end.getTime() - start.getTime());
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const payment = await Payment.findOne({ where: { RentalID: rental.RentalID } });
+    if (rental.RentalStatus !== 'pending' || payment) {
+        // If already confirmed, just go to the first page.
+        return res.redirect('/browse');
+    }
 
-                        const total = diffDays * pricePerDay;
-                        totalSpan.innerText = total.toLocaleString() + ' ฿';
-                        daysText.innerText = diffDays + ' day(s)';
-                        statusText.innerText = 'Ready to book';
-                        statusText.className = 'text-xs text-green-400';
-                        bookBtn.innerText = 'Book Now';
-                        bookBtn.disabled = false;
-                        bookBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                        bookBtn.classList.add('hover:bg-yellow-500');
-                    } else {
-                        totalSpan.innerText = '0 ฿';
-                        daysText.innerText = '-';
-                        statusText.innerText = 'End date must be the same or after start date';
-                        statusText.className = 'text-xs text-red-400';
-                        bookBtn.innerText = 'Select valid dates';
-                        bookBtn.disabled = true;
-                        bookBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                        bookBtn.classList.remove('hover:bg-yellow-500');
+    rental.RentalStatus = 'active';
+    await rental.save();
+    // User requested: after confirm, warp back to the first page.
+    return res.redirect('/browse');
+};
+
+exports.showPaymentPage = (req, res) => {
+    const { bookingId } = req.params;
+    const rentalId = Number(bookingId);
+    return Rental.findByPk(rentalId)
+        .then((rental) => {
+            if (!rental) return res.status(404).send('Booking not found');
+            return Customer.findByPk(rental.CustomerID).then((customer) => {
+                if (!customer) return res.status(404).send('Booking not found');
+                if (customer.Username !== req.session.user.username && req.session.user.role !== 'admin') {
+                    return res.status(403).send('Forbidden');
+                }
+                return Payment.findOne({ where: { RentalID: rental.RentalID } }).then((payment) => {
+                    if (payment) {
+                        if (payment.PaymentStatus === 'pending') {
+                            return res.status(409).send('Your slip is pending admin approval');
+                        }
+                        if (payment.PaymentStatus === 'approved') {
+                            return res.status(409).send('Payment has already been approved');
+                        }
+                        return res.render('payment', {
+                            booking: {
+                                id: rental.RentalID,
+                                totalPrice: Number(rental.TotalAmount),
+                                previousSlipRejected: true
+                            }
+                        });
                     }
-                } else {
-                    totalSpan.innerText = '0 ฿';
-                    daysText.innerText = '-';
-                    statusText.innerText = 'Choose start and end date';
-                    statusText.className = 'text-xs text-gray-400';
-                    bookBtn.innerText = 'Pick dates first';
-                    bookBtn.disabled = true;
-                    bookBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    bookBtn.classList.remove('hover:bg-yellow-500');
-                }
-            }
-        }
-
-        /**
-         * Simple accordion toggle for sidebar
-         * @param {string} id
-         */
-        function toggleAccordion(id) {
-            const el = document.getElementById(id);
-            const icon = document.getElementById('icon-' + id);
-            if (el && icon) {
-                if (el.classList.contains('hidden')) {
-                    el.classList.remove('hidden');
-                    icon.innerText = '-';
-                } else {
-                    el.classList.add('hidden');
-                    icon.innerText = '+';
-                }
-            }
-        }
-
-        function toggleAdminAddPanel() {
-            const panel = document.getElementById('admin-add-panel');
-            const icon = document.getElementById('admin-add-icon');
-            const buttonText = document.getElementById('admin-add-button-text');
-            if (!panel || !icon || !buttonText) return;
-
-            const isHidden = panel.classList.contains('hidden');
-            if (isHidden) {
-                panel.classList.remove('hidden');
-                icon.innerText = '-';
-                buttonText.innerText = 'Hide Add Product';
-            } else {
-                panel.classList.add('hidden');
-                icon.innerText = '+';
-                buttonText.innerText = 'Add New Product';
-            }
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            initializeBookingInputs();
-        });
-    </script>
-</head>
-
-<body class="bg-brand-brown text-white min-h-screen">
-
-    <!-- Navbar (Same as main page) -->
-    <nav class="flex h-16 w-full sticky top-0 z-50 shadow-md bg-brand-brown">
-        <!-- Logo Area -->
-        <a href="/welcome"
-            class="bg-brand-yellow text-black font-black text-lg md:text-xl flex items-center justify-center px-6 md:px-10 tracking-wider hover:opacity-90">
-            CAMERA TYPE
-        </a>
-
-        <!-- Navigation Links -->
-        <div class="flex-1 bg-[#222] flex items-center justify-start px-8 gap-8 hidden md:flex border-b border-black">
-            <a href="/browse?type=digital" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">DIGITAL</a>
-            <a href="/browse?type=film" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">FILM</a>
-            <a href="/process" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">PROCESS</a>
-            <a href="/contact" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">CONTACT</a>
-        </div>
-
-        <!-- Icons Area -->
-        <div class="bg-white text-black flex items-center justify-center px-6 gap-6 ml-auto md:ml-0">
-            <a href="/profile" class="hover:text-gray-600 transition" title="Profile">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                </svg>
-            </a>
-            <form action="/logout" method="POST" class="inline" title="Logout">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <button type="submit" class="hover:text-red-600 transition font-semibold text-sm">Logout</button>
-            </form>
-            <a href="/cart" class="hover:text-gray-600 transition" title="Cart">
-                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z">
-                    </path>
-                </svg>
-            </a>
-        </div>
-    </nav>
-
-    <!-- Main Content Area -->
-    <div class="max-w-7xl mx-auto px-6 pb-12 flex flex-col md:flex-row gap-10">
-        
-        <!-- Error Alert -->
-        <script>
-            window.addEventListener('DOMContentLoaded', () => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const error = urlParams.get('error');
-                if (error) {
-                    const alertDiv = document.createElement('div');
-                    alertDiv.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-full max-w-lg px-4';
-                    alertDiv.innerHTML = `
-                        <div class="bg-red-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center justify-between animate-bounce">
-                            <div class="flex items-center gap-3">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span class="font-bold">${decodeURIComponent(error)}</span>
-                            </div>
-                            <button onclick="this.parentElement.parentElement.remove()" class="hover:opacity-75 font-black text-xl leading-none">&times;</button>
-                        </div>
-                    `;
-                    document.body.appendChild(alertDiv);
-                    // Remove error from URL without refreshing
-                    const newUrl = window.location.pathname + window.location.search.replace(/[?&]error=[^&]+/, '').replace(/^&/, '?');
-                    window.history.replaceState({}, '', newUrl);
-                    
-                    // Auto remove after 5s
-                    setTimeout(() => alertDiv.remove(), 5000);
-                }
+                    return res.render('payment', {
+                        booking: {
+                            id: rental.RentalID,
+                            totalPrice: Number(rental.TotalAmount)
+                        }
+                    });
+                });
             });
-        </script>
+        })
+        .catch(() => res.status(500).send('Failed to load payment page'));
+};
 
-        <!-- Sidebar filters -->
-        <aside class="w-full md:w-1/4 flex flex-col gap-6">
-            <% 
-                var curMin = typeof locals !== 'undefined' && locals.minPrice !== undefined ? locals.minPrice : null;
-                var curMax = typeof locals !== 'undefined' && locals.maxPrice !== undefined ? locals.maxPrice : null;
-                var curSearch = typeof locals !== 'undefined' && locals.searchQuery !== undefined ? locals.searchQuery : '';
-                var curType = typeof locals !== 'undefined' && locals.selectedType !== undefined ? locals.selectedType : '';
-            %>
+exports.confirmPayment = async (req, res) => {
+    const { bookingId } = req.params;
+    const rentalId = Number(bookingId);
+    const rental = await Rental.findByPk(rentalId);
+    if (!rental) return res.status(404).send('Booking not found');
+    const customer = await Customer.findByPk(rental.CustomerID);
+    if (!customer) return res.status(404).send('Booking not found');
+    if (customer.Username !== req.session.user.username && req.session.user.role !== 'admin') {
+        return res.status(403).send('Forbidden');
+    }
 
-            <!-- Brand Accordion -->
-            <div>
-                <button onclick="toggleAccordion('brand-list')"
-                    class="w-full flex items-center justify-between text-xl font-black mb-3 border-b border-gray-500 pb-1 hover:text-brand-yellow transition">
-                    Brand <span id="icon-brand-list" class="font-normal text-gray-400">-</span>
-                </button>
-                <div id="brand-list" class="flex flex-col gap-3 pl-2 text-gray-300 font-bold tracking-wide">
-                    <% 
-                        function getBrandLink(brand) {
-                            let link = '?search=' + encodeURIComponent(brand) + '&';
-                            if (curMin !== null) link += 'minPrice=' + curMin + '&';
-                            if (curMax !== null) link += 'maxPrice=' + curMax + '&';
-                            if (curType) link += 'type=' + encodeURIComponent(curType) + '&';
-                            return link.slice(0, -1);
-                        }
-                    %>
-                    <a href="<%= getBrandLink('canon') %>" class="<%= curSearch.toLowerCase().includes('canon') ? 'text-brand-yellow' : 'hover:text-white transition' %>">Cannon</a>
-                    <a href="<%= getBrandLink('fujifilm') %>" class="<%= curSearch.toLowerCase().includes('fujifilm') ? 'text-brand-yellow' : 'hover:text-white transition' %>">Fujifilm</a>
-                    <a href="<%= getBrandLink('sony') %>" class="<%= curSearch.toLowerCase().includes('sony') ? 'text-brand-yellow' : 'hover:text-white transition' %>">Sony</a>
-                    <a href="<%= getBrandLink('kodak') %>" class="<%= curSearch.toLowerCase().includes('kodak') ? 'text-brand-yellow' : 'hover:text-white transition' %>">Kodak</a>
-                </div>
-            </div>
+    try {
+        await sequelize.transaction(
+            { isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE },
+            async (transaction) => {
+                const lockedRental = await Rental.findByPk(rentalId, {
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+                if (!lockedRental) {
+                    const error = new Error('Booking not found');
+                    error.statusCode = 404;
+                    throw error;
+                }
 
-            <!-- Category Accordion -->
-            <div>
-                <button onclick="toggleAccordion('cat-list')"
-                    class="w-full flex items-center justify-between text-xl font-black mb-3 border-b border-gray-500 pb-1 hover:text-brand-yellow transition mt-4">
-                    Category <span id="icon-cat-list" class="font-normal text-gray-400">-</span>
-                </button>
-                <div id="cat-list" class="flex flex-col gap-3 pl-2 text-gray-300 font-bold tracking-wide">
-                    <% 
-                        function getCatLink(type) {
-                            let link = '?';
-                            if (type) link += 'type=' + encodeURIComponent(type) + '&';
-                            if (curMin !== null) link += 'minPrice=' + curMin + '&';
-                            if (curMax !== null) link += 'maxPrice=' + curMax + '&';
-                            if (curSearch) link += 'search=' + encodeURIComponent(curSearch) + '&';
-                            return link.slice(0, -1);
-                        }
-                    %>
-                    <a href="<%= getCatLink('') %>" class="<%= !curType ? 'text-white font-black underline decoration-brand-yellow' : 'hover:text-white transition' %>">All</a>
-                    <% categories.forEach(cat => { %>
-                        <a href="<%= getCatLink(cat.name) %>" 
-                           class="<%= curType === cat.name.toLowerCase() ? 'text-brand-yellow font-black' : 'hover:text-white transition' %>">
-                           <%= cat.name %>
-                        </a>
-                    <% }) %>
-                </div>
-            </div>
+                const payment = await Payment.findOne({
+                    where: { RentalID: lockedRental.RentalID },
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+                if (lockedRental.RentalStatus !== 'active') {
+                    const error = new Error('Payment cannot be confirmed from its current state');
+                    error.statusCode = 409;
+                    throw error;
+                }
+                if (!req.file) {
+                    const error = new Error('Please upload a payment slip');
+                    error.statusCode = 400;
+                    throw error;
+                }
 
-            <!-- Price Accordion (Mimicking Figma text layout) -->
-            <div>
-                <button onclick="toggleAccordion('price-list')"
-                    class="w-full flex items-center justify-between text-xl font-black mb-3 border-b border-gray-500 pb-1 hover:text-brand-yellow transition mt-4">
-                    Price <span id="icon-price-list" class="font-normal text-gray-400">-</span>
-                </button>
-                <div id="price-list" class="flex flex-col gap-3 pl-2 text-gray-300 font-bold tracking-wide">
-                    <% 
-                        function getPriceLink(min, max) {
-                            let link = '?';
-                            if (min !== null) link += 'minPrice=' + min + '&';
-                            if (max !== null) link += 'maxPrice=' + max + '&';
-                            if (curSearch) link += 'search=' + encodeURIComponent(curSearch) + '&';
-                            if (curType) link += 'type=' + encodeURIComponent(curType) + '&';
-                            return link.slice(0, -1);
-                        }
-                    %>
-                    <a href="<%= getPriceLink(null, null) %>" class="<%= (curMin === null && curMax === null) ? 'text-white font-black' : 'hover:text-white transition' %>">All Prices</a>
-                    <a href="<%= getPriceLink(0, 200) %>" class="<%= (curMin === 0 && curMax === 200) ? 'text-white font-black' : 'hover:text-white transition' %>">0 - 200 ฿</a>
-                    <a href="<%= getPriceLink(200, 500) %>" class="<%= (curMin === 200 && curMax === 500) ? 'text-white font-black' : 'hover:text-white transition' %>">200 - 500 ฿</a>
-                    <a href="<%= getPriceLink(500, 1000) %>" class="<%= (curMin === 500 && curMax === 1000) ? 'text-white font-black' : 'hover:text-white transition' %>">500 - 1000 ฿</a>
-                    <a href="<%= getPriceLink(1000, null) %>" class="<%= (curMin === 1000 && curMax === null) ? 'text-white font-black' : 'hover:text-white transition' %>">1000+ ฿</a>
-                </div>
-            </div>
+                if (!payment) {
+                    await Payment.create({
+                        RentalID: lockedRental.RentalID,
+                        PaymentMethod: 'app-payment',
+                        Amount: lockedRental.TotalAmount,
+                        PaymentDate: new Date(),
+                        SlipPath: `/uploads/slips/${req.file.filename}`,
+                        PaymentStatus: 'pending'
+                    }, { transaction });
+                } else if (payment.PaymentStatus === 'rejected') {
+                    payment.PaymentDate = new Date();
+                    payment.Amount = lockedRental.TotalAmount;
+                    payment.SlipPath = `/uploads/slips/${req.file.filename}`;
+                    payment.PaymentStatus = 'pending';
+                    await payment.save({ transaction });
+                } else {
+                    const error = new Error('Payment cannot be confirmed from its current state');
+                    error.statusCode = 409;
+                    throw error;
+                }
+            }
+        );
+    } catch (error) {
+        if (error && error.statusCode) {
+            return res.status(error.statusCode).send(error.message);
+        }
+        if (error && error.name === 'SequelizeUniqueConstraintError') {
+            return res.status(409).send('Payment cannot be confirmed from its current state');
+        }
+        return res.status(500).send('Failed to confirm payment');
+    }
 
-        </aside>
+    return res.redirect('/cart');
+};
 
-        <!-- Product Grid & Search -->
-        <main class="w-full md:w-3/4 flex flex-col gap-8">
-            <% if (user && user.role === 'admin') { %>
-                <section class="bg-gradient-to-r from-[#1f1811] to-[#2a2017] border border-yellow-800/70 rounded-2xl p-4 shadow-lg">
-                    <button
-                        type="button"
-                        onclick="toggleAdminAddPanel()"
-                        class="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/25 hover:bg-black/35 transition">
-                        <div class="flex items-center gap-2">
-                            <span class="text-brand-yellow font-semibold text-sm uppercase tracking-wider">Admin Tools</span>
-                            <span class="text-white font-bold" id="admin-add-button-text">Add New Product</span>
-                        </div>
-                        <span id="admin-add-icon" class="text-brand-yellow text-xl leading-none">+</span>
-                    </button>
+exports.showAdminPaymentSlips = async (req, res) => {
+    const payments = await Payment.findAll({
+        include: [
+            {
+                model: Rental,
+                required: true,
+                include: [
+                    { model: Customer, required: true },
+                    {
+                        model: RentalDetail,
+                        required: false,
+                        include: [{ model: Equipment, required: false }]
+                    }
+                ]
+            }
+        ],
+        order: [['PaymentDate', 'DESC']]
+    });
 
-                    <div id="admin-add-panel" class="hidden mt-4">
-                        <form action="/admin/cameras" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                            <div class="flex flex-col gap-2 relative">
-                                <select name="brand" onchange="document.getElementById('customBrandWrapper').classList.toggle('hidden', this.value !== 'Etc')" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
-                                    <option value="" disabled selected>Select Brand</option>
-                                    <% brands.forEach(b => { %>
-                                        <option value="<%= b %>"><%= b %></option>
-                                    <% }) %>
-                                    <option value="Etc">Etc (Other)</option>
-                                </select>
-                                <div id="customBrandWrapper" class="hidden absolute top-auto left-0 right-0 z-10 pt-1 mt-11">
-                                    <input type="text" name="customBrand" placeholder="Enter custom brand..." class="w-full px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500 shadow-md">
-                                </div>
-                            </div>
-                            <input type="text" name="model" placeholder="Model (e.g. A7 IV)" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
-                            
-                            <select name="categoryId" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
-                                <% categories.forEach(cat => { %>
-                                    <option value="<%= cat.id %>"><%= cat.name %></option>
-                                <% }) %>
-                            </select>
-                            
-                            <input type="number" name="stock" min="1" placeholder="Initial Stock Quantity" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
-                            <input type="number" name="pricePerDay" min="1" placeholder="Price per day" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500" required>
-                            <input type="file" name="imageFile" accept=".jpg,.jpeg,.png,.webp,.gif,.svg" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-500">
-                            <input type="text" name="imageUrl" placeholder="Or paste image URL (optional)" class="px-3 py-2.5 rounded-lg bg-white text-black border border-gray-300 md:col-span-2 focus:outline-none focus:ring-2 focus:ring-yellow-500">
-                            <button type="submit" class="md:col-span-2 px-4 py-2.5 rounded-lg bg-brand-yellow text-black font-bold hover:opacity-90 transition">Add Camera</button>
-                        </form>
-                        <p class="text-xs text-gray-300 mt-2">Visible only to admin. Click the header above to hide/show this panel.</p>
-                    </div>
-                </section>
-            <% } %>
+    return res.render('admin_payment_slips', {
+        user: req.session.user,
+        slips: payments.map((payment) => {
+            const rental = payment.Rental;
+            const detail = rental.RentalDetails && rental.RentalDetails.length > 0 ? rental.RentalDetails[0] : null;
+            const equipment = detail ? detail.Equipment : null;
+            return {
+                paymentId: payment.PaymentID,
+                paymentStatus: payment.PaymentStatus || 'approved',
+                paymentDate: payment.PaymentDate,
+                amount: Number(payment.Amount),
+                slipPath: payment.SlipPath || null,
+                rentalId: rental.RentalID,
+                rentalStatus: rental.RentalStatus,
+                customer: {
+                    username: rental.Customer.Username,
+                    email: rental.Customer.Email
+                },
+                booking: {
+                    startDate: detail ? detail.StartDate : '-',
+                    endDate: detail ? detail.EndDate : '-',
+                    cameraModel: equipment ? `${equipment.Brand} ${equipment.ModelName}` : '-'
+                }
+            };
+        })
+    });
+};
 
-            <!-- Search Bar -->
-            <form action="/browse" method="GET" class="flex w-full">
-                <% if (selectedType) { %>
-                    <input type="hidden" name="type" value="<%= selectedType %>">
-                <% } %>
-                <input type="text" name="search" value="<%= searchQuery %>" placeholder="Search by brand or model..."
-                    class="w-full h-14 bg-[#D9D9D9] text-black px-6 rounded-l-full focus:outline-none focus:ring-2 focus:ring-brand-yellow">
-                <button type="submit"
-                    class="bg-brand-yellow w-20 h-14 rounded-r-full flex items-center justify-center hover:opacity-90 transition cursor-pointer">
-                    <svg class="w-6 h-6 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </button>
-            </form>
+exports.approvePaymentSlip = async (req, res) => {
+    const paymentId = Number(req.params.paymentId);
+    if (!Number.isFinite(paymentId) || paymentId <= 0) {
+        return res.status(400).send('Invalid payment id');
+    }
 
-            <!-- Cards Grid (3 columns like Figma) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <% cameras.forEach(camera=> { %>
-                    <div
-                        class="camera-card bg-card-dark rounded-xl overflow-hidden shadow-lg flex flex-col border border-gray-800 hover:border-brand-yellow/50 transition duration-300">
-                        <!-- Image placeholder -->
-                        <div class="h-44 w-full bg-[#111] relative group">
-                            <img src="<%= camera.image %>" alt="<%= camera.model %>"
-                                class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition">
-                            <div
-                                class="absolute top-3 right-3 bg-black/80 text-white px-3 py-1 rounded border border-gray-700 text-xs font-bold">
-                                Stock: <%= camera.stock %>
-                            </div>
-                        </div>
+    const payment = await Payment.findByPk(paymentId);
+    if (!payment) return res.status(404).send('Payment not found');
+    if (payment.PaymentStatus !== 'pending') {
+        return res.status(409).send('This slip is not pending approval');
+    }
 
-                        <!-- Content -->
-                        <div class="p-5 flex-1 flex flex-col">
-                            <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <div class="flex items-center gap-2">
-                                        <h3 class="text-xl font-bold text-white tracking-wide">
-                                            <%= camera.model %>
-                                        </h3>
-                                        <button type="button" onclick="showAvailability('<%= camera.id %>')" title="Check Booked Dates" class="text-white hover:text-gray-300 transition" id="availability-btn-<%= camera.id %>">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    <p class="text-sm text-gray-400 capitalize">
-                                        <%= camera.brand %>
-                                    </p>
-                                </div>
-                                <span class="text-lg font-bold text-brand-yellow">
-                                    <%= camera.pricePerDay %> ฿<span
-                                            class="text-xs text-gray-500 block text-right font-normal">/day</span>
-                                </span>
-                            </div>
+    const rental = await Rental.findByPk(payment.RentalID);
+    if (!rental) return res.status(404).send('Booking not found');
 
-                            <div class="flex-1"></div>
+    payment.PaymentStatus = 'approved';
+    await payment.save();
+    rental.RentalStatus = 'completed';
+    await rental.save();
+    return res.redirect('/admin/payment-slips');
+};
 
-                            <!-- Booking Form inside Card -->
-                            <form action="/book" method="POST" class="space-y-3 mt-4">
-                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                <input type="hidden" name="cameraId" value="<%= camera.id %>">
+exports.rejectPaymentSlip = async (req, res) => {
+    const paymentId = Number(req.params.paymentId);
+    if (!Number.isFinite(paymentId) || paymentId <= 0) {
+        return res.status(400).send('Invalid payment id');
+    }
 
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label
-                                            class="block text-xs uppercase tracking-wider text-white mb-1">Start</label>
-                                        <input type="text" name="startDate" id="start-<%= camera.id %>" required
-                                            placeholder="Click me"
-                                            data-price="<%= camera.pricePerDay %>"
-                                            oninput="calculatePrice('<%= camera.id %>', '<%= camera.pricePerDay %>')"
-                                            onchange="calculatePrice('<%= camera.id %>', '<%= camera.pricePerDay %>')"
-                                            class="date-picker w-full text-xs bg-black/40 border border-gray-700 rounded p-2 outline-none focus:border-brand-yellow text-white">
-                                    </div>
-                                    <div>
-                                        <label
-                                            class="block text-xs uppercase tracking-wider text-white mb-1">End</label>
-                                        <input type="text" name="endDate" id="end-<%= camera.id %>" required
-                                            placeholder="Click me"
-                                            data-price="<%= camera.pricePerDay %>"
-                                            oninput="calculatePrice('<%= camera.id %>', '<%= camera.pricePerDay %>')"
-                                            onchange="calculatePrice('<%= camera.id %>', '<%= camera.pricePerDay %>')"
-                                            class="date-picker w-full text-xs bg-black/40 border border-gray-700 rounded p-2 outline-none focus:border-brand-yellow text-white">
-                                    </div>
-                                </div>
-                                <p id="status-<%= camera.id %>" class="text-xs text-gray-400">Choose start and end date</p>
+    const payment = await Payment.findByPk(paymentId);
+    if (!payment) return res.status(404).send('Payment not found');
+    if (payment.PaymentStatus !== 'pending') {
+        return res.status(409).send('This slip is not pending review');
+    }
 
-                                <div class="flex items-center justify-between pt-3 border-t border-gray-800">
-                                    <div class="text-xs font-medium text-gray-400">
-                                        Total: <span id="total-<%= camera.id %>"
-                                            class="text-base font-bold text-white ml-1">0 ฿</span>
-                                        <span class="ml-2 text-gray-500">Days: <span id="days-<%= camera.id %>">-</span></span>
-                                    </div>
-                                    <button type="submit" id="btn-<%= camera.id %>" disabled
-                                        class="bg-gray-700 text-white px-4 py-1.5 rounded font-bold transition opacity-50 cursor-not-allowed text-xs uppercase tracking-wider">
-                                        Pick dates first
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                    <% }) %>
+    payment.PaymentStatus = 'rejected';
+    await payment.save();
 
-                        <% if(cameras.length===0) { %>
-                            <div class="col-span-full py-20 text-center text-gray-500 font-medium">
-                                ไม่พบกล้องที่คุณค้นหา (No cameras found)
-                            </div>
-                            <% } %>
-            </div>
+    const rental = await Rental.findByPk(payment.RentalID);
+    if (rental && rental.RentalStatus === 'completed') {
+        rental.RentalStatus = 'active';
+        await rental.save();
+    }
+    return res.redirect('/admin/payment-slips');
+};
 
-        </main>
-    </div>
+exports.getBookedDates = async (req, res) => {
+    const { cameraId } = req.params;
+    try {
+        const bookings = await RentalDetail.findAll({
+            where: { EquipmentID: cameraId },
+            include: [{
+                model: Rental,
+                required: true,
+                where: { RentalStatus: { [Op.ne]: 'cancelled' } }
+            }]
+        });
 
-</body>
+        const formattedBookings = bookings.map(b => ({
+            from: b.StartDate, // expected format YYYY-MM-DD
+            to: b.EndDate
+        }));
 
-</html>
+        res.json(formattedBookings);
+    } catch (error) {
+        console.error('Error fetching booked dates:', error);
+        res.status(500).json({ error: 'Failed to fetch booked dates' });
+    }
+};
+
+exports.showAdminCameras = async (req, res) => {
+    try {
+        const cameras = await Equipment.findAll({
+            include: [{ model: Category }],
+            order: [['EquipmentID', 'ASC']]
+        });
+        res.render('admin_cameras', {
+            cameras,
+            user: req.session.user,
+            error: req.query.error || null
+        });
+    } catch (error) {
+        console.error('Error loading admin cameras:', error);
+        res.status(500).send('Failed to load admin cameras');
+    }
+};
+
+exports.toggleCameraStatus = async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    try {
+        const equipment = await Equipment.findByPk(id);
+        if (!equipment) return res.status(404).send('Camera not found');
+        equipment.Status = status;
+        await equipment.save();
+        res.redirect('/admin/cameras');
+    } catch (error) {
+        console.error('Error toggling camera status:', error);
+        res.redirect('/admin/cameras?error=Failed to update status');
+    }
+};
+
+exports.deleteCamera = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const equipment = await Equipment.findByPk(id);
+        if (!equipment) return res.status(404).send('Camera not found');
+        await equipment.destroy();
+        res.redirect('/admin/cameras');
+    } catch (error) {
+        console.error('Error deleting camera:', error);
+        res.redirect('/admin/cameras?error=Cannot delete camera. It might be linked to existing bookings.');
+    }
+};
+
