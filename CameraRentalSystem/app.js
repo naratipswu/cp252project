@@ -64,6 +64,8 @@ app.use(authController.attachCsrfToken);
 app.get('/', authController.showMain);
 app.get('/main', authController.showMain);
 app.get('/welcome', authController.showLanding);
+app.get('/process', authController.showProcess);
+app.get('/contact', authController.showContact);
 
 app.get('/signin', authController.showSignIn);
 app.get('/signup', authController.showSignUp);

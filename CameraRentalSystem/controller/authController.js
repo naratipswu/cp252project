@@ -57,6 +57,14 @@ exports.showSignUp = (req, res) => {
     res.render('signup', { error: null });
 };
 
+exports.showProcess = (req, res) => {
+    res.render('process', { error: null, user: req.session.user || null });
+};
+
+exports.showContact = (req, res) => {
+    res.render('contact', { error: null, user: req.session.user || null });
+};
+
 exports.showAdminAccounts = (req, res) => {
     return renderAdminAccounts(res).catch(() => res.status(500).send('Failed to load accounts'));
 };
