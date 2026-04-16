@@ -76,6 +76,16 @@ exports.cancelCartItem = async (req, res) => {
 
   rental.RentalStatus = 'cancelled';
   await rental.save();
+
+  const details = await RentalDetail.findAll({ where: { RentalID: rental.RentalID } });
+  for (const d of details) {
+    const eq = await Equipment.findByPk(d.EquipmentID);
+    if (eq && eq.Status === 'rented') {
+      eq.Status = 'available';
+      await eq.save();
+    }
+  }
+
   return res.redirect('/cart');
 };
 

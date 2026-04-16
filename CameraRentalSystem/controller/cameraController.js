@@ -181,6 +181,10 @@ exports.bookCamera = async (req, res) => {
                     EndDate: endDateOnly,
                     SubTotal: totalPrice
                 }, { transaction });
+
+                equipment.Status = 'rented';
+                await equipment.save({ transaction });
+
                 return createdRental;
             }
         );
