@@ -96,6 +96,9 @@ jobs:
           POSTGRES_DB: camera_rental
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
+          ADMIN_USERNAME: admin_test
+          ADMIN_EMAIL: admin@test.com
+          ADMIN_PASSWORD: password123456
         ports:
           - 5432:5432
         options: >-
@@ -138,7 +141,7 @@ jobs:
           DB_PASSWORD: postgres
           ADMIN_USERNAME: admin_test
           ADMIN_EMAIL: admin@test.com
-          ADMIN_PASSWORD: password123
+          ADMIN_PASSWORD: password123456
 
       - name: 📸 Upload Screenshots on Failure
         if: failure()
@@ -169,7 +172,7 @@ jobs:
           POSTGRES_PASSWORD: postgres
           ADMIN_USERNAME: admin_test
           ADMIN_EMAIL: admin@test.com
-          ADMIN_PASSWORD: password123
+          ADMIN_PASSWORD: password123456
         ports:
           - 5432:5432
         options: >-
