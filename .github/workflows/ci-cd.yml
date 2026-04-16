@@ -160,16 +160,8 @@ jobs:
       - name: 📚 Install dependencies
         run: npm ci
 
-      # ✅ FIX: รอ PostgreSQL พร้อมก่อน start server
-      - name: ⏳ Wait for PostgreSQL to be ready
-        run: npx wait-on tcp:127.0.0.1:5432 --timeout 60000
-
-      # ✅ FIX: Redirect server log ออกมา เพื่อดู error ได้ชัดเจน
       - name: 🚀 Start Server
-        run: |
-          npm start > /tmp/server.log 2>&1 &
-          echo "Server PID: $!"
-          echo "Server started in background, logs at /tmp/server.log"
+        run: npm start &
         env:
           NODE_ENV: production
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
@@ -180,23 +172,12 @@ jobs:
           DB_USER: postgres
           DB_PASSWORD: postgres
 
-      # ✅ FIX: ถ้า wait-on timeout จะ print log ออกมาให้เห็นสาเหตุ
       - name: ⏳ Wait for server
-        run: |
-          npx wait-on http://localhost:3000 --timeout 300000 || \
-          (echo "❌ Server failed to start. Server logs:" && cat /tmp/server.log && exit 1)
+        run: npx wait-on http://localhost:3000 --timeout 300000
 
       - name: 📊 Run Performance Profile
         run: npm run profile
         continue-on-error: true
-
-      # ✅ FIX: Upload server log ทุกครั้ง เพื่อ debug ได้ง่าย
-      - name: 📤 Upload Server Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: server-log
-          path: /tmp/server.log
 
       - name: 📤 Upload Performance Results
         if: always()
