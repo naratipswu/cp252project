@@ -131,6 +131,22 @@ jobs:
     name: ⚡ Performance Profiling
     runs-on: ubuntu-latest
     needs: build
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: camera_rental
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d camera_rental"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -148,6 +164,12 @@ jobs:
         run: npm start &
         env:
           NODE_ENV: production
+          DB_DIALECT: postgres
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_NAME: camera_rental
+          DB_USER: postgres
+          DB_PASSWORD: postgres
 
       - name: ⏳ Wait for server
         run: npx wait-on http://localhost:3000 --timeout 60000
