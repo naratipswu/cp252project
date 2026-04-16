@@ -81,6 +81,7 @@ app.post('/logout', authController.requireAuth, authController.requireCsrf, auth
 
 // 2. Camera Browsing & Booking
 app.get('/browse', cameraController.browseCameras);
+app.get('/api/cameras/:cameraId/booked-dates', cameraController.getBookedDates);
 app.get('/cart', authController.requireAuth, cartController.showCart);
 app.post('/cart/:rentalId/cancel', authController.requireAuth, authController.requireCsrf, cartController.cancelCartItem);
 app.post('/admin/cameras', authController.requireAdmin, authController.requireCsrf, uploadImage.single('imageFile'), cameraController.addCamera);

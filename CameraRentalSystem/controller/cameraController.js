@@ -6,7 +6,7 @@ const { Customer, Equipment, Rental, RentalDetail, Payment, Category } = require
 function getDateOrNull(dateString) {
     const parsed = new Date(dateString);
     if (Number.isNaN(parsed.getTime())) return null;
-    parsed.setHours(0, 0, 0, 0);
+    // Don't use setHours(0,0,0,0) as it uses local time and causes shift
     return parsed;
 }
 
@@ -190,10 +190,11 @@ exports.bookCamera = async (req, res) => {
         );
         return res.redirect(`/booking/${rental.RentalID}/confirm`);
     } catch (error) {
+        let msg = 'Failed to create booking';
         if (error && error.statusCode) {
-            return res.status(error.statusCode).send(error.message);
+            msg = error.message;
         }
-        return res.status(500).send('Failed to create booking');
+        return res.redirect(`/browse?error=${encodeURIComponent(msg)}`);
     }
 };
 
@@ -490,3 +491,28 @@ exports.rejectPaymentSlip = async (req, res) => {
     }
     return res.redirect('/admin/payment-slips');
 };
+
+exports.getBookedDates = async (req, res) => {
+    const { cameraId } = req.params;
+    try {
+        const bookings = await RentalDetail.findAll({
+            where: { EquipmentID: cameraId },
+            include: [{
+                model: Rental,
+                required: true,
+                where: { RentalStatus: { [Op.ne]: 'cancelled' } }
+            }]
+        });
+
+        const formattedBookings = bookings.map(b => ({
+            from: b.StartDate, // expected format YYYY-MM-DD
+            to: b.EndDate
+        }));
+
+        res.json(formattedBookings);
+    } catch (error) {
+        console.error('Error fetching booked dates:', error);
+        res.status(500).json({ error: 'Failed to fetch booked dates' });
+    }
+};
+
