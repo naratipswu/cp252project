@@ -259,8 +259,9 @@
         <div class="flex-1 bg-[#222] flex items-center justify-start px-8 gap-8 hidden md:flex border-b border-black">
             <a href="/browse?type=digital" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">DIGITAL</a>
             <a href="/browse?type=film" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">FILM</a>
-            <a href="/process" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">PROCESS</a>
-            <a href="/contact" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">CONTACT</a>
+            <a href="#" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">PHOTO</a>
+            <a href="#" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">PROCESS</a>
+            <a href="#" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">CONTACT</a>
         </div>
 
         <!-- Icons Area -->
@@ -318,12 +319,6 @@
 
         <!-- Sidebar filters -->
         <aside class="w-full md:w-1/4 flex flex-col gap-6">
-            <% 
-                var curMin = typeof locals !== 'undefined' && locals.minPrice !== undefined ? locals.minPrice : null;
-                var curMax = typeof locals !== 'undefined' && locals.maxPrice !== undefined ? locals.maxPrice : null;
-                var curSearch = typeof locals !== 'undefined' && locals.searchQuery !== undefined ? locals.searchQuery : '';
-                var curType = typeof locals !== 'undefined' && locals.selectedType !== undefined ? locals.selectedType : '';
-            %>
 
             <!-- Brand Accordion -->
             <div>
@@ -332,19 +327,10 @@
                     Brand <span id="icon-brand-list" class="font-normal text-gray-400">-</span>
                 </button>
                 <div id="brand-list" class="flex flex-col gap-3 pl-2 text-gray-300 font-bold tracking-wide">
-                    <% 
-                        function getBrandLink(brand) {
-                            let link = '?search=' + encodeURIComponent(brand) + '&';
-                            if (curMin !== null) link += 'minPrice=' + curMin + '&';
-                            if (curMax !== null) link += 'maxPrice=' + curMax + '&';
-                            if (curType) link += 'type=' + encodeURIComponent(curType) + '&';
-                            return link.slice(0, -1);
-                        }
-                    %>
-                    <a href="<%= getBrandLink('canon') %>" class="<%= curSearch.toLowerCase().includes('canon') ? 'text-brand-yellow' : 'hover:text-white transition' %>">Cannon</a>
-                    <a href="<%= getBrandLink('fujifilm') %>" class="<%= curSearch.toLowerCase().includes('fujifilm') ? 'text-brand-yellow' : 'hover:text-white transition' %>">Fujifilm</a>
-                    <a href="<%= getBrandLink('sony') %>" class="<%= curSearch.toLowerCase().includes('sony') ? 'text-brand-yellow' : 'hover:text-white transition' %>">Sony</a>
-                    <a href="<%= getBrandLink('kodak') %>" class="<%= curSearch.toLowerCase().includes('kodak') ? 'text-brand-yellow' : 'hover:text-white transition' %>">Kodak</a>
+                    <a href="?search=canon" class="hover:text-white transition">Cannon</a>
+                    <a href="?search=fujifilm" class="hover:text-white transition">Fujifilm</a>
+                    <a href="?search=sony" class="hover:text-white transition">Sony</a>
+                    <a href="?search=kodak" class="hover:text-white transition">Kodak</a>
                 </div>
             </div>
 
@@ -355,22 +341,9 @@
                     Category <span id="icon-cat-list" class="font-normal text-gray-400">-</span>
                 </button>
                 <div id="cat-list" class="flex flex-col gap-3 pl-2 text-gray-300 font-bold tracking-wide">
-                    <% 
-                        function getCatLink(type) {
-                            let link = '?';
-                            if (type) link += 'type=' + encodeURIComponent(type) + '&';
-                            if (curMin !== null) link += 'minPrice=' + curMin + '&';
-                            if (curMax !== null) link += 'maxPrice=' + curMax + '&';
-                            if (curSearch) link += 'search=' + encodeURIComponent(curSearch) + '&';
-                            return link.slice(0, -1);
-                        }
-                    %>
-                    <a href="<%= getCatLink('') %>" class="<%= !curType ? 'text-white font-black underline decoration-brand-yellow' : 'hover:text-white transition' %>">All</a>
+                    <a href="/browse" class="<%= !selectedType ? 'text-white' : 'hover:text-white transition' %>">All</a>
                     <% categories.forEach(cat => { %>
-                        <a href="<%= getCatLink(cat.name) %>" 
-                           class="<%= curType === cat.name.toLowerCase() ? 'text-brand-yellow font-black' : 'hover:text-white transition' %>">
-                           <%= cat.name %>
-                        </a>
+                        <a href="?type=<%= encodeURIComponent(cat.name) %>" class="<%= selectedType === cat.name.toLowerCase() ? 'text-brand-yellow' : 'hover:text-white transition' %>"><%= cat.name %></a>
                     <% }) %>
                 </div>
             </div>
@@ -382,21 +355,10 @@
                     Price <span id="icon-price-list" class="font-normal text-gray-400">-</span>
                 </button>
                 <div id="price-list" class="flex flex-col gap-3 pl-2 text-gray-300 font-bold tracking-wide">
-                    <% 
-                        function getPriceLink(min, max) {
-                            let link = '?';
-                            if (min !== null) link += 'minPrice=' + min + '&';
-                            if (max !== null) link += 'maxPrice=' + max + '&';
-                            if (curSearch) link += 'search=' + encodeURIComponent(curSearch) + '&';
-                            if (curType) link += 'type=' + encodeURIComponent(curType) + '&';
-                            return link.slice(0, -1);
-                        }
-                    %>
-                    <a href="<%= getPriceLink(null, null) %>" class="<%= (curMin === null && curMax === null) ? 'text-white font-black' : 'hover:text-white transition' %>">All Prices</a>
-                    <a href="<%= getPriceLink(0, 200) %>" class="<%= (curMin === 0 && curMax === 200) ? 'text-white font-black' : 'hover:text-white transition' %>">0 - 200 ฿</a>
-                    <a href="<%= getPriceLink(200, 500) %>" class="<%= (curMin === 200 && curMax === 500) ? 'text-white font-black' : 'hover:text-white transition' %>">200 - 500 ฿</a>
-                    <a href="<%= getPriceLink(500, 1000) %>" class="<%= (curMin === 500 && curMax === 1000) ? 'text-white font-black' : 'hover:text-white transition' %>">500 - 1000 ฿</a>
-                    <a href="<%= getPriceLink(1000, null) %>" class="<%= (curMin === 1000 && curMax === null) ? 'text-white font-black' : 'hover:text-white transition' %>">1000+ ฿</a>
+                    <a href="#" class="hover:text-white transition">Cannon</a>
+                    <a href="#" class="hover:text-white transition">Fujifilm</a>
+                    <a href="#" class="hover:text-white transition">Sony</a>
+                    <a href="#" class="hover:text-white transition">Kodak</a>
                 </div>
             </div>
 
