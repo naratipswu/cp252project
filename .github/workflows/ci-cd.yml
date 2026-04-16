@@ -173,7 +173,7 @@ jobs:
           DB_PASSWORD: postgres
 
       - name: ⏳ Wait for server
-        run: npx wait-on http://localhost:3000 --timeout 300000
+        run: npx wait-on http://localhost:3000 --timeout 60000
 
       - name: 📊 Run Performance Profile
         run: npm run profile
