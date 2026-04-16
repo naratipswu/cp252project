@@ -6,34 +6,52 @@
   <title>Media Manager</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
-  <main class="max-w-4xl mx-auto p-6">
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Media Manager</h1>
-      <div class="flex items-center gap-2">
-        <a href="/main" class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-500 transition">Go to Main</a>
-        <a href="/browse" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition">Go to Browse</a>
-        <a href="/admin" class="px-4 py-2 bg-gray-900 text-white rounded hover:bg-gray-700 transition">Back to Admin</a>
-      </div>
+<body class="bg-[#f8f9fa] min-h-screen font-sans text-slate-800">
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-3">
+                    <div class="bg-slate-900 p-2 rounded-lg">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h1 class="text-xl font-bold text-slate-900 tracking-tight">Media Manager</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="/admin" class="text-indigo-600 hover:text-indigo-800 text-sm font-semibold transition">Back to Dashboard</a>
+                    <span class="w-px h-4 bg-gray-300"></span>
+                    <a href="/main" class="text-slate-600 hover:text-slate-900 text-sm font-medium transition">Main</a>
+                    <span class="w-px h-4 bg-gray-300"></span>
+                    <a href="/browse" class="text-slate-600 hover:text-slate-900 text-sm font-medium transition">Storefront</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Manage Media Files</h1>
+      <p class="text-sm text-slate-500 mt-1">Upload and organize images and assets used throughout the platform.</p>
     </div>
 
-    <div class="bg-white rounded-lg border shadow p-6 mb-6">
-      <h2 class="text-lg font-semibold mb-4">Upload Image</h2>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] p-6 mb-8">
+      <h2 class="text-lg font-bold text-slate-800 tracking-tight mb-5 border-b border-gray-100 pb-4">Upload New Image</h2>
 
       <% if (error) { %>
-        <p class="mb-4 text-red-600 font-medium"><%= error %></p>
+        <div class="mb-6 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 font-medium text-sm shadow-sm"><%= error %></div>
       <% } %>
       <% if (uploaded) { %>
-        <p class="mb-4 text-green-700 font-medium">Uploaded: <code><%= uploaded %></code></p>
-        <img src="<%= uploaded %>" alt="uploaded file" class="w-56 h-40 object-cover rounded border">
+        <div class="mb-6 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 font-medium text-sm shadow-sm flex flex-col gap-3">
+            <span class="flex items-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Success! Uploaded to: <code class="bg-white px-2 py-0.5 rounded text-xs select-all"><%= uploaded %></code></span>
+            <img src="<%= uploaded %>" alt="uploaded file" class="w-48 h-32 object-cover rounded-lg border border-emerald-200 shadow-sm mt-2">
+        </div>
       <% } %>
 
-      <form action="/admin/media/upload" method="POST" enctype="multipart/form-data" class="space-y-4 mt-4">
+      <form action="/admin/media/upload" method="POST" enctype="multipart/form-data" class="space-y-5">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
         <div>
-          <label class="block mb-1 font-medium text-gray-700">Category</label>
-          <select name="category" class="w-full border rounded px-3 py-2" required>
+          <label class="block mb-1.5 text-sm font-semibold text-slate-700">Storage Category</label>
+          <select name="category" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50" required>
             <% categories.forEach((category) => { %>
               <option value="<%= category %>"><%= category %></option>
             <% }) %>
@@ -41,34 +59,36 @@
         </div>
 
         <div>
-          <label class="block mb-1 font-medium text-gray-700">Bind to Product Camera (optional)</label>
-          <select name="cameraId" class="w-full border rounded px-3 py-2">
-            <option value="">No binding</option>
+          <label class="block mb-1.5 text-sm font-semibold text-slate-700">Bind to Product Camera (Optional)</label>
+          <select name="cameraId" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50">
+            <option value="">-- No binding --</option>
             <% cameras.forEach((camera) => { %>
               <option value="<%= camera.id %>"><%= camera.brand %> <%= camera.model %> (ID <%= camera.id %>)</option>
             <% }) %>
           </select>
-          <p class="text-xs text-gray-500 mt-1">If category is <code>products</code> and camera is selected, system updates camera image path automatically.</p>
+          <p class="text-[13px] text-slate-500 mt-2 flex items-center gap-1.5"><svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> If folder is <code>products</code> and camera is selected, system updates camera image path automatically.</p>
         </div>
 
         <div>
-          <label class="block mb-1 font-medium text-gray-700">Image File</label>
-          <input type="file" name="imageFile" accept=".jpg,.jpeg,.png,.webp,.gif,.svg" class="w-full border rounded px-3 py-2" required>
+          <label class="block mb-1.5 text-sm font-semibold text-slate-700">Image File</label>
+          <input type="file" name="imageFile" accept=".jpg,.jpeg,.png,.webp,.gif,.svg" class="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" required>
         </div>
 
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-500 transition">Upload & Rename</button>
+        <div class="pt-2">
+            <button type="submit" class="bg-indigo-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-indigo-700 hover:shadow-md transition-all w-full md:w-auto">Upload & Process</button>
+        </div>
       </form>
     </div>
 
-    <div class="bg-white rounded-lg border shadow p-6">
-      <h2 class="text-lg font-semibold mb-3">Folder Structure</h2>
-      <pre class="bg-gray-50 border rounded p-3 text-sm text-gray-700">public/
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_-3px_rgba(0,0,0,0.05)] p-6">
+      <h2 class="text-lg font-bold text-slate-800 tracking-tight mb-4 border-b border-gray-100 pb-3">Folder Structure</h2>
+      <pre class="bg-slate-800 text-emerald-400 rounded-xl p-5 text-sm font-mono overflow-x-auto shadow-inner">public/
   uploads/
-    products/
-    website/
-    slips/
-    avatars/
-    others/</pre>
+    ├── products/
+    ├── website/
+    ├── slips/
+    ├── avatars/
+    └── others/</pre>
     </div>
   </main>
 </body>
