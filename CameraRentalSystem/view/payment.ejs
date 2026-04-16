@@ -6,60 +6,47 @@
     <title>Payment</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-[#f8f9fa] min-h-screen font-sans text-slate-800 flex items-center justify-center p-4">
-    <div class="w-full max-w-xl bg-white rounded-3xl shadow-[0_4px_24px_-8px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden text-center relative">
-        <div class="h-2 w-full bg-emerald-500"></div>
-        <div class="p-10">
-            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-5 shadow-sm">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
-            </div>
-            
-            <h1 class="text-3xl font-bold tracking-tight text-slate-900 mb-2">Scan QR to Pay</h1>
-            <p class="text-slate-500 mb-8 font-medium">Booking ID: <span class="font-bold text-slate-800">#<%= booking.id %></span></p>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-xl bg-white rounded-2xl shadow-xl p-8 text-center">
+        <h1 class="text-2xl font-bold mb-2">Scan QR to Pay</h1>
+        <p class="text-gray-500 mb-6">Booking ID: <span class="font-semibold"><%= booking.id %></span></p>
 
-            <div class="bg-gradient-to-b from-slate-50 to-white border border-gray-100 rounded-2xl p-8 mb-8 shadow-sm">
-                <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm inline-block mx-auto mb-6">
-                    <img
-                        src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=BOOKING-<%= booking.id %>-AMOUNT-<%= booking.totalPrice %>"
-                        alt="Payment QR Code"
-                        class="rounded-lg object-contain w-[200px] h-[200px]"
-                    >
-                </div>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Amount to Transfer</p>
-                <p class="text-4xl font-black text-emerald-600 tracking-tight"><%= Number(booking.totalPrice).toLocaleString() %> <span class="text-xl font-bold text-emerald-500">THB</span></p>
-            </div>
-
-            <% if (booking.previousSlipRejected) { %>
-                <div class="mb-6 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700 text-left flex items-start gap-3 shadow-sm">
-                    <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                    <p class="font-medium">สลิปก่อนหน้าถูกปฏิเสธ กรุณาอัปโหลดสลิปใหม่ที่ถูกต้องและชัดเจนอีกครั้ง</p>
-                </div>
-            <% } %>
-
-            <form action="/booking/<%= booking.id %>/payment/confirm" method="POST" enctype="multipart/form-data" class="text-left bg-slate-50 border border-gray-100 p-6 rounded-2xl">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <input type="hidden" name="category" value="slips">
-                
-                <label for="slipFile" class="block text-sm font-bold text-slate-700 mb-3">แนบสลิปการโอนเงิน</label>
-                <input
-                    id="slipFile"
-                    name="slipFile"
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.webp,.gif"
-                    class="block w-full text-sm text-slate-600 mb-5 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer focus:outline-none transition-all"
-                    required
-                >
-                <button type="submit" class="w-full py-3.5 rounded-xl bg-emerald-600 text-white font-bold text-[15px] hover:bg-emerald-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    Confirm Payment Options
-                </button>
-            </form>
-
-            <a href="/cart" class="inline-flex items-center gap-2 mt-8 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                I'll pay later (Back to cart)
-            </a>
+        <div class="bg-gray-50 rounded-xl p-6 mb-6">
+            <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=BOOKING-<%= booking.id %>-AMOUNT-<%= booking.totalPrice %>"
+                alt="Payment QR Code"
+                class="mx-auto rounded-lg border border-gray-200"
+            >
+            <p class="mt-4 text-lg">Amount</p>
+            <p class="text-3xl font-bold text-green-700"><%= booking.totalPrice %> THB</p>
         </div>
+
+        <% if (booking.previousSlipRejected) { %>
+            <div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700 text-left">
+                สลิปก่อนหน้าถูกปฏิเสธ กรุณาอัปโหลดสลิปใหม่ที่ถูกต้อง
+            </div>
+        <% } %>
+
+        <form action="/booking/<%= booking.id %>/payment/confirm" method="POST" enctype="multipart/form-data" class="text-left">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="category" value="slips">
+            <label for="slipFile" class="block text-sm font-medium text-gray-700 mb-2">แนบสลิปการโอน</label>
+            <input
+                id="slipFile"
+                name="slipFile"
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.gif"
+                class="block w-full text-sm text-gray-700 mb-4 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                required
+            >
+            <button type="submit" class="w-full py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition">
+                Confirm Payment with Slip
+            </button>
+        </form>
+
+        <a href="/booking/<%= booking.id %>/confirm" class="inline-block mt-4 text-sm text-gray-500 hover:text-gray-700">
+            Back to booking confirmation
+        </a>
     </div>
 </body>
 </html>

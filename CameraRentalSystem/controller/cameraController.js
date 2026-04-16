@@ -52,8 +52,6 @@ function cameraMatchesType(camera, type) {
 exports.browseCameras = async (req, res) => {
     const searchQuery = req.query.search || '';
     const selectedType = String(req.query.type || '').toLowerCase();
-    const minPrice = req.query.minPrice !== undefined ? Number(req.query.minPrice) : null;
-    const maxPrice = req.query.maxPrice !== undefined ? Number(req.query.maxPrice) : null;
 
     // Fetch categories
     const categoryRecords = await Category.findAll();
@@ -72,21 +70,11 @@ exports.browseCameras = async (req, res) => {
         );
     }
 
-    // Filter by price
-    if (minPrice !== null) {
-        filteredCameras = filteredCameras.filter(c => c.pricePerDay >= minPrice);
-    }
-    if (maxPrice !== null) {
-        filteredCameras = filteredCameras.filter(c => c.pricePerDay <= maxPrice);
-    }
-
     res.render('browse_camera', {
         cameras: filteredCameras,
         user: req.session.user,
         searchQuery,
         selectedType,
-        minPrice,
-        maxPrice,
         categories
     });
 };
