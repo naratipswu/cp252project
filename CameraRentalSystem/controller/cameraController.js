@@ -6,7 +6,7 @@ const { Customer, Equipment, Rental, RentalDetail, Payment, Category } = require
 function getDateOrNull(dateString) {
     const parsed = new Date(dateString);
     if (Number.isNaN(parsed.getTime())) return null;
-    parsed.setHours(0, 0, 0, 0);
+    // Don't use setHours(0,0,0,0) as it uses local time and causes shift
     return parsed;
 }
 
@@ -52,10 +52,15 @@ function cameraMatchesType(camera, type) {
 exports.browseCameras = async (req, res) => {
     const searchQuery = req.query.search || '';
     const selectedType = String(req.query.type || '').toLowerCase();
+    const minPrice = req.query.minPrice !== undefined ? Number(req.query.minPrice) : null;
+    const maxPrice = req.query.maxPrice !== undefined ? Number(req.query.maxPrice) : null;
+
+    // Fetch categories
+    const categoryRecords = await Category.findAll();
+    const categories = categoryRecords.map(cat => ({ name: cat.CategoryName }));
 
     // Filter by brand or model
-    let allCameras = await getAllCameras();
-    let filteredCameras = allCameras;
+    let filteredCameras = await getAllCameras();
     if (selectedType) {
         filteredCameras = filteredCameras.filter((camera) => cameraMatchesType(camera, selectedType));
     }
@@ -67,21 +72,22 @@ exports.browseCameras = async (req, res) => {
         );
     }
 
-    const categoriesFromDB = await Category.findAll();
-    const categories = categoriesFromDB.map(c => ({
-        id: c.CategoryID,
-        name: c.CategoryName
-    }));
-
-    const brands = [...new Set(allCameras.map(c => c.brand).filter(Boolean))];
+    // Filter by price
+    if (minPrice !== null) {
+        filteredCameras = filteredCameras.filter(c => c.pricePerDay >= minPrice);
+    }
+    if (maxPrice !== null) {
+        filteredCameras = filteredCameras.filter(c => c.pricePerDay <= maxPrice);
+    }
 
     res.render('browse_camera', {
         cameras: filteredCameras,
         user: req.session.user,
         searchQuery,
         selectedType,
-        categories,
-        brands
+        minPrice,
+        maxPrice,
+        categories
     });
 };
 
@@ -187,15 +193,20 @@ exports.bookCamera = async (req, res) => {
                     EndDate: endDateOnly,
                     SubTotal: totalPrice
                 }, { transaction });
+
+                equipment.Status = 'rented';
+                await equipment.save({ transaction });
+
                 return createdRental;
             }
         );
         return res.redirect(`/booking/${rental.RentalID}/confirm`);
     } catch (error) {
+        let msg = 'Failed to create booking';
         if (error && error.statusCode) {
-            return res.status(error.statusCode).send(error.message);
+            msg = error.message;
         }
-        return res.status(500).send('Failed to create booking');
+        return res.redirect(`/browse?error=${encodeURIComponent(msg)}`);
     }
 };
 
@@ -493,58 +504,27 @@ exports.rejectPaymentSlip = async (req, res) => {
     return res.redirect('/admin/payment-slips');
 };
 
-exports.showAdminCameras = async (req, res) => {
+exports.getBookedDates = async (req, res) => {
+    const { cameraId } = req.params;
     try {
-        const cameras = await Equipment.findAll({
-            include: [{ model: Category, required: false }],
-            order: [['EquipmentID', 'DESC']]
+        const bookings = await RentalDetail.findAll({
+            where: { EquipmentID: cameraId },
+            include: [{
+                model: Rental,
+                required: true,
+                where: { RentalStatus: { [Op.ne]: 'cancelled' } }
+            }]
         });
-        const categories = await Category.findAll();
 
-        res.render('admin_cameras', {
-            cameras: cameras.map(c => c.toJSON()),
-            categories: categories.map(c => c.toJSON()),
-            user: req.session.user,
-            error: req.query.error,
-            csrfToken: req.csrfToken && req.csrfToken()
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error loading cameras');
+        const formattedBookings = bookings.map(b => ({
+            from: b.StartDate, // expected format YYYY-MM-DD
+            to: b.EndDate
+        }));
+
+        res.json(formattedBookings);
+    } catch (error) {
+        console.error('Error fetching booked dates:', error);
+        res.status(500).json({ error: 'Failed to fetch booked dates' });
     }
 };
 
-exports.toggleCameraStatus = async (req, res) => {
-    try {
-        const cameraId = Number(req.params.id);
-        const newStatus = req.body.status;
-        if (!['available', 'maintenance'].includes(newStatus)) {
-            return res.redirect('/admin/cameras?error=Invalid status');
-        }
-
-        const camera = await Equipment.findByPk(cameraId);
-        if (!camera) return res.redirect('/admin/cameras?error=Camera not found');
-
-        camera.Status = newStatus;
-        await camera.save();
-        return res.redirect('/admin/cameras');
-    } catch (err) {
-        console.error(err);
-        return res.redirect('/admin/cameras?error=Failed to update status');
-    }
-};
-
-exports.deleteCamera = async (req, res) => {
-    try {
-        const cameraId = Number(req.params.id);
-        const camera = await Equipment.findByPk(cameraId);
-        if (!camera) return res.redirect('/admin/cameras?error=Camera not found');
-        
-        await camera.destroy();
-        return res.redirect('/admin/cameras');
-    } catch (err) {
-        console.error(err);
-        // Will fail if there are dependent records, which is expected by the prompt
-        return res.redirect('/admin/cameras?error=Failed to delete camera. Ensure there are no existing bookings.');
-    }
-};

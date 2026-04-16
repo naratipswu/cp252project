@@ -7,6 +7,10 @@
     <title>Browse Cameras</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -37,6 +41,32 @@
             opacity: 1;
             cursor: pointer;
         }
+
+        /* Booked dates highlighting */
+        .flatpickr-day.booked {
+            background: #ef4444 !important; /* Tailwind red-500 */
+            border-color: #ef4444 !important;
+            color: white !important;
+            cursor: not-allowed !important;
+        }
+        
+        .flatpickr-calendar {
+            background: #262119 !important;
+            border: 1px solid #4b5563 !important;
+        }
+
+        .flatpickr-day {
+            color: #d1d5db !important;
+        }
+
+        .flatpickr-day:hover {
+            background: #374151 !important;
+        }
+
+        .flatpickr-day.selected {
+            background: #d69e2e !important;
+            border-color: #d69e2e !important;
+        }
     </style>
     <script>
         function toDateOnlyString(dateObj) {
@@ -46,13 +76,71 @@
             return `${y}-${m}-${d}`;
         }
 
-        function initializeBookingInputs() {
+        const flatpickrInstances = {};
+
+        async function fetchBookedDates(cameraId) {
+            try {
+                const response = await fetch(`/api/cameras/${cameraId}/booked-dates`);
+                return await response.json();
+            } catch (err) {
+                console.error('Failed to fetch booked dates', err);
+                return [];
+            }
+        }
+
+        async function initializeBookingInputs() {
             const today = new Date();
+            today.setHours(0,0,0,0);
             const todayStr = toDateOnlyString(today);
-            const dateInputs = document.querySelectorAll('input[type="date"]');
-            dateInputs.forEach((input) => {
-                input.min = todayStr;
-            });
+
+            const maxDate = new Date();
+            maxDate.setMonth(maxDate.getMonth() + 3);
+            
+            const dateInputs = document.querySelectorAll('.date-picker');
+            
+            for (const input of dateInputs) {
+                const cameraId = input.id.split('-')[1];
+                const isStart = input.id.startsWith('start-');
+                
+                const bookedRanges = await fetchBookedDates(cameraId);
+                
+                const fp = flatpickr(input, {
+                    minDate: "today",
+                    maxDate: maxDate,
+                    dateFormat: "Y-m-d",
+                    disable: bookedRanges,
+                    onDayCreate: (dObj, dStr, fp, dayElem) => {
+                        const currentStr = toDateOnlyString(dayElem.dateObj);
+                        const isBooked = bookedRanges.some(range => {
+                            return currentStr >= range.from && currentStr <= range.to;
+                        });
+                        if (isBooked) {
+                            dayElem.classList.add('booked');
+                        }
+                    },
+                    onChange: (selectedDates, dateStr, instance) => {
+                        calculatePrice(cameraId, input.dataset.price);
+                        
+                        // If start date changed, update end date min
+                        if (isStart) {
+                            const endInput = document.getElementById('end-' + cameraId);
+                            if (endInput && endInput._flatpickr) {
+                                endInput._flatpickr.set('minDate', dateStr);
+                            }
+                        }
+                    }
+                });
+                
+                if (!flatpickrInstances[cameraId]) flatpickrInstances[cameraId] = {};
+                flatpickrInstances[cameraId][isStart ? 'start' : 'end'] = fp;
+            }
+        }
+
+        function showAvailability(cameraId) {
+            const startInput = document.getElementById('start-' + cameraId);
+            if (startInput && startInput._flatpickr) {
+                startInput._flatpickr.open();
+            }
         }
 
         /**
@@ -72,10 +160,6 @@
             const daysText = document.getElementById('days-' + cameraId);
 
             if (startInput && endInput && totalSpan && bookBtn && statusText && daysText) {
-                if (startInput.value && !endInput.value) {
-                    endInput.min = startInput.value;
-                }
-
                 if (startInput.value && endInput.value) {
                     const start = new Date(startInput.value);
                     const end = new Date(endInput.value);
@@ -204,6 +288,34 @@
 
     <!-- Main Content Area -->
     <div class="max-w-7xl mx-auto px-6 pb-12 flex flex-col md:flex-row gap-10">
+        
+        <!-- Error Alert -->
+        <script>
+            window.addEventListener('DOMContentLoaded', () => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const error = urlParams.get('error');
+                if (error) {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'fixed top-20 left-1/2 -translate-x-1/2 z-[100] w-full max-w-lg px-4';
+                    alertDiv.innerHTML = `
+                        <div class="bg-red-500 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center justify-between animate-bounce">
+                            <div class="flex items-center gap-3">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span class="font-bold">${decodeURIComponent(error)}</span>
+                            </div>
+                            <button onclick="this.parentElement.parentElement.remove()" class="hover:opacity-75 font-black text-xl leading-none">&times;</button>
+                        </div>
+                    `;
+                    document.body.appendChild(alertDiv);
+                    // Remove error from URL without refreshing
+                    const newUrl = window.location.pathname + window.location.search.replace(/[?&]error=[^&]+/, '').replace(/^&/, '?');
+                    window.history.replaceState({}, '', newUrl);
+                    
+                    // Auto remove after 5s
+                    setTimeout(() => alertDiv.remove(), 5000);
+                }
+            });
+        </script>
 
         <!-- Sidebar filters -->
         <aside class="w-full md:w-1/4 flex flex-col gap-6">
@@ -321,7 +433,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <% cameras.forEach(camera=> { %>
                     <div
-                        class="bg-card-dark rounded-xl overflow-hidden shadow-lg flex flex-col border border-gray-800 hover:border-brand-yellow/50 transition duration-300">
+                        class="camera-card bg-card-dark rounded-xl overflow-hidden shadow-lg flex flex-col border border-gray-800 hover:border-brand-yellow/50 transition duration-300">
                         <!-- Image placeholder -->
                         <div class="h-44 w-full bg-[#111] relative group">
                             <img src="<%= camera.image %>" alt="<%= camera.model %>"
@@ -336,9 +448,16 @@
                         <div class="p-5 flex-1 flex flex-col">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
-                                    <h3 class="text-xl font-bold text-white tracking-wide">
-                                        <%= camera.model %>
-                                    </h3>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-xl font-bold text-white tracking-wide">
+                                            <%= camera.model %>
+                                        </h3>
+                                        <button type="button" onclick="showAvailability('<%= camera.id %>')" title="Check Booked Dates" class="text-white hover:text-gray-300 transition" id="availability-btn-<%= camera.id %>">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
                                     <p class="text-sm text-gray-400 capitalize">
                                         <%= camera.brand %>
                                     </p>
@@ -359,19 +478,23 @@
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label
-                                            class="block text-xs uppercase tracking-wider text-gray-500 mb-1">Start</label>
-                                        <input type="date" name="startDate" id="start-<%= camera.id %>" required
+                                            class="block text-xs uppercase tracking-wider text-white mb-1">Start</label>
+                                        <input type="text" name="startDate" id="start-<%= camera.id %>" required
+                                            placeholder="Click me"
+                                            data-price="<%= camera.pricePerDay %>"
                                             oninput="calculatePrice('<%= camera.id %>', '<%= camera.pricePerDay %>')"
                                             onchange="calculatePrice('<%= camera.id %>', '<%= camera.pricePerDay %>')"
-                                            class="w-full text-xs bg-black/40 border border-gray-700 rounded p-2 outline-none focus:border-brand-yellow text-white">
+                                            class="date-picker w-full text-xs bg-black/40 border border-gray-700 rounded p-2 outline-none focus:border-brand-yellow text-white">
                                     </div>
                                     <div>
                                         <label
-                                            class="block text-xs uppercase tracking-wider text-gray-500 mb-1">End</label>
-                                        <input type="date" name="endDate" id="end-<%= camera.id %>" required
+                                            class="block text-xs uppercase tracking-wider text-white mb-1">End</label>
+                                        <input type="text" name="endDate" id="end-<%= camera.id %>" required
+                                            placeholder="Click me"
+                                            data-price="<%= camera.pricePerDay %>"
                                             oninput="calculatePrice('<%= camera.id %>', '<%= camera.pricePerDay %>')"
                                             onchange="calculatePrice('<%= camera.id %>', '<%= camera.pricePerDay %>')"
-                                            class="w-full text-xs bg-black/40 border border-gray-700 rounded p-2 outline-none focus:border-brand-yellow text-white">
+                                            class="date-picker w-full text-xs bg-black/40 border border-gray-700 rounded p-2 outline-none focus:border-brand-yellow text-white">
                                     </div>
                                 </div>
                                 <p id="status-<%= camera.id %>" class="text-xs text-gray-400">Choose start and end date</p>
