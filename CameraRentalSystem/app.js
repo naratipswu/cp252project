@@ -6,6 +6,8 @@ const authController = require('./controller/authController');
 const cameraController = require('./controller/cameraController');
 const mediaController = require('./controller/mediaController');
 const cartController = require('./controller/cartController');
+const returnController = require('./controller/returnController');
+const logController = require('./controller/logController');
 const { registerPgRealtimeRoutes } = require('./service/pgRealtime');
 const { ensureUploadDirectories, uploadImage } = require('./service/uploadService');
 const { ensureCameraStoreReady } = require('./service/cameraStore');
@@ -62,6 +64,8 @@ app.use(authController.attachCsrfToken);
 app.get('/', authController.showMain);
 app.get('/main', authController.showMain);
 app.get('/welcome', authController.showLanding);
+app.get('/process', authController.showProcess);
+app.get('/contact', authController.showContact);
 
 app.get('/signin', authController.showSignIn);
 app.get('/signup', authController.showSignUp);
@@ -113,6 +117,16 @@ app.post(
   uploadImage.single('imageFile'),
   mediaController.uploadMedia
 );
+
+// Newly added admin endpoints
+app.get('/admin/cameras', authController.requireAdmin, cameraController.showAdminCameras);
+app.post('/admin/cameras/:id/status', authController.requireAdmin, authController.requireCsrf, cameraController.toggleCameraStatus);
+app.post('/admin/cameras/:id/delete', authController.requireAdmin, authController.requireCsrf, cameraController.deleteCamera);
+
+app.get('/admin/returns', authController.requireAdmin, returnController.showAdminReturns);
+app.post('/admin/returns/:rentalDetailId', authController.requireAdmin, authController.requireCsrf, returnController.processReturn);
+
+app.get('/admin/logs', authController.requireAdmin, logController.showAdminLogs);
 
 // Optional PostgreSQL SQL/report endpoints for pgAdmin class demo.
 // Disabled by default (ENABLE_PG_REALTIME=false or unset).
