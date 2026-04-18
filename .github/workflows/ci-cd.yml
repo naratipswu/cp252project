@@ -83,11 +83,30 @@ jobs:
           node -e "console.log('✓ Node.js build verified')"
           ls -la CameraRentalSystem/
 
-  # ==================== JOB 4: E2E Tests ====================
+# ==================== JOB 4: E2E Tests ====================
   e2e-tests:
     name: 🎬 E2E UI Tests (Cypress)
     runs-on: ubuntu-latest
     needs: build
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: camera_rental
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          ADMIN_USERNAME: admin_test
+          ADMIN_EMAIL: admin@test.com
+          ADMIN_PASSWORD: password123456
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d camera_rental"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -111,6 +130,18 @@ jobs:
           browser: chrome
           record: false
         continue-on-error: true
+        env:
+          NODE_ENV: production
+          SESSION_SECRET: ci-only-change-me
+          DB_DIALECT: postgres
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_NAME: camera_rental
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          ADMIN_USERNAME: admin_test
+          ADMIN_EMAIL: admin@test.com
+          ADMIN_PASSWORD: password123456
 
       - name: 📸 Upload Screenshots on Failure
         if: failure()
@@ -139,6 +170,9 @@ jobs:
           POSTGRES_DB: camera_rental
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
+          ADMIN_USERNAME: admin_test
+          ADMIN_EMAIL: admin@test.com
+          ADMIN_PASSWORD: password123456
         ports:
           - 5432:5432
         options: >-
@@ -160,43 +194,39 @@ jobs:
       - name: 📚 Install dependencies
         run: npm ci
 
-      # ✅ FIX: รอ PostgreSQL พร้อมก่อน start server
-      - name: ⏳ Wait for PostgreSQL to be ready
-        run: npx wait-on tcp:127.0.0.1:5432 --timeout 60000
-
-      # ✅ FIX: Redirect server log ออกมา เพื่อดู error ได้ชัดเจน
-      - name: 🚀 Start Server
+      - name: 🚀 Start Server (capture logs)
         run: |
-          npm start > /tmp/server.log 2>&1 &
+          set -euxo pipefail
+          nohup npm start > /tmp/server.log 2>&1 &
           echo "Server PID: $!"
-          echo "Server started in background, logs at /tmp/server.log"
+          sleep 2
+          echo "=== First 200 lines of server log ==="
+          sed -n '1,200p' /tmp/server.log || true
         env:
           NODE_ENV: production
+          # ต้องมีค่าเสมอ (เลือกอย่างใดอย่างหนึ่ง)
           SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+          # หรือชั่วคราวเพื่อให้ผ่าน CI:
+          # SESSION_SECRET: ${{ secrets.SESSION_SECRET || 'ci-only-change-me' }}
+
           DB_DIALECT: postgres
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
           DB_NAME: camera_rental
           DB_USER: postgres
           DB_PASSWORD: postgres
+          ADMIN_USERNAME: admin_test
+          ADMIN_EMAIL: admin@test.com
+          ADMIN_PASSWORD: password123456
 
-      # ✅ FIX: ถ้า wait-on timeout จะ print log ออกมาให้เห็นสาเหตุ
-      - name: ⏳ Wait for server
+      - name: ⏳ Wait for server (print logs on failure)
         run: |
-          npx wait-on http://localhost:3000 --timeout 300000 || \
+          npx wait-on http://127.0.0.1:3000 --timeout 60000 || \
           (echo "❌ Server failed to start. Server logs:" && cat /tmp/server.log && exit 1)
 
       - name: 📊 Run Performance Profile
         run: npm run profile
         continue-on-error: true
-
-      # ✅ FIX: Upload server log ทุกครั้ง เพื่อ debug ได้ง่าย
-      - name: 📤 Upload Server Log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: server-log
-          path: /tmp/server.log
 
       - name: 📤 Upload Performance Results
         if: always()
