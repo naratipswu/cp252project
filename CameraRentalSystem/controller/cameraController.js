@@ -59,13 +59,38 @@ exports.browseCameras = async (req, res) => {
     const categoryRecords = await Category.findAll();
     const categories = categoryRecords.map(cat => ({ id: cat.CategoryID, name: cat.CategoryName }));
 
-    // Get all cameras and filter
-    let allCameras = await getAllCameras();
+    // Get all cameras
+    let rawCameras = await getAllCameras();
     
     // Extract unique brands for the sidebar
-    const brands = [...new Set(allCameras.map(c => c.brand))].sort();
+    const brands = [...new Set(rawCameras.map(c => c.brand))].sort();
 
-    let filteredCameras = allCameras;
+    // Grouping by Brand + Model
+    const modelGroups = new Map();
+    rawCameras.forEach(cam => {
+        const key = `${cam.brand}|${cam.model}`;
+        if (!modelGroups.has(key)) {
+            modelGroups.set(key, {
+                ...cam,
+                availableCount: cam.status === 'available' ? 1 : 0,
+                totalStock: 1
+            });
+        } else {
+            const group = modelGroups.get(key);
+            group.totalStock += 1;
+            if (cam.status === 'available') {
+                group.availableCount += 1;
+                // If the group representative isn't available, pick this one
+                if (group.status !== 'available') {
+                    group.id = cam.id;
+                    group.status = 'available';
+                }
+            }
+        }
+    });
+
+    let filteredCameras = Array.from(modelGroups.values());
+
     if (selectedType) {
         filteredCameras = filteredCameras.filter((camera) => cameraMatchesType(camera, selectedType));
     }
@@ -107,6 +132,8 @@ exports.addCamera = async (req, res) => {
     const normalizedImageUrl = typeof imageUrl === 'string' ? imageUrl.trim() : '';
     const uploadedImagePath = req.file ? `/uploads/products/${req.file.filename}` : '';
 
+    const normalizedCategoryId = Number(req.body.categoryId) || null;
+
     if (!normalizedBrand || !normalizedModel) {
         return res.status(400).send('Brand and model are required');
     }
@@ -122,6 +149,7 @@ exports.addCamera = async (req, res) => {
         model: normalizedModel,
         stock: normalizedStock,
         pricePerDay: normalizedPricePerDay,
+        categoryId: normalizedCategoryId,
         image: uploadedImagePath || normalizedImageUrl || DEFAULT_IMAGE
     });
 

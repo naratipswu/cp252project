@@ -107,6 +107,13 @@ exports.processReturn = async (req, res) => {
                     Notes: notes || null
                 }, { transaction });
 
+                // Update the Equipment status back to 'available'
+                const equipment = await Equipment.findByPk(detail.EquipmentID, { transaction });
+                if (equipment) {
+                    equipment.Status = 'available';
+                    await equipment.save({ transaction });
+                }
+
                 // We keep RentalStatus as 'completed' (which means paid and fulfilled)
                 // The existence of the Return record signifies it's physically returned.
             }

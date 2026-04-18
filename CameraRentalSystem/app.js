@@ -89,7 +89,13 @@ app.get('/browse', cameraController.browseCameras);
 app.get('/api/cameras/:cameraId/booked-dates', cameraController.getBookedDates);
 app.get('/cart', authController.requireAuth, cartController.showCart);
 app.post('/cart/:rentalId/cancel', authController.requireAuth, authController.requireCsrf, cartController.cancelCartItem);
-app.post('/admin/cameras', authController.requireAdmin, authController.requireCsrf, uploadImage.single('imageFile'), cameraController.addCamera);
+app.post(
+  '/admin/cameras',
+  authController.requireAdmin,
+  uploadImage.single('imageFile'),
+  authController.requireCsrf,
+  cameraController.addCamera
+);
 app.post('/book', authController.requireAuth, authController.requireCsrf, cameraController.bookCamera);
 app.get('/booking/:bookingId/confirm', authController.requireAuth, cameraController.showBookingConfirm);
 app.post('/booking/:bookingId/confirm', authController.requireAuth, authController.requireCsrf, cameraController.confirmBooking);
@@ -123,8 +129,8 @@ app.get('/admin/media', authController.requireAdmin, mediaController.showMediaMa
 app.post(
   '/admin/media/upload',
   authController.requireAdmin,
-  authController.requireCsrf,
   uploadImage.single('imageFile'),
+  authController.requireCsrf,
   mediaController.uploadMedia
 );
 

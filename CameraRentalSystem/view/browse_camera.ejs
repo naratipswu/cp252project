@@ -6,6 +6,8 @@
     <title>Browse Cameras - Camera Rental System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <style>
         :root {
             --brand-brown-dark: #120e09;
@@ -19,7 +21,7 @@
         body { 
             font-family: 'Outfit', sans-serif; 
             background-color: var(--brand-brown-dark); 
-            color: #f3f4f6;
+            color: #ffffff;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -117,13 +119,14 @@
         }
 
         .date-input {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             transition: all 0.3s ease;
+            font-weight: 600;
         }
         .date-input:focus {
             border-color: var(--brand-yellow);
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.6);
         }
 
         .btn-primary {
@@ -132,6 +135,7 @@
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            font-weight: 800;
         }
         .btn-primary:hover {
             background: var(--brand-yellow-light);
@@ -140,13 +144,56 @@
         }
         .btn-primary:active { transform: translateY(0); }
 
-        /* Animation for grid entry */
+        .animate-card {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        /* Admin Styles */
+        .admin-panel {
+            background: linear-gradient(135deg, rgba(214, 158, 46, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
+            border: 1px solid rgba(214, 158, 46, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        .admin-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .admin-input:focus {
+            border-color: var(--brand-yellow);
+            background: rgba(255, 255, 255, 0.08);
+            outline: none;
+        }
+
+        /* Flatpickr Custom Overrides */
+        .flatpickr-calendar {
+            background: #1a150d !important;
+            border: 1px solid #d69e2e !important;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+        }
+        .flatpickr-day.flatpickr-disabled, 
+        .flatpickr-day.flatpickr-disabled:hover {
+            background: #4b0000 !important;
+            color: #ff9999 !important;
+            cursor: not-allowed !important;
+            opacity: 0.5;
+        }
+        .flatpickr-day.selected {
+            background: #d69e2e !important;
+            border-color: #d69e2e !important;
+        }
+        .flatpickr-months .flatpickr-month,
+        .flatpickr-current-month .flatpickr-monthDropdown-months {
+            background: #1a150d !important;
+        }
+        .flatpickr-weekday {
+            color: #d69e2e !important;
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-card {
-            animation: fadeIn 0.6s ease-out forwards;
         }
     </style>
 </head>
@@ -251,8 +298,8 @@
             <!-- Header Row -->
             <div class="flex flex-col md:flex-row justify-between items-end gap-6">
                 <div>
-                    <h2 class="text-4xl font-black tracking-tighter text-white mb-2 uppercase">Explore Gear</h2>
-                    <p class="text-gray-500 text-sm font-medium">Showing <%= cameras ? cameras.length : 0 %> premium cameras available for rent.</p>
+                    <h2 class="text-5xl font-black tracking-tighter text-white mb-3 uppercase">Explore Gear</h2>
+                    <p class="text-gray-300 text-base font-semibold">Showing <%= cameras ? cameras.length : 0 %> premium cameras available for rent.</p>
                 </div>
                 
                 <!-- Search Bar -->
@@ -266,6 +313,74 @@
                     </button>
                 </form>
             </div>
+
+            <!-- Admin Add Panel -->
+            <% if (user && user.role === 'admin') { %>
+                <div class="w-full flex justify-end">
+                    <button onclick="toggleAdminPanel()" class="flex items-center gap-2 bg-brand-yellow/10 hover:bg-brand-yellow/20 border border-brand-yellow/30 text-brand-yellow px-6 py-3 rounded-xl text-xs font-black tracking-widest transition-all uppercase">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Add New Equipment
+                    </button>
+                </div>
+
+                <div id="adminAddPanel" class="hidden animate-card">
+                    <div class="admin-panel rounded-3xl p-8 lg:p-10">
+                        <div class="flex justify-between items-center mb-8 pb-4 border-b border-white/5">
+                            <h3 class="text-xl font-black text-white uppercase tracking-wider">Product Information</h3>
+                            <button onclick="toggleAdminPanel()" class="text-gray-500 hover:text-white transition-colors">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <form action="/admin/cameras" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-black uppercase tracking-widest text-brand-yellow">Brand</label>
+                                <input type="text" name="brand" required placeholder="Sony, Canon, Nikon..." class="admin-input rounded-xl px-4 py-3.5 text-sm">
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-black uppercase tracking-widest text-brand-yellow">Model Name</label>
+                                <input type="text" name="model" required placeholder="A7III, EOS R5..." class="admin-input rounded-xl px-4 py-3.5 text-sm">
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-black uppercase tracking-widest text-brand-yellow">Category</label>
+                                <select name="categoryId" required class="admin-input rounded-xl px-4 py-[14px] text-sm appearance-none bg-brand-brown">
+                                    <% categories.forEach(cat => { %>
+                                        <option value="<%= cat.id %>"><%= cat.name %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-black uppercase tracking-widest text-brand-yellow">Price Per Day (฿)</label>
+                                <input type="number" name="pricePerDay" required placeholder="800" min="1" class="admin-input rounded-xl px-4 py-3.5 text-sm">
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-black uppercase tracking-widest text-brand-yellow">Stock Quantity</label>
+                                <input type="number" name="stock" required placeholder="5" min="1" class="admin-input rounded-xl px-4 py-3.5 text-sm">
+                            </div>
+
+                            <div class="flex flex-col gap-2">
+                                <label class="text-[11px] font-black uppercase tracking-widest text-brand-yellow">Equipment Image</label>
+                                <input type="file" name="imageFile" class="admin-input rounded-xl px-4 py-[9px] text-xs file:hidden cursor-pointer">
+                            </div>
+
+                            <div class="lg:col-span-3 flex justify-end gap-4 mt-4">
+                                <button type="button" onclick="toggleAdminPanel()" class="text-gray-400 hover:text-white px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-colors">Cancel</button>
+                                <button type="submit" class="bg-brand-yellow text-black px-10 py-4 rounded-xl text-xs font-black uppercase tracking-[0.2em] hover:bg-yellow-500 transition-all shadow-lg shadow-brand-yellow/20">Add Product Now</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            <% } %>
 
             <!-- Grid -->
             <% if (!cameras || cameras.length === 0) { %>
@@ -286,29 +401,34 @@
                             <div class="camera-image-container">
                                 <img src="<%= camera.image %>" alt="<%= camera.model %>" loading="lazy">
                                 <div class="absolute top-4 left-4 flex gap-2">
-                                    <div class="status-badge text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest <%= camera.status === 'available' ? 'text-green-400' : 'text-orange-400' %>">
-                                        <%= camera.status === 'available' ? 'Available' : 'Maintenance' %>
+                                    <div class="status-badge text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest <%= camera.availableCount > 0 ? 'text-green-400' : 'text-orange-400' %>">
+                                        <%= camera.availableCount > 0 ? 'Available' : 'Out of Stock' %>
                                     </div>
+                                    <% if (camera.availableCount > 0) { %>
+                                        <div class="status-badge text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest text-brand-yellow">
+                                            เหลืออีก <%= camera.availableCount %> ตัว
+                                        </div>
+                                    <% } %>
                                 </div>
                             </div>
                             
                             <div class="p-8 flex flex-col flex-1">
                                 <div class="flex justify-between items-start mb-6">
                                     <div class="max-w-[65%]">
-                                        <p class="text-[10px] text-brand-yellow font-black uppercase tracking-[0.2em] mb-1"><%= camera.brand %></p>
+                                        <p class="text-[12px] text-brand-yellow font-black uppercase tracking-[0.2em] mb-1"><%= camera.brand %></p>
                                         <h3 class="text-2xl font-black leading-tight text-white group-hover:text-brand-yellow transition-colors truncate" title="<%= camera.model %>">
                                             <%= camera.model %>
                                         </h3>
                                     </div>
                                     <div class="text-right">
-                                        <span class="block text-2xl font-black text-white"><%= Number(camera.pricePerDay).toLocaleString() %><span class="text-xs text-gray-400 ml-1">฿</span></span>
-                                        <span class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">per day</span>
+                                        <span class="block text-2xl font-black text-white"><%= Number(camera.pricePerDay).toLocaleString() %><span class="text-sm text-brand-yellow ml-1">฿</span></span>
+                                        <span class="text-[11px] text-gray-300 font-black uppercase tracking-widest">per day</span>
                                     </div>
                                 </div>
 
                                 <div class="flex items-center gap-2 mb-8">
-                                    <div class="w-5 h-[1px] bg-white/10"></div>
-                                    <span class="text-[10px] text-gray-400 font-semibold uppercase tracking-[0.1em]"><%= camera.categoryName %></span>
+                                    <div class="w-8 h-[1px] bg-brand-yellow/30"></div>
+                                    <span class="text-[12px] text-white font-bold uppercase tracking-[0.15em]"><%= camera.categoryName %></span>
                                 </div>
                                 
                                 <div class="mt-auto">
@@ -319,17 +439,19 @@
                                                 <input type="hidden" name="cameraId" value="<%= camera.id %>">
                                                 <div class="grid grid-cols-2 gap-3">
                                                     <div class="flex flex-col gap-1.5">
-                                                        <label class="text-[9px] font-black uppercase tracking-widest text-gray-500">Pick Up</label>
-                                                        <input type="date" name="startDate" required min="<%= new Date().toISOString().slice(0,10) %>"
-                                                            class="date-input w-full text-white rounded-xl px-3 py-2 text-xs outline-none">
+                                                        <label class="text-[11px] font-black uppercase tracking-widest text-brand-yellow">Pick Up</label>
+                                                        <input type="text" name="startDate" required placeholder="Select date"
+                                                            data-camera-id="<%= camera.id %>"
+                                                            class="date-picker-start date-input w-full text-white rounded-xl px-3 py-3 text-sm outline-none cursor-pointer">
                                                     </div>
                                                     <div class="flex flex-col gap-1.5">
-                                                        <label class="text-[9px] font-black uppercase tracking-widest text-gray-500">Return</label>
-                                                        <input type="date" name="endDate" required min="<%= new Date().toISOString().slice(0,10) %>"
-                                                            class="date-input w-full text-white rounded-xl px-3 py-2 text-xs outline-none">
+                                                        <label class="text-[11px] font-black uppercase tracking-widest text-brand-yellow">Return</label>
+                                                        <input type="text" name="endDate" required placeholder="Select date"
+                                                            data-camera-id="<%= camera.id %>"
+                                                            class="date-picker-end date-input w-full text-white rounded-xl px-3 py-3 text-sm outline-none cursor-pointer">
                                                     </div>
                                                 </div>
-                                                <button type="submit" class="btn-primary w-full font-black py-4 rounded-xl text-xs tracking-[0.2em] uppercase">Reserve Now</button>
+                                                <button type="submit" class="btn-primary w-full font-black py-5 rounded-xl text-sm tracking-[0.2em] uppercase">Reserve Now</button>
                                             </form>
                                         <% } else { %>
                                             <a href="/signin" class="btn-primary block w-full text-center font-black py-4 rounded-xl text-xs tracking-[0.2em] uppercase">Sign in to book</a>
@@ -356,5 +478,70 @@
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const startInputs = document.querySelectorAll('.date-picker-start');
+            const endInputs = document.querySelectorAll('.date-picker-end');
+            
+            const maxDate = new Date();
+            maxDate.setDate(maxDate.getDate() + 30); // 1 month from now
+
+            async function getBookedDates(cameraId) {
+                try {
+                    const response = await fetch(`/api/cameras/${cameraId}/booked-dates`);
+                    if (!response.ok) return [];
+                    const data = await response.json();
+                    return data.map(range => ({ from: range.from, to: range.to }));
+                } catch (error) {
+                    console.error('Error fetching booked dates:', error);
+                    return [];
+                }
+            }
+
+            startInputs.forEach(async (startInput, index) => {
+                const cameraId = startInput.dataset.cameraId;
+                const endInput = endInputs[index];
+                const bookedDates = await getBookedDates(cameraId);
+
+                const startInstance = flatpickr(startInput, {
+                    minDate: "today",
+                    maxDate: maxDate,
+                    disable: bookedDates,
+                    dateFormat: "Y-m-d",
+                    onChange: function(selectedDates, dateStr) {
+                        endInstance.set('minDate', dateStr);
+                    }
+                });
+
+                const endInstance = flatpickr(endInput, {
+                    minDate: "today",
+                    maxDate: maxDate,
+                    disable: bookedDates,
+                    dateFormat: "Y-m-d",
+                    onChange: function(selectedDates, dateStr) {
+                        if (selectedDates.length > 0) {
+                             startInstance.set('maxDate', dateStr < maxDate.toISOString() ? dateStr : maxDate);
+                        }
+                    }
+                });
+            });
+        });
+
+        function toggleAdminPanel() {
+            const panel = document.getElementById('adminAddPanel');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                setTimeout(() => {
+                    window.scrollTo({
+                        top: panel.offsetTop - 100,
+                        behavior: 'smooth'
+                    });
+                }, 50);
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+    </script>
 </body>
 </html>
