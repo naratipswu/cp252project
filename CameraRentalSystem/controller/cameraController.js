@@ -55,12 +55,17 @@ exports.browseCameras = async (req, res) => {
     const minPrice = req.query.minPrice !== undefined ? Number(req.query.minPrice) : null;
     const maxPrice = req.query.maxPrice !== undefined ? Number(req.query.maxPrice) : null;
 
-    // Fetch categories
+    // Fetch categories with IDs for filtering and forms
     const categoryRecords = await Category.findAll();
-    const categories = categoryRecords.map(cat => ({ name: cat.CategoryName }));
+    const categories = categoryRecords.map(cat => ({ id: cat.CategoryID, name: cat.CategoryName }));
 
-    // Filter by brand or model
-    let filteredCameras = await getAllCameras();
+    // Get all cameras and filter
+    let allCameras = await getAllCameras();
+    
+    // Extract unique brands for the sidebar
+    const brands = [...new Set(allCameras.map(c => c.brand))].sort();
+
+    let filteredCameras = allCameras;
     if (selectedType) {
         filteredCameras = filteredCameras.filter((camera) => cameraMatchesType(camera, selectedType));
     }
@@ -87,7 +92,9 @@ exports.browseCameras = async (req, res) => {
         selectedType,
         minPrice,
         maxPrice,
-        categories
+        categories,
+        brands,
+        csrfToken: req.csrfToken ? req.csrfToken() : ''
     });
 };
 
