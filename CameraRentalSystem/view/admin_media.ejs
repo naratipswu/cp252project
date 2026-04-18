@@ -47,10 +47,24 @@
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                             
                             <div class="relative group">
-                                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Destination</label>
-                                <select name="dir" class="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all appearance-none cursor-pointer">
-                                    <option value="public/images">Project Roots (Images)</option>
-                                    <option value="public/uploads">Dynamic Uploads</option>
+                                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Category / Destination</label>
+                                <select name="category" class="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all appearance-none cursor-pointer">
+                                    <% categories.forEach(cat => { %>
+                                        <option value="<%= cat %>"><%= cat.charAt(0).toUpperCase() + cat.slice(1) %></option>
+                                    <% }) %>
+                                </select>
+                                <div class="absolute right-4 top-9 pointer-events-none text-slate-300">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+
+                            <div class="relative group">
+                                <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Link to Camera (Optional)</label>
+                                <select name="cameraId" class="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 transition-all appearance-none cursor-pointer">
+                                    <option value="0">None (General Asset)</option>
+                                    <% cameras.forEach(cam => { %>
+                                        <option value="<%= cam.EquipmentID %>"><%= cam.Brand %> <%= cam.Model %> (ID: <%= cam.EquipmentID %>)</option>
+                                    <% }) %>
                                 </select>
                                 <div class="absolute right-4 top-9 pointer-events-none text-slate-300">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -58,12 +72,12 @@
                             </div>
 
                             <div class="border-2 border-dashed border-slate-100 rounded-2xl p-8 hover:border-purple-400 hover:bg-purple-50 group/drop transition-all duration-300 relative overflow-hidden">
-                                <input type="file" name="file" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                                <input type="file" name="imageFile" required class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                                 <div class="text-center relative z-0 pointer-events-none">
                                     <div class="bg-slate-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 group-hover/drop:bg-purple-600 transition-colors">
                                         <svg class="w-6 h-6 text-slate-400 group-hover/drop:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                                     </div>
-                                    <p class="text-xs font-black text-slate-900 group-hover/drop:text-purple-700 transition-colors mb-1">CHOOSE FILE</p>
+                                    <p class="text-xs font-black text-slate-900 group-hover/drop:text-purple-700 transition-colors mb-1">CHOOSE IMAGE</p>
                                     <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">or drag & drop here</p>
                                 </div>
                             </div>
