@@ -93,8 +93,7 @@ exports.browseCameras = async (req, res) => {
         minPrice,
         maxPrice,
         categories,
-        brands,
-        csrfToken: req.csrfToken ? req.csrfToken() : ''
+        brands
     });
 };
 
@@ -127,6 +126,65 @@ exports.addCamera = async (req, res) => {
     });
 
     return res.redirect('/browse');
+};
+
+exports.showAdminCameras = async (req, res) => {
+    try {
+        const cameras = await Equipment.findAll({
+            include: [{ model: Category, required: false }],
+            order: [['EquipmentID', 'ASC']]
+        });
+
+        return res.render('admin_cameras', {
+            user: req.session.user,
+            error: req.query.error || null,
+            cameras: cameras.map(c => ({
+                id: c.EquipmentID,
+                brand: c.Brand,
+                model: c.ModelName,
+                status: c.Status,
+                pricePerDay: Number(c.DailyRate),
+                categoryName: c.Category ? c.Category.CategoryName : 'General'
+            }))
+        });
+    } catch (error) {
+        console.error('Failed to load admin cameras:', error);
+        return res.status(500).send('Failed to load cameras');
+    }
+};
+
+exports.toggleCameraStatus = async (req, res) => {
+    const id = Number(req.params.id);
+    const status = String(req.body.status || '').toLowerCase();
+
+    if (!Number.isFinite(id) || id <= 0) return res.status(400).send('Invalid camera id');
+    if (!['available', 'maintenance'].includes(status)) return res.status(400).send('Invalid status');
+
+    try {
+        const camera = await Equipment.findByPk(id);
+        if (!camera) return res.status(404).send('Camera not found');
+        camera.Status = status;
+        await camera.save();
+        return res.redirect('/admin/cameras');
+    } catch (error) {
+        console.error('Failed to update camera status:', error);
+        return res.status(500).send('Failed to update status');
+    }
+};
+
+exports.deleteCamera = async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) return res.status(400).send('Invalid camera id');
+
+    try {
+        const camera = await Equipment.findByPk(id);
+        if (!camera) return res.status(404).send('Camera not found');
+        await camera.destroy();
+        return res.redirect('/admin/cameras');
+    } catch (error) {
+        console.error('Failed to delete camera:', error);
+        return res.status(409).send('Cannot delete camera (it may have related bookings)');
+    }
 };
 
 exports.bookCamera = async (req, res) => {

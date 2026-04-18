@@ -6,6 +6,9 @@ const authController = require('./controller/authController');
 const cameraController = require('./controller/cameraController');
 const mediaController = require('./controller/mediaController');
 const cartController = require('./controller/cartController');
+const dashboardController = require('./controller/dashboardController');
+const logController = require('./controller/logController');
+const returnController = require('./controller/returnController');
 const { registerPgRealtimeRoutes } = require('./service/pgRealtime');
 const { ensureUploadDirectories, uploadImage } = require('./service/uploadService');
 const { ensureCameraStoreReady } = require('./service/cameraStore');
@@ -100,7 +103,16 @@ app.post(
 );
 
 // Admin dashboard 
-app.get('/admin', authController.requireAdmin, cameraController.showAdminDashboard);
+app.get('/admin', authController.requireAdmin, dashboardController.showDashboard);
+app.get('/admin/cameras', authController.requireAdmin, cameraController.showAdminCameras);
+app.post('/admin/cameras/:id/status', authController.requireAdmin, authController.requireCsrf, cameraController.toggleCameraStatus);
+app.post('/admin/cameras/:id/delete', authController.requireAdmin, authController.requireCsrf, cameraController.deleteCamera);
+
+app.get('/admin/returns', authController.requireAdmin, returnController.showAdminReturns);
+app.post('/admin/returns/:rentalDetailId', authController.requireAdmin, authController.requireCsrf, returnController.processReturn);
+
+app.get('/admin/logs', authController.requireAdmin, logController.showAdminLogs);
+
 app.get('/admin/accounts', authController.requireAdmin, authController.showAdminAccounts);
 app.post('/admin/accounts/role', authController.requireAdmin, authController.requireCsrf, authController.updateUserRole);
 app.post('/admin/accounts/create-admin', authController.requireAdmin, authController.requireCsrf, authController.createAdminAccount);
