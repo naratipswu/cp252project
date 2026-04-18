@@ -39,8 +39,6 @@ function isFilmLikeCamera(brand, text) {
 function cameraMatchesType(camera, type) {
     const normalizedType = String(type || '').toLowerCase();
     if (!normalizedType) return true;
-    
-    // Original Film/Digital logic based on model/brand text
     const brand = String(camera.brand || '').toLowerCase();
     const model = String(camera.model || '').toLowerCase();
     const text = `${brand} ${model}`;
@@ -48,10 +46,7 @@ function cameraMatchesType(camera, type) {
 
     if (normalizedType === 'film') return isFilmLike;
     if (normalizedType === 'digital') return !isFilmLike;
-
-    // Check against actual Category Name from DB
-    const catName = String(camera.categoryName || '').toLowerCase();
-    return catName === normalizedType;
+    return true;
 }
 
 exports.browseCameras = async (req, res) => {
@@ -532,49 +527,3 @@ exports.getBookedDates = async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch booked dates' });
     }
 };
-
-exports.showAdminCameras = async (req, res) => {
-    try {
-        const cameras = await Equipment.findAll({
-            include: [{ model: Category }],
-            order: [['EquipmentID', 'ASC']]
-        });
-        res.render('admin_cameras', {
-            cameras,
-            user: req.session.user,
-            error: req.query.error || null
-        });
-    } catch (error) {
-        console.error('Error loading admin cameras:', error);
-        res.status(500).send('Failed to load admin cameras');
-    }
-};
-
-exports.toggleCameraStatus = async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-    try {
-        const equipment = await Equipment.findByPk(id);
-        if (!equipment) return res.status(404).send('Camera not found');
-        equipment.Status = status;
-        await equipment.save();
-        res.redirect('/admin/cameras');
-    } catch (error) {
-        console.error('Error toggling camera status:', error);
-        res.redirect('/admin/cameras?error=Failed to update status');
-    }
-};
-
-exports.deleteCamera = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const equipment = await Equipment.findByPk(id);
-        if (!equipment) return res.status(404).send('Camera not found');
-        await equipment.destroy();
-        res.redirect('/admin/cameras');
-    } catch (error) {
-        console.error('Error deleting camera:', error);
-        res.redirect('/admin/cameras?error=Cannot delete camera. It might be linked to existing bookings.');
-    }
-};
-
