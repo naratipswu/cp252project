@@ -39,6 +39,29 @@ const storage = multer.diskStorage({
   }
 });
 
+function getDirectoryStructure(dirPath = UPLOADS_DIR, prefix = '') {
+  if (!fs.existsSync(dirPath)) return 'Directory not found';
+  
+  let result = '';
+  const items = fs.readdirSync(dirPath).filter(f => !f.startsWith('.'));
+  
+  items.forEach((item, index) => {
+    const isLast = index === items.length - 1;
+    const itemPath = path.join(dirPath, item);
+    const stats = fs.statSync(itemPath);
+    
+    result += `${prefix}${isLast ? '└── ' : '├── '}${item}\n`;
+    
+    if (stats.isDirectory()) {
+      result += getDirectoryStructure(itemPath, `${prefix}${isLast ? '    ' : '│   '}`);
+    }
+  });
+  
+  if (prefix === '' && result === '') return '(empty)';
+  return result;
+}
+
+
 const uploadImage = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -57,5 +80,6 @@ module.exports = {
   UPLOAD_CATEGORIES,
   UPLOADS_DIR,
   ensureUploadDirectories,
-  uploadImage
+  uploadImage,
+  getDirectoryStructure
 };

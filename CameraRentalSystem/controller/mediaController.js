@@ -1,4 +1,4 @@
-const { UPLOAD_CATEGORIES } = require('../service/uploadService');
+const { UPLOAD_CATEGORIES, getDirectoryStructure } = require('../service/uploadService');
 const { getAllCameras } = require('../service/cameraStore');
 const Equipment = require('../../models/equipment');
 
@@ -8,7 +8,8 @@ exports.showMediaManager = (req, res) => {
       categories: UPLOAD_CATEGORIES,
       cameras,
       uploaded: null,
-      error: null
+      error: null,
+      structure: getDirectoryStructure()
     }))
     .catch(() => res.status(500).send('Failed to load media manager'));
 };
@@ -20,7 +21,8 @@ exports.uploadMedia = (req, res) => {
         categories: UPLOAD_CATEGORIES,
         cameras,
         uploaded: null,
-        error: 'Please select an image file.'
+        error: 'Please select an image file.',
+        structure: getDirectoryStructure()
       });
     }
 
@@ -37,7 +39,11 @@ exports.uploadMedia = (req, res) => {
       categories: UPLOAD_CATEGORIES,
       cameras: updatedCameras,
       uploaded: publicPath,
-      error: null
+      error: null,
+      structure: getDirectoryStructure()
     });
-  }).catch(() => res.status(500).send('Failed to upload media'));
+  }).catch((err) => {
+    console.error('Upload Error:', err);
+    res.status(500).send('Failed to upload media');
+  });
 };
