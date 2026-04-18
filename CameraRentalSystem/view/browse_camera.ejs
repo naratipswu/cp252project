@@ -7,7 +7,7 @@
     <title>Browse Cameras - Camera Rental System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;700;900&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
@@ -49,10 +49,21 @@
             background: var(--brand-yellow);
         }
 
-        .glass-nav {
-            background: rgba(26, 21, 13, 0.85);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        .nav-link {
+            font-family: 'Inter', sans-serif;
+            color: #ffffff;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--brand-yellow);
+        }
+
+        .nav-link.active {
+            color: var(--brand-yellow);
         }
 
         .bg-brand-yellow {
@@ -251,32 +262,31 @@
 <body class="min-h-screen">
 
     <!-- Navbar -->
-    <nav class="flex h-16 w-full sticky top-0 z-50 glass-nav">
+    <nav class="flex h-16 w-full sticky top-0 z-50 border-b border-white/10 bg-brand-brown font-[Inter]">
         <!-- Logo Area -->
         <a href="/"
-            class="bg-brand-yellow text-black font-black text-lg md:text-xl flex items-center justify-center px-6 md:px-12 tracking-tighter hover:bg-yellow-500 transition-colors duration-300">
+            class="bg-brand-yellow text-black font-black text-lg md:text-xl flex items-center justify-center px-6 md:px-10 tracking-wider hover:bg-yellow-500 transition-colors duration-300">
             CAMERA TYPE
         </a>
 
         <!-- Navigation Links -->
-        <div class="flex-1 flex items-center justify-start px-12 gap-10 hidden md:flex">
+        <div class="flex-1 bg-[#222] flex items-center justify-start px-8 gap-8 hidden md:flex">
+            <% const currentPath = typeof path !== 'undefined' ? path : ''; %>
             <a href="/browse?type=digital"
-                class="text-gray-400 text-sm font-semibold tracking-widest hover:text-brand-yellow transition-all duration-300 uppercase">Digital</a>
+                class="nav-link <%= selectedType === 'digital' ? 'active' : '' %>">Digital</a>
             <a href="/browse?type=film"
-                class="text-gray-400 text-sm font-semibold tracking-widest hover:text-brand-yellow transition-all duration-300 uppercase">Film</a>
-            <a href="/browse?type=photo"
-                class="text-gray-400 text-sm font-semibold tracking-widest hover:text-brand-yellow transition-all duration-300 uppercase">Photo</a>
+                class="nav-link <%= selectedType === 'film' ? 'active' : '' %>">Film</a>
             <a href="/process"
-                class="text-gray-400 text-sm font-semibold tracking-widest hover:text-brand-yellow transition-all duration-300 uppercase">Process</a>
+                class="nav-link">Process</a>
             <a href="/contact"
-                class="text-gray-400 text-sm font-semibold tracking-widest hover:text-brand-yellow transition-all duration-300 uppercase">Contact</a>
+                class="nav-link">Contact</a>
         </div>
 
         <!-- Icons Area -->
-        <div class="flex items-center justify-center px-8 gap-8 ml-auto md:ml-0 bg-white/5 border-l border-white/5">
-            <a href="/profile" class="text-gray-400 hover:text-white transition-colors duration-300" title="Profile">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+        <div class="bg-white text-black flex items-center justify-center px-6 gap-6 ml-auto md:ml-0">
+            <a href="<%= user ? '/profile' : '/signin' %>" class="hover:text-gray-600 transition-colors duration-300" title="<%= user ? 'Profile' : 'Sign in' %>">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                 </svg>
             </a>
@@ -284,17 +294,16 @@
                 <form action="/logout" method="POST" class="inline">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <button type="submit"
-                        class="text-gray-400 hover:text-red-400 transition-colors duration-300 font-bold text-xs uppercase tracking-widest">Logout</button>
+                        class="text-xs font-black tracking-widest uppercase hover:text-red-600 transition-colors">Logout</button>
                 </form>
-                <% } %>
-                    <a href="/cart" class="relative text-gray-400 hover:text-white transition-colors duration-300"
-                        title="Cart">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z">
-                            </path>
-                        </svg>
-                    </a>
+            <% } %>
+            <a href="/cart" class="hover:text-gray-600 transition-colors duration-300" title="Cart">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z">
+                    </path>
+                </svg>
+            </a>
         </div>
     </nav>
 
