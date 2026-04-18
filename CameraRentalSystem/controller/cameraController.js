@@ -39,8 +39,6 @@ function isFilmLikeCamera(brand, text) {
 function cameraMatchesType(camera, type) {
     const normalizedType = String(type || '').toLowerCase();
     if (!normalizedType) return true;
-    
-    // Original Film/Digital logic based on model/brand text
     const brand = String(camera.brand || '').toLowerCase();
     const model = String(camera.model || '').toLowerCase();
     const text = `${brand} ${model}`;
@@ -48,10 +46,7 @@ function cameraMatchesType(camera, type) {
 
     if (normalizedType === 'film') return isFilmLike;
     if (normalizedType === 'digital') return !isFilmLike;
-
-    // Check against actual Category Name from DB
-    const catName = String(camera.categoryName || '').toLowerCase();
-    return catName === normalizedType;
+    return true;
 }
 
 exports.browseCameras = async (req, res) => {
@@ -60,12 +55,42 @@ exports.browseCameras = async (req, res) => {
     const minPrice = req.query.minPrice !== undefined ? Number(req.query.minPrice) : null;
     const maxPrice = req.query.maxPrice !== undefined ? Number(req.query.maxPrice) : null;
 
-    // Fetch categories
+    // Fetch categories with IDs for filtering and forms
     const categoryRecords = await Category.findAll();
-    const categories = categoryRecords.map(cat => ({ name: cat.CategoryName }));
+    const categories = categoryRecords.map(cat => ({ id: cat.CategoryID, name: cat.CategoryName }));
 
-    // Filter by brand or model
-    let filteredCameras = await getAllCameras();
+    // Get all cameras
+    let rawCameras = await getAllCameras();
+    
+    // Extract unique brands for the sidebar
+    const brands = [...new Set(rawCameras.map(c => c.brand))].sort();
+
+    // Grouping by Brand + Model
+    const modelGroups = new Map();
+    rawCameras.forEach(cam => {
+        const key = `${cam.brand}|${cam.model}`;
+        if (!modelGroups.has(key)) {
+            modelGroups.set(key, {
+                ...cam,
+                availableCount: cam.status === 'available' ? 1 : 0,
+                totalStock: 1
+            });
+        } else {
+            const group = modelGroups.get(key);
+            group.totalStock += 1;
+            if (cam.status === 'available') {
+                group.availableCount += 1;
+                // If the group representative isn't available, pick this one
+                if (group.status !== 'available') {
+                    group.id = cam.id;
+                    group.status = 'available';
+                }
+            }
+        }
+    });
+
+    let filteredCameras = Array.from(modelGroups.values());
+
     if (selectedType) {
         filteredCameras = filteredCameras.filter((camera) => cameraMatchesType(camera, selectedType));
     }
@@ -73,7 +98,8 @@ exports.browseCameras = async (req, res) => {
         const lowerQuery = searchQuery.toLowerCase();
         filteredCameras = filteredCameras.filter(c =>
             c.brand.toLowerCase().includes(lowerQuery) ||
-            c.model.toLowerCase().includes(lowerQuery)
+            c.model.toLowerCase().includes(lowerQuery) ||
+            (c.categoryName && c.categoryName.toLowerCase().includes(lowerQuery))
         );
     }
 
@@ -92,7 +118,8 @@ exports.browseCameras = async (req, res) => {
         selectedType,
         minPrice,
         maxPrice,
-        categories
+        categories,
+        brands
     });
 };
 
@@ -105,6 +132,8 @@ exports.addCamera = async (req, res) => {
     const normalizedPricePerDay = Number(pricePerDay);
     const normalizedImageUrl = typeof imageUrl === 'string' ? imageUrl.trim() : '';
     const uploadedImagePath = req.file ? `/uploads/products/${req.file.filename}` : '';
+
+    const normalizedCategoryId = Number(req.body.categoryId) || null;
 
     if (!normalizedBrand || !normalizedModel) {
         return res.status(400).send('Brand and model are required');
@@ -121,10 +150,72 @@ exports.addCamera = async (req, res) => {
         model: normalizedModel,
         stock: normalizedStock,
         pricePerDay: normalizedPricePerDay,
+        categoryId: normalizedCategoryId,
         image: uploadedImagePath || normalizedImageUrl || DEFAULT_IMAGE
     });
 
     return res.redirect('/browse');
+};
+
+exports.showAdminCameras = async (req, res) => {
+    try {
+        const cameras = await Equipment.findAll({
+            include: [{ model: Category, required: false }],
+            order: [['EquipmentID', 'ASC']]
+        });
+
+        return res.render('admin_cameras', {
+            user: req.session.user,
+            error: req.query.error || null,
+            cameras: cameras.map(c => ({
+                EquipmentID: c.EquipmentID,
+                Brand: c.Brand,
+                ModelName: c.ModelName,
+                Status: c.Status,
+                DailyRate: c.DailyRate,
+                ImageURL: c.ImageURL,
+                SerialNumber: c.SerialNumber,
+                Category: c.Category
+            }))
+        });
+    } catch (error) {
+        console.error('Failed to load admin cameras:', error);
+        return res.status(500).send('Failed to load cameras');
+    }
+};
+
+exports.toggleCameraStatus = async (req, res) => {
+    const id = Number(req.params.id);
+    const status = String(req.body.status || '').toLowerCase();
+
+    if (!Number.isFinite(id) || id <= 0) return res.status(400).send('Invalid camera id');
+    if (!['available', 'maintenance'].includes(status)) return res.status(400).send('Invalid status');
+
+    try {
+        const camera = await Equipment.findByPk(id);
+        if (!camera) return res.status(404).send('Camera not found');
+        camera.Status = status;
+        await camera.save();
+        return res.redirect('/admin/cameras');
+    } catch (error) {
+        console.error('Failed to update camera status:', error);
+        return res.status(500).send('Failed to update status');
+    }
+};
+
+exports.deleteCamera = async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) return res.status(400).send('Invalid camera id');
+
+    try {
+        const camera = await Equipment.findByPk(id);
+        if (!camera) return res.status(404).send('Camera not found');
+        await camera.destroy();
+        return res.redirect('/admin/cameras');
+    } catch (error) {
+        console.error('Failed to delete camera:', error);
+        return res.status(409).send('Cannot delete camera (it may have related bookings)');
+    }
 };
 
 exports.bookCamera = async (req, res) => {
@@ -205,7 +296,7 @@ exports.bookCamera = async (req, res) => {
                 return createdRental;
             }
         );
-        return res.redirect(`/booking/${rental.RentalID}/confirm`);
+        return res.redirect('/cart');
     } catch (error) {
         let msg = 'Failed to create booking';
         if (error && error.statusCode) {
@@ -298,8 +389,7 @@ exports.confirmBooking = async (req, res) => {
 
     rental.RentalStatus = 'active';
     await rental.save();
-    // User requested: after confirm, warp back to the first page.
-    return res.redirect('/browse');
+    return res.redirect('/cart');
 };
 
 exports.showPaymentPage = (req, res) => {
@@ -532,49 +622,3 @@ exports.getBookedDates = async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch booked dates' });
     }
 };
-
-exports.showAdminCameras = async (req, res) => {
-    try {
-        const cameras = await Equipment.findAll({
-            include: [{ model: Category }],
-            order: [['EquipmentID', 'ASC']]
-        });
-        res.render('admin_cameras', {
-            cameras,
-            user: req.session.user,
-            error: req.query.error || null
-        });
-    } catch (error) {
-        console.error('Error loading admin cameras:', error);
-        res.status(500).send('Failed to load admin cameras');
-    }
-};
-
-exports.toggleCameraStatus = async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-    try {
-        const equipment = await Equipment.findByPk(id);
-        if (!equipment) return res.status(404).send('Camera not found');
-        equipment.Status = status;
-        await equipment.save();
-        res.redirect('/admin/cameras');
-    } catch (error) {
-        console.error('Error toggling camera status:', error);
-        res.redirect('/admin/cameras?error=Failed to update status');
-    }
-};
-
-exports.deleteCamera = async (req, res) => {
-    const { id } = req.params;
-    try {
-        const equipment = await Equipment.findByPk(id);
-        if (!equipment) return res.status(404).send('Camera not found');
-        await equipment.destroy();
-        res.redirect('/admin/cameras');
-    } catch (error) {
-        console.error('Error deleting camera:', error);
-        res.redirect('/admin/cameras?error=Cannot delete camera. It might be linked to existing bookings.');
-    }
-};
-

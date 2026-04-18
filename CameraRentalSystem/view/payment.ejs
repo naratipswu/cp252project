@@ -3,50 +3,149 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment</title>
+    <title>Secure Payment | CAMERA RENTAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-yellow': '#d69e2e',
+                        'brand-brown': '#171717',
+                        'brand-gray': '#222222',
+                    },
+                    fontFamily: {
+                        'serif-elegant': ['"Playfair Display"', 'serif'],
+                        'sans-modern': ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(34, 34, 34, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .text-glow {
+            text-shadow: 0 0 15px rgba(214, 158, 46, 0.3);
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
-    <div class="w-full max-w-xl bg-white rounded-2xl shadow-xl p-8 text-center">
-        <h1 class="text-2xl font-bold mb-2">Scan QR to Pay</h1>
-        <p class="text-gray-500 mb-6">Booking ID: <span class="font-semibold"><%= booking.id %></span></p>
+<body class="bg-brand-brown text-white font-sans-modern min-h-screen flex flex-col">
 
-        <div class="bg-gray-50 rounded-xl p-6 mb-6">
-            <img
-                src="https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=BOOKING-<%= booking.id %>-AMOUNT-<%= booking.totalPrice %>"
-                alt="Payment QR Code"
-                class="mx-auto rounded-lg border border-gray-200"
-            >
-            <p class="mt-4 text-lg">Amount</p>
-            <p class="text-3xl font-bold text-green-700"><%= booking.totalPrice %> THB</p>
-        </div>
-
-        <% if (booking.previousSlipRejected) { %>
-            <div class="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700 text-left">
-                สลิปก่อนหน้าถูกปฏิเสธ กรุณาอัปโหลดสลิปใหม่ที่ถูกต้อง
-            </div>
-        <% } %>
-
-        <form action="/booking/<%= booking.id %>/payment/confirm" method="POST" enctype="multipart/form-data" class="text-left">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <input type="hidden" name="category" value="slips">
-            <label for="slipFile" class="block text-sm font-medium text-gray-700 mb-2">แนบสลิปการโอน</label>
-            <input
-                id="slipFile"
-                name="slipFile"
-                type="file"
-                accept=".jpg,.jpeg,.png,.webp,.gif"
-                class="block w-full text-sm text-gray-700 mb-4 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
-                required
-            >
-            <button type="submit" class="w-full py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition">
-                Confirm Payment with Slip
-            </button>
-        </form>
-
-        <a href="/booking/<%= booking.id %>/confirm" class="inline-block mt-4 text-sm text-gray-500 hover:text-gray-700">
-            Back to booking confirmation
+    <!-- Header / Navbar -->
+    <nav class="flex h-16 w-full border-b border-white/5 sticky top-0 z-50 bg-brand-brown/80 backdrop-blur-md">
+        <a href="/welcome" class="bg-brand-yellow text-black font-black text-xl flex items-center justify-center px-10 tracking-wider hover:bg-yellow-500 transition duration-300">
+            CAMERA RENTAL
         </a>
-    </div>
+        <div class="flex-1 flex items-center justify-end px-8 gap-6">
+            <span class="text-xs text-gray-400 font-bold tracking-widest uppercase">Secure Session</span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-brand-gray/50 via-brand-brown to-brand-brown">
+        <div class="w-full max-w-xl glass-card rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
+            <!-- Decorative Accent -->
+            <div class="absolute top-0 right-0 w-32 h-32 bg-brand-yellow/10 blur-3xl -mr-16 -mt-16 rounded-full"></div>
+
+            <header class="mb-10 text-center">
+                <h1 class="font-serif-elegant text-4xl md:text-5xl font-black mb-4 tracking-tight">Payment</h1>
+                <p class="text-gray-400 font-light tracking-wide uppercase text-xs">Step 2 of 2: Scan and upload slip</p>
+                <p class="mt-4 text-xs font-bold text-brand-yellow tracking-widest uppercase">Booking ID: #<%= booking.id %></p>
+            </header>
+
+            <!-- QR Code Section -->
+            <div class="bg-white rounded-3xl p-8 mb-8 shadow-inner overflow-hidden flex flex-col items-center">
+                <div class="mb-6 relative">
+                    <img
+                        src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=BOOKING-<%= booking.id %>-AMOUNT-<%= booking.totalPrice %>"
+                        alt="Payment QR Code"
+                        class="rounded-xl border-4 border-white grayscale hover:grayscale-0 transition duration-500"
+                    >
+                </div>
+                <div class="text-center">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Total Amount</p>
+                    <p class="text-4xl font-black text-black tracking-tighter"><%= booking.totalPrice %> <span class="text-sm font-normal text-gray-500">THB</span></p>
+                </div>
+            </div>
+
+            <% if (booking.previousSlipRejected) { %>
+                <div class="mb-8 rounded-2xl bg-red-500/10 border border-red-500/20 p-5 flex items-start gap-4">
+                    <div class="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                        <span class="text-white font-black text-lg">!</span>
+                    </div>
+                    <div>
+                        <p class="text-red-400 font-bold text-sm uppercase tracking-tight">Slip Rejected</p>
+                        <p class="text-xs text-red-300/80 mt-1">สลิปก่อนหน้าไม่ถูกต้อง กรุณาอัปโหลดสลิปใหม่ที่ชัดเจน</p>
+                    </div>
+                </div>
+            <% } %>
+
+            <!-- Form Section -->
+            <form action="/booking/<%= booking.id %>/payment/confirm" method="POST" enctype="multipart/form-data" class="space-y-6">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="category" value="slips">
+                
+                <div class="space-y-3">
+                    <label for="slipFile" class="block text-[10px] text-brand-yellow font-bold uppercase tracking-widest pl-2">Upload Transfer Slip</label>
+                    <div class="relative group">
+                        <input
+                            id="slipFile"
+                            name="slipFile"
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp,.gif"
+                            class="block w-full text-sm text-gray-400 file:mr-4 file:py-3 file:px-6 file:rounded-full file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-white/10 file:text-white hover:file:bg-white/20 transition cursor-pointer border border-white/5 rounded-full bg-black/20"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" class="w-full bg-white text-black font-black py-4 px-10 rounded-full hover:bg-brand-yellow hover:text-black hover:scale-[1.02] active:scale-98 transition duration-300 tracking-widest uppercase text-sm shadow-xl">
+                        Verify and Complete Booking
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-10 text-center">
+                <a href="/booking/<%= booking.id %>/confirm" class="text-gray-500 hover:text-white transition text-[10px] font-bold tracking-widest uppercase">
+                    &larr; Review Booking Details
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-black/95 border-t border-white/10 py-16 px-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
+            <!-- Branding Area -->
+            <div class="flex flex-col items-center md:items-start text-center md:text-left">
+                <div class="bg-brand-yellow text-black font-black px-6 py-2 text-xl tracking-tighter mb-4 inline-block">
+                    CAMERA RENTAL
+                </div>
+                <p class="text-gray-400 text-sm max-w-xs leading-relaxed">
+                    Premium vintage camera rentals for your creative storytelling. Capture moments the old way with modern reliability.
+                </p>
+            </div>
+
+            <!-- Group Credit Area -->
+            <div class="flex flex-col items-center md:items-end text-center md:text-right">
+                <h3 class="text-gray-500 font-bold text-xs uppercase tracking-[0.2em] mb-3">Developed By</h3>
+                <div class="text-white font-black text-3xl md:text-4xl tracking-widest uppercase">
+                    เกรซ<span class="text-brand-yellow">นาย</span>หรั่ง
+                </div>
+                <div class="mt-6 flex gap-6 text-gray-500 text-sm">
+                    <span class="hover:text-brand-yellow transition cursor-default">CP252 Project</span>
+                    <span class="text-gray-700">|</span>
+                    <span>© 2026 Camera Rental</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
 </body>
 </html>

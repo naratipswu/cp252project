@@ -3,163 +3,217 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Cart</title>
+  <title>My Cart | CAMERA RENTAL</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand-yellow': '#d69e2e',
+            'brand-brown': '#171717',
+            'brand-gray': '#222222',
+          },
+          fontFamily: {
+            'serif-elegant': ['"Playfair Display"', 'serif'],
+            'sans-modern': ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glass-card {
+      background: rgba(34, 34, 34, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .status-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      padding: 0.25rem 0.75rem;
+      text-transform: uppercase;
+      border-radius: 9999px;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-  <nav class="bg-gray-900 shadow">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16 items-center">
-        <div class="flex items-center gap-3">
-          <a href="/browse" class="text-white font-bold">Back to Browse</a>
-          <span class="text-gray-400 text-sm">Cart</span>
-        </div>
-        <div class="flex items-center gap-4">
-          <a href="/profile" class="text-gray-200 hover:text-white text-sm">Profile</a>
-          <form action="/logout" method="POST" class="inline">
+<body class="bg-brand-brown text-white font-sans-modern min-h-screen flex flex-col">
+
+  <!-- Header / Navbar -->
+  <nav class="flex h-16 w-full border-b border-white/5 sticky top-0 z-50 bg-brand-brown/80 backdrop-blur-md">
+    <a href="/welcome" class="bg-brand-yellow text-black font-black text-xl flex items-center justify-center px-10 tracking-wider hover:bg-yellow-500 transition duration-300">
+      CAMERA RENTAL
+    </a>
+    <div class="flex-1 bg-[#222]/50 flex items-center justify-end px-8 gap-8">
+        <a href="/browse" class="text-white font-bold tracking-widest text-xs hover:text-brand-yellow transition uppercase">Marketplace</a>
+        <a href="/profile" class="text-white font-bold tracking-widest text-xs hover:text-brand-yellow transition uppercase">Account</a>
+        <form action="/logout" method="POST" class="inline">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <button type="submit" class="text-gray-200 hover:text-white text-sm">Logout</button>
-          </form>
-        </div>
-      </div>
+            <button type="submit" class="bg-white/5 border border-white/10 text-white font-bold tracking-widest text-[10px] py-2 px-4 hover:bg-red-600 hover:border-red-600 transition uppercase">Logout</button>
+        </form>
     </div>
   </nav>
 
-  <main class="max-w-6xl mx-auto p-6">
-    <div class="flex items-end justify-between mb-6">
+  <main class="max-w-7xl mx-auto w-full p-6 md:p-12 flex-1">
+    
+    <!-- Hero Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6 border-b border-white/10 pb-10">
       <div>
-        <h1 class="text-2xl font-bold text-gray-900">My Cart</h1>
-        <p class="text-sm text-gray-500">รายการจองที่ยังไม่เสร็จสิ้น (pending/active)</p>
+        <h1 class="font-serif-elegant text-5xl font-black mb-4 tracking-tight">Your Collection</h1>
+        <p class="text-brand-yellow text-[10px] font-bold uppercase tracking-[0.3em]">Managed Orders & Active Rentals</p>
       </div>
-      <a href="/browse" class="px-4 py-2 rounded bg-black text-white hover:bg-gray-800 transition">Browse more</a>
+      <a href="/browse" class="bg-brand-yellow text-black font-black py-3 px-8 text-xs tracking-[0.2em] uppercase hover:bg-yellow-500 transition duration-300 flex items-center gap-3 group">
+        Explore Equipment <span class="group-hover:translate-x-1 transition-transform">→</span>
+      </a>
     </div>
 
-    <% if (!items || items.length === 0) { %>
-      <div class="bg-white border rounded-lg p-10 text-center text-gray-600">
-        ไม่มีรายการในตะกร้า
+    <!-- Active Cart Section -->
+    <div class="mb-20">
+      <div class="flex items-center gap-4 mb-8">
+          <div class="h-px bg-white/10 flex-1"></div>
+          <h2 class="text-[10px] font-bold tracking-[0.4em] uppercase text-gray-500">Active & Pending</h2>
+          <div class="h-px bg-white/10 flex-1"></div>
       </div>
-    <% } else { %>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <% items.forEach((item) => { %>
-          <div class="bg-white border rounded-2xl shadow-sm overflow-hidden">
-            <div class="flex gap-4 p-4">
-              <div class="w-28 h-20 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
-                <% if (item.camera.image) { %>
-                  <img src="<%= item.camera.image %>" alt="camera" class="w-full h-full object-cover">
-                <% } else { %>
-                  <span class="text-xs text-gray-500">No image</span>
-                <% } %>
-              </div>
-              <div class="flex-1">
-                <div class="flex items-start justify-between gap-3">
+
+      <% if (!items || items.length === 0) { %>
+        <div class="glass-card rounded-3xl p-20 text-center">
+            <div class="text-gray-600 mb-4 font-serif-elegant italic text-2xl">Your boutique is empty</div>
+            <p class="text-gray-500 text-xs uppercase tracking-widest">Select your gear to begin the journey</p>
+        </div>
+      <% } else { %>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <% items.forEach((item) => { %>
+            <div class="glass-card rounded-3xl overflow-hidden hover:border-brand-yellow/30 transition-all duration-500 group">
+              <div class="flex flex-col sm:flex-row h-full">
+                <!-- Image Section -->
+                <div class="w-full sm:w-48 h-48 sm:h-auto bg-black/40 relative overflow-hidden">
+                  <% if (item.camera.image) { %>
+                    <img src="<%= item.camera.image %>" alt="camera" class="w-full h-full object-cover group-hover:scale-110 transition duration-1000">
+                  <% } else { %>
+                    <div class="w-full h-full flex items-center justify-center text-[10px] text-gray-700 font-bold uppercase tracking-widest">No Image</div>
+                  <% } %>
+                  <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent sm:hidden"></div>
+                </div>
+
+                <!-- Info Section -->
+                <div class="flex-1 p-6 flex flex-col justify-between">
                   <div>
-                    <div class="font-semibold text-gray-900"><%= item.camera.brand %> <%= item.camera.model %></div>
-                    <div class="text-xs text-gray-500">Rental ID: <%= item.rentalId %></div>
-                  </div>
-                  <div class="text-right">
-                    <div class="text-sm font-bold text-gray-900"><%= item.totalAmount %> THB</div>
-                    <div class="text-xs text-gray-500">Payment: <%= item.paymentStatus %></div>
-                  </div>
-                </div>
+                    <div class="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 class="font-serif-elegant text-xl font-bold group-hover:text-brand-yellow transition duration-300"><%= item.camera.brand %> <%= item.camera.model %></h3>
+                        <p class="text-[9px] text-gray-500 tracking-widest uppercase mt-1">Order #<%= item.rentalId %></p>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-xl font-black text-brand-yellow tracking-tighter"><%= item.totalAmount %> <span class="text-[10px] font-normal text-gray-400">THB</span></p>
+                      </div>
+                    </div>
 
-                <div class="mt-3 grid grid-cols-2 gap-2 text-sm">
-                  <div class="bg-gray-50 rounded p-2">
-                    <div class="text-xs text-gray-500">Start</div>
-                    <div class="font-medium text-gray-800"><%= item.startDate %></div>
-                  </div>
-                  <div class="bg-gray-50 rounded p-2">
-                    <div class="text-xs text-gray-500">End</div>
-                    <div class="font-medium text-gray-800"><%= item.endDate %></div>
-                  </div>
-                </div>
-
-                <div class="mt-3 flex items-center justify-between gap-2">
-                  <div class="text-xs">
-                    <span class="px-2 py-1 rounded-full <%= item.rentalStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800' %>">
-                      <%= item.rentalStatus %>
-                    </span>
+                    <div class="flex gap-4 mb-6">
+                      <div class="flex-1 bg-white/5 rounded-xl p-3 border border-white/5">
+                        <p class="text-[8px] text-gray-500 font-bold uppercase tracking-widest mb-1">Pick Up</p>
+                        <p class="text-[11px] font-semibold tracking-tight"><%= item.startDate %></p>
+                      </div>
+                      <div class="flex-1 bg-white/5 rounded-xl p-3 border border-white/5">
+                        <p class="text-[8px] text-gray-500 font-bold uppercase tracking-widest mb-1">Return</p>
+                        <p class="text-[11px] font-semibold tracking-tight"><%= item.endDate %></p>
+                      </div>
+                    </div>
                   </div>
 
-                  <div class="flex items-center gap-2">
-                    <% if (item.rentalStatus === 'pending') { %>
-                      <form action="/booking/<%= item.rentalId %>/confirm" method="POST">
-                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <button type="submit" class="px-3 py-2 rounded bg-gray-900 text-white text-sm hover:bg-gray-700 transition">Confirm</button>
-                      </form>
-                    <% } %>
+                  <div class="flex items-center justify-between border-t border-white/5 pt-6">
+                    <div>
+                        <span class="status-badge <%= item.rentalStatus === 'pending' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'bg-blue-500/10 text-blue-400 border border-blue-400/20' %>">
+                            <%= item.rentalStatus %>
+                        </span>
+                    </div>
 
-                    <% if (item.rentalStatus === 'active' && item.paymentStatus === 'unpaid') { %>
-                      <a href="/booking/<%= item.rentalId %>/payment" class="px-3 py-2 rounded bg-emerald-600 text-white text-sm hover:bg-emerald-500 transition">Pay</a>
-                    <% } %>
+                    <div class="flex items-center gap-3">
+                      <% if (item.rentalStatus === 'pending') { %>
+                        <form action="/booking/<%= item.rentalId %>/confirm" method="POST">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <button type="submit" class="bg-brand-yellow text-black font-black text-[9px] py-2 px-6 uppercase tracking-widest hover:bg-yellow-500 transition">Confirm</button>
+                        </form>
+                      <% } %>
 
-                    <% if (item.rentalStatus === 'active' && item.paymentStatus === 'pending') { %>
-                      <span class="px-3 py-2 rounded bg-amber-100 text-amber-800 text-sm">Pending approval</span>
-                    <% } %>
+                      <% if (item.rentalStatus === 'active' && item.paymentStatus === 'unpaid') { %>
+                        <a href="/booking/<%= item.rentalId %>/payment" class="bg-brand-yellow text-black font-black text-[9px] py-2 px-6 uppercase tracking-widest hover:bg-yellow-500 transition">Pay Now</a>
+                      <% } %>
 
-                    <% if (item.rentalStatus === 'active' && item.paymentStatus === 'rejected') { %>
-                      <a href="/booking/<%= item.rentalId %>/payment" class="px-3 py-2 rounded bg-red-600 text-white text-sm hover:bg-red-500 transition">Re-upload Slip</a>
-                    <% } %>
+                      <% if (item.rentalStatus === 'active' && item.paymentStatus === 'pending') { %>
+                        <span class="text-[9px] text-yellow-500 font-black tracking-widest uppercase italic bg-yellow-500/5 px-4 py-2 rounded-full border border-yellow-500/10">Verifying Slip...</span>
+                      <% } %>
 
-                    <% if (item.paymentStatus === 'unpaid') { %>
-                      <form action="/cart/<%= item.rentalId %>/cancel" method="POST" onsubmit="return confirm('Cancel this booking?');">
-                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <button type="submit" class="px-3 py-2 rounded border border-gray-300 text-gray-700 text-sm hover:bg-gray-50 transition">Cancel</button>
-                      </form>
-                    <% } %>
+                      <% if (item.rentalStatus === 'active' && item.paymentStatus === 'rejected') { %>
+                        <a href="/booking/<%= item.rentalId %>/payment" class="bg-red-600 text-white font-black text-[9px] py-2 px-6 uppercase tracking-widest hover:bg-red-500 transition">Update Slip</a>
+                      <% } %>
+
+                      <% if (item.paymentStatus === 'unpaid') { %>
+                        <form action="/cart/<%= item.rentalId %>/cancel" method="POST" onsubmit="return confirm('Cancel this booking?');">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <button type="submit" class="text-white font-bold text-[9px] py-2 px-4 uppercase tracking-widest hover:text-red-500 transition opacity-40 hover:opacity-100">Cancel</button>
+                        </form>
+                      <% } %>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        <% }) %>
-      </div>
-    <% } %>
-
-    <section class="mt-10">
-      <div class="flex items-end justify-between mb-4">
-        <div>
-          <h2 class="text-xl font-bold text-gray-900">Booking History</h2>
-          <p class="text-sm text-gray-500">รายการที่เสร็จสิ้นหรือถูกยกเลิก</p>
+          <% }) %>
         </div>
-      </div>
+      <% } %>
+    </div>
+
+    <!-- History Section -->
+    <section class="mt-32">
+        <div class="flex items-center gap-4 mb-10">
+            <h2 class="text-3xl font-serif-elegant font-bold">Past Chronicles</h2>
+            <div class="h-px bg-white/10 flex-1"></div>
+            <p class="text-[9px] font-bold tracking-[0.3em] uppercase text-gray-500">Rental History</p>
+        </div>
 
       <% if (!historyItems || historyItems.length === 0) { %>
-        <div class="bg-white border rounded-lg p-8 text-center text-gray-600">
-          ยังไม่มีประวัติการจอง
+        <div class="glass-card rounded-3xl p-12 text-center text-gray-600 uppercase tracking-widest text-[10px]">
+          No archived bookings found in your ledger
         </div>
       <% } else { %>
-        <div class="bg-white border rounded-2xl shadow-sm overflow-hidden">
+        <div class="glass-card rounded-3xl overflow-hidden">
           <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-              <thead class="bg-gray-50 text-gray-600">
-                <tr>
-                  <th class="text-left px-4 py-3 border-b">Rental</th>
-                  <th class="text-left px-4 py-3 border-b">Camera</th>
-                  <th class="text-left px-4 py-3 border-b">Dates</th>
-                  <th class="text-left px-4 py-3 border-b">Total</th>
-                  <th class="text-left px-4 py-3 border-b">Booking</th>
-                  <th class="text-left px-4 py-3 border-b">Payment</th>
-                  <th class="text-left px-4 py-3 border-b">Slip</th>
+            <table class="min-w-full text-left">
+              <thead>
+                <tr class="border-b border-white/5 bg-white/5">
+                  <th class="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-brand-yellow">ID</th>
+                  <th class="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Equipment</th>
+                  <th class="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Timeline</th>
+                  <th class="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-right">Settlement</th>
+                  <th class="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Status</th>
+                  <th class="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 text-center">Evidence</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody class="text-xs">
                 <% historyItems.forEach((item) => { %>
-                  <tr class="odd:bg-white even:bg-gray-50/70">
-                    <td class="px-4 py-3 border-b border-gray-100 font-medium text-gray-800">#<%= item.rentalId %></td>
-                    <td class="px-4 py-3 border-b border-gray-100 text-gray-800"><%= item.camera.brand %> <%= item.camera.model %></td>
-                    <td class="px-4 py-3 border-b border-gray-100 text-gray-700"><%= item.startDate %> - <%= item.endDate %></td>
-                    <td class="px-4 py-3 border-b border-gray-100 font-semibold text-gray-900"><%= item.totalAmount %> THB</td>
-                    <td class="px-4 py-3 border-b border-gray-100">
-                      <span class="px-2 py-1 rounded-full text-xs <%= item.rentalStatus === 'completed' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800' %>">
+                  <tr class="border-b border-white/5 hover:bg-white/[0.02] transition duration-300 group">
+                    <td class="px-8 py-6 font-black text-white/40 group-hover:text-brand-yellow transition">#<%= item.rentalId %></td>
+                    <td class="px-8 py-6 font-bold tracking-tight text-white/80"><%= item.camera.brand %> <%= item.camera.model %></td>
+                    <td class="px-8 py-6 text-gray-500 font-medium tracking-tight">
+                        <span class="text-gray-300"><%= item.startDate %></span> 
+                        <span class="mx-2 text-brand-yellow">→</span> 
+                        <span class="text-gray-300"><%= item.endDate %></span>
+                    </td>
+                    <td class="px-8 py-6 font-black text-right text-white">
+                        <%= item.totalAmount %> <span class="text-[9px] text-gray-500 font-normal">THB</span>
+                    </td>
+                    <td class="px-8 py-6 text-center">
+                      <span class="status-badge <%= item.rentalStatus === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-400/20' : 'bg-red-500/10 text-red-400 border border-red-400/20' %>">
                         <%= item.rentalStatus %>
                       </span>
                     </td>
-                    <td class="px-4 py-3 border-b border-gray-100 text-gray-700"><%= item.paymentStatus %></td>
-                    <td class="px-4 py-3 border-b border-gray-100">
+                    <td class="px-8 py-6 text-center">
                       <% if (item.slipPath) { %>
-                        <a href="<%= item.slipPath %>" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 underline">View slip</a>
+                        <a href="<%= item.slipPath %>" target="_blank" rel="noopener" class="text-brand-yellow font-black tracking-widest uppercase text-[8px] border-b border-brand-yellow/30 hover:border-brand-yellow transition">View Slip</a>
                       <% } else { %>
-                        <span class="text-gray-400">-</span>
+                        <span class="text-gray-700">-</span>
                       <% } %>
                     </td>
                   </tr>
@@ -171,6 +225,34 @@
       <% } %>
     </section>
   </main>
+
+  <!-- Footer -->
+  <footer class="bg-black/95 border-t border-white/10 py-16 px-6">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
+        <!-- Branding Area -->
+        <div class="flex flex-col items-center md:items-start text-center md:text-left">
+            <div class="bg-brand-yellow text-black font-black px-6 py-2 text-xl tracking-tighter mb-4 inline-block uppercase">
+                CAMERA RENTAL
+            </div>
+            <p class="text-gray-400 text-sm max-w-xs leading-relaxed">
+                Premium vintage camera rentals for your creative storytelling. Capture moments the old way with modern reliability.
+            </p>
+        </div>
+
+        <!-- Group Credit Area -->
+        <div class="flex flex-col items-center md:items-end text-center md:text-right">
+            <h3 class="text-gray-500 font-bold text-xs uppercase tracking-[0.2em] mb-3">Developed By</h3>
+            <div class="text-white font-black text-3xl md:text-4xl tracking-widest uppercase">
+                เกรซ<span class="text-brand-yellow">นาย</span>หรั่ง
+            </div>
+            <div class="mt-6 flex gap-6 text-gray-500 text-sm">
+                <span class="hover:text-brand-yellow transition cursor-default">CP252 Project</span>
+                <span class="text-gray-700">|</span>
+                <span>© 2026 Camera Rental</span>
+            </div>
+        </div>
+    </div>
+  </footer>
+
 </body>
 </html>
-
