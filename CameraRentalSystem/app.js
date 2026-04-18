@@ -36,6 +36,9 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'view'));
 ensureUploadDirectories();
 app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+app.use('/brand_logo', express.static(path.join(__dirname, 'public', 'brand_logo')));
+app.use('/categ_main', express.static(path.join(__dirname, 'public', 'categ_main')));
+app.use('/process', express.static(path.join(__dirname, 'public', 'process')));
 async function initializeApp() {
   await ensureFullSchemaReady();
   await ensureCameraStoreReady();
@@ -74,9 +77,15 @@ app.get('/profile', authController.requireAuth, authController.showProfile);
 app.post(
   '/profile/avatar',
   authController.requireAuth,
-  authController.requireCsrf,
   uploadImage.single('avatarFile'),
+  authController.requireCsrf,
   authController.updateProfileAvatar
+);
+app.post(
+  '/profile/update',
+  authController.requireAuth,
+  authController.requireCsrf,
+  authController.updateProfile
 );
 
 app.post('/login', authController.requireCsrf, authController.login);
@@ -108,27 +117,29 @@ app.post(
   cameraController.confirmPayment
 );
 
+// Centralized Admin Protection
+app.use('/admin', authController.requireAdmin);
+
 // Admin dashboard 
-app.get('/admin', authController.requireAdmin, dashboardController.showDashboard);
-app.get('/admin/cameras', authController.requireAdmin, cameraController.showAdminCameras);
-app.post('/admin/cameras/:id/status', authController.requireAdmin, authController.requireCsrf, cameraController.toggleCameraStatus);
-app.post('/admin/cameras/:id/delete', authController.requireAdmin, authController.requireCsrf, cameraController.deleteCamera);
+app.get('/admin', dashboardController.showDashboard);
+app.get('/admin/cameras', cameraController.showAdminCameras);
+app.post('/admin/cameras/:id/status', authController.requireCsrf, cameraController.toggleCameraStatus);
+app.post('/admin/cameras/:id/delete', authController.requireCsrf, cameraController.deleteCamera);
 
-app.get('/admin/returns', authController.requireAdmin, returnController.showAdminReturns);
-app.post('/admin/returns/:rentalDetailId', authController.requireAdmin, authController.requireCsrf, returnController.processReturn);
+app.get('/admin/returns', returnController.showAdminReturns);
+app.post('/admin/returns/:rentalDetailId', authController.requireCsrf, returnController.processReturn);
 
-app.get('/admin/logs', authController.requireAdmin, logController.showAdminLogs);
+app.get('/admin/logs', logController.showAdminLogs);
 
-app.get('/admin/accounts', authController.requireAdmin, authController.showAdminAccounts);
-app.post('/admin/accounts/role', authController.requireAdmin, authController.requireCsrf, authController.updateUserRole);
-app.post('/admin/accounts/create-admin', authController.requireAdmin, authController.requireCsrf, authController.createAdminAccount);
-app.get('/admin/payment-slips', authController.requireAdmin, cameraController.showAdminPaymentSlips);
-app.post('/admin/payment-slips/:paymentId/approve', authController.requireAdmin, authController.requireCsrf, cameraController.approvePaymentSlip);
-app.post('/admin/payment-slips/:paymentId/reject', authController.requireAdmin, authController.requireCsrf, cameraController.rejectPaymentSlip);
-app.get('/admin/media', authController.requireAdmin, mediaController.showMediaManager);
+app.get('/admin/accounts', authController.showAdminAccounts);
+app.post('/admin/accounts/role', authController.requireCsrf, authController.updateUserRole);
+app.post('/admin/accounts/create-admin', authController.requireCsrf, authController.createAdminAccount);
+app.get('/admin/payment-slips', cameraController.showAdminPaymentSlips);
+app.post('/admin/payment-slips/:paymentId/approve', authController.requireCsrf, cameraController.approvePaymentSlip);
+app.post('/admin/payment-slips/:paymentId/reject', authController.requireCsrf, cameraController.rejectPaymentSlip);
+app.get('/admin/media', mediaController.showMediaManager);
 app.post(
   '/admin/media/upload',
-  authController.requireAdmin,
   uploadImage.single('imageFile'),
   authController.requireCsrf,
   mediaController.uploadMedia
@@ -136,7 +147,7 @@ app.post(
 
 // Optional PostgreSQL SQL/report endpoints for pgAdmin class demo.
 // Disabled by default (ENABLE_PG_REALTIME=false or unset).
-registerPgRealtimeRoutes(app, authController.requireAdmin);
+registerPgRealtimeRoutes(app);
 
 const port = Number(process.env.PORT || 3000);
 if (require.main === module) {

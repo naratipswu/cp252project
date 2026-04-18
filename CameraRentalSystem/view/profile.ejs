@@ -3,61 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Profile</title>
+    <title>My Profile | CAMERA RENTAL</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-yellow': '#d69e2e',
+                        'brand-brown': '#171717',
+                        'brand-gray': '#222222',
+                    },
+                    fontFamily: {
+                        'serif-elegant': ['"Playfair Display"', 'serif'],
+                        'sans-modern': ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(34, 34, 34, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .profile-label {
+            font-size: 0.65rem;
+            font-weight: 800;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #d69e2e;
+            margin-bottom: 0.25rem;
+        }
+        .profile-value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #ffffff;
+        }
+        .profile-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: white;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .profile-input:focus {
+            border-color: #d69e2e;
+            background: rgba(255, 255, 255, 0.08);
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-900">
-    <div class="max-w-4xl mx-auto py-10 px-4">
-        <div class="flex items-center justify-between mb-6">
-            <h1 class="text-3xl font-bold">My Profile</h1>
-            <div class="flex items-center gap-3">
-                <a href="/browse" class="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition">Back to Browse</a>
-                <form action="/logout" method="POST">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">Logout</button>
-                </form>
-            </div>
-        </div>
+<body class="bg-brand-brown text-white font-sans-modern min-h-screen flex flex-col">
 
-        <section class="bg-white rounded-lg shadow p-6 mb-8">
-            <h2 class="text-xl font-semibold mb-4">Account Info</h2>
-            <div class="mb-5 flex items-center gap-4">
-                <% if (user.avatar) { %>
-                    <img src="<%= user.avatar %>" alt="avatar" class="w-20 h-20 rounded-full object-cover border">
-                <% } else { %>
-                    <div class="w-20 h-20 rounded-full border bg-gray-200 flex items-center justify-center text-gray-600 text-sm">No avatar</div>
-                <% } %>
-                <form action="/profile/avatar" method="POST" enctype="multipart/form-data" class="flex items-center gap-2">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <input type="hidden" name="category" value="avatars">
-                    <input type="file" name="avatarFile" accept=".jpg,.jpeg,.png,.webp,.gif,.svg" class="text-sm" required>
-                    <button type="submit" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition">Update Avatar</button>
-                </form>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <p><span class="font-semibold">Username:</span> <%= user.username %></p>
-                <p><span class="font-semibold">Email:</span> <%= user.email %></p>
-                <p><span class="font-semibold">Role:</span> <%= user.role %></p>
-                <p><span class="font-semibold">Avatar path:</span> <%= user.avatar || '-' %></p>
-            </div>
-        </section>
-        <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-900">
-            ดูรายการจองและประวัติทั้งหมดได้ที่หน้า <a href="/cart" class="underline font-medium hover:text-blue-700">My Cart</a>
+    <!-- Header / Navbar -->
+    <nav class="flex h-16 w-full border-b border-white/5 sticky top-0 z-50 bg-brand-brown/80 backdrop-blur-md">
+        <a href="/welcome" class="bg-brand-yellow text-black font-black text-xl flex items-center justify-center px-10 tracking-wider hover:bg-yellow-500 transition duration-300">
+            CAMERA RENTAL
+        </a>
+        <div class="flex-1 bg-[#222]/50 flex items-center justify-end px-8 gap-8">
+            <a href="/browse" class="text-white font-bold tracking-widest text-xs hover:text-brand-yellow transition uppercase">Marketplace</a>
+            <a href="/cart" class="text-white font-bold tracking-widest text-xs hover:text-brand-yellow transition uppercase">My Cart</a>
+            <form action="/logout" method="POST" class="inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <button type="submit" class="bg-white/5 border border-white/10 text-white font-bold tracking-widest text-[10px] py-2 px-4 hover:bg-red-600 hover:border-red-600 transition uppercase">Logout</button>
+            </form>
         </div>
+    </nav>
 
-        <% if (user.role === 'admin') { %>
-            <div class="mt-4 bg-purple-50 border border-purple-100 rounded-lg p-4">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                    <div>
-                        <h3 class="text-sm font-semibold text-purple-900">Admin Access</h3>
-                        <p class="text-sm text-purple-800">ไปหน้า Admin Dashboard เพื่อเลือกจัดการระบบแอดมิน</p>
+    <main class="flex-1 flex flex-col items-center py-20 px-6 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-brand-gray/50 via-brand-brown to-brand-brown">
+        
+        <div class="max-w-4xl w-full">
+            <header class="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div>
+                    <h1 class="font-serif-elegant text-5xl font-black mb-4 tracking-tight">Account Identity</h1>
+                    <p class="text-gray-500 font-light tracking-[0.3em] uppercase text-xs">Your Personal Equipment Portfolio</p>
+                </div>
+                <!-- Action Button -->
+                <button id="edit-btn" onclick="toggleEdit()" class="bg-white/5 border border-white/10 text-white font-bold tracking-widest text-[10px] py-3 px-8 rounded-full hover:bg-brand-yellow hover:text-black hover:border-brand-yellow transition duration-300 uppercase">
+                    Edit Details
+                </button>
+            </header>
+
+            <div class="glass-card rounded-[2.5rem] overflow-hidden shadow-2xl relative">
+                <div class="flex flex-col md:flex-row shadow-2xl min-h-[500px]">
+                    
+                    <!-- Left Sidebar (Avatar) -->
+                    <div class="w-full md:w-80 bg-black/40 p-12 flex flex-col items-center border-b md:border-b-0 md:border-r border-white/5">
+                        <div class="relative group mb-8">
+                            <div class="w-40 h-40 rounded-full overflow-hidden border-4 border-brand-yellow/30 shadow-[0_0_30px_rgba(214,158,46,0.2)] group-hover:border-brand-yellow transition duration-500">
+                                <% if (user.avatar) { %>
+                                    <img src="<%= user.avatar %>" alt="avatar" class="w-full h-full object-cover group-hover:scale-110 transition duration-1000">
+                                <% } else { %>
+                                    <div class="w-full h-full bg-brand-gray flex items-center justify-center text-gray-700 font-black text-4xl">?</div>
+                                <% } %>
+                            </div>
+                            <div class="absolute inset-0 rounded-full ring-1 ring-white/10 ring-inset pointer-events-none"></div>
+                        </div>
+
+                        <form action="/profile/avatar" method="POST" enctype="multipart/form-data" class="w-full space-y-4">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="hidden" name="category" value="avatars">
+                            
+                            <div class="relative overflow-hidden">
+                                <label class="block text-[8px] font-black uppercase tracking-widest text-brand-yellow mb-2 text-center">Change Portrait</label>
+                                <input type="file" name="avatarFile" accept=".jpg,.jpeg,.png,.webp,.gif,.svg" class="block w-full text-[10px] text-gray-500 file:mr-0 file:py-2 file:px-0 file:rounded-full file:border-0 file:text-[9px] file:font-black file:uppercase file:bg-transparent file:text-white hover:file:text-brand-yellow cursor-pointer" required>
+                            </div>
+                            <button type="submit" class="w-full bg-white/5 border border-white/10 text-white font-bold tracking-widest text-[9px] py-3 uppercase hover:bg-brand-yellow hover:text-black hover:border-brand-yellow transition duration-300">
+                                Update Avatar
+                            </button>
+                        </form>
+
+                        <div class="mt-12 pt-12 border-t border-white/5 w-full text-center">
+                            <span class="px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest <%= user.role === 'admin' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-brand-yellow/10 text-brand-yellow border border-brand-yellow/20' %>">
+                                RANK: <%= user.role %>
+                            </span>
+                        </div>
                     </div>
-                    <a href="/admin" class="inline-flex items-center justify-center px-4 py-2 rounded bg-purple-700 text-white text-sm font-medium hover:bg-purple-600 transition">
-                        Go to Admin Dashboard
-                    </a>
+
+                    <!-- Right Panel (Info) -->
+                    <div class="flex-1 p-10 md:p-16 relative">
+                        
+                        <!-- View Mode -->
+                        <div id="view-mode" class="block transition-all duration-500">
+                            <section class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                                <div class="space-y-1">
+                                    <p class="profile-label">First Name</p>
+                                    <p class="profile-value font-serif-elegant text-2xl tracking-tight"><%= user.firstName %></p>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="profile-label">Last Name</p>
+                                    <p class="profile-value font-serif-elegant text-2xl tracking-tight"><%= user.lastName %></p>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="profile-label">Alias / Username</p>
+                                    <p class="profile-value tracking-tight opacity-50">@<%= user.username %></p>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="profile-label">Digital Address</p>
+                                    <p class="profile-value tracking-tight text-white/80"><%= user.email %></p>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="profile-label">Contact Line</p>
+                                    <p class="profile-value tracking-tight text-white/80"><%= user.phone || 'Not Provided' %></p>
+                                </div>
+                                <div class="md:col-span-2 pt-6 border-t border-white/5">
+                                    <p class="profile-label">Billing & Shipping Location</p>
+                                    <p class="profile-value text-white/70 italic"><%= user.address || 'Address not registered in our archives' %></p>
+                                </div>
+                            </section>
+
+                            <div class="mt-16">
+                                <a href="/cart" class="inline-block bg-brand-yellow text-black font-black py-4 px-10 rounded-full hover:bg-yellow-500 hover:scale-105 transition duration-300 tracking-widest uppercase text-xs shadow-[0_10px_30px_rgba(214,158,46,0.3)]">
+                                    View Booking History
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Edit Mode -->
+                        <div id="edit-mode" class="hidden transition-all duration-500">
+                            <form action="/profile/update" method="POST" class="space-y-8">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                
+                                <div class="grid grid-cols-2 gap-6">
+                                    <div class="space-y-2">
+                                        <label class="profile-label pl-2">First Name</label>
+                                        <input type="text" name="firstName" value="<%= user.firstName %>" class="profile-input" required>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <label class="profile-label pl-2">Last Name</label>
+                                        <input type="text" name="lastName" value="<%= user.lastName %>" class="profile-input" required>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-6">
+                                    <div class="space-y-2 col-span-2 md:col-span-1">
+                                        <label class="profile-label pl-2">Username (Locked)</label>
+                                        <input type="text" value="<%= user.username %>" class="profile-input opacity-40 cursor-not-allowed" disabled>
+                                    </div>
+                                    <div class="space-y-2 col-span-2 md:col-span-1">
+                                        <label class="profile-label pl-2">Email</label>
+                                        <input type="email" name="email" value="<%= user.email %>" class="profile-input" required>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="profile-label pl-2">Phone</label>
+                                    <input type="text" name="phone" value="<%= user.phone %>" class="profile-input" required>
+                                </div>
+
+                                <div class="space-y-2">
+                                    <label class="profile-label pl-2">Address</label>
+                                    <textarea name="address" rows="3" class="profile-input resize-none"><%= user.address %></textarea>
+                                </div>
+
+                                <div class="pt-6 flex items-center justify-end gap-6">
+                                    <button type="button" onclick="toggleEdit()" class="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-white transition">Cancel</button>
+                                    <button type="submit" class="bg-brand-yellow text-black font-black py-4 px-12 rounded-full hover:bg-yellow-500 transition duration-300 tracking-widest uppercase text-xs shadow-xl">
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                    </div>
                 </div>
             </div>
-        <% } %>
-    </div>
+
+            <!-- Admin Access Card -->
+            <% if (user.role === 'admin') { %>
+                <div class="mt-10 bg-gradient-to-r from-purple-900/40 to-indigo-900/40 border border-purple-500/20 rounded-[2rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div class="text-center md:text-left">
+                        <h3 class="font-serif-elegant text-3xl font-black mb-2 text-white">Administrator Access</h3>
+                        <p class="text-xs text-purple-300/60 font-medium uppercase tracking-[0.2em]">Elevated Permissions Detected</p>
+                    </div>
+                    <a href="/admin" class="bg-purple-600 text-white font-black py-4 px-10 rounded-full hover:bg-purple-500 hover:scale-105 transition duration-300 tracking-widest uppercase text-xs shadow-2xl">
+                        Open Command Center
+                    </a>
+                </div>
+            <% } %>
+        </div>
+
+    </main>
+
+    <script>
+        function toggleEdit() {
+            const viewMode = document.getElementById('view-mode');
+            const editMode = document.getElementById('edit-mode');
+            const editBtn = document.getElementById('edit-btn');
+
+            if (viewMode.classList.contains('block')) {
+                viewMode.classList.replace('block', 'hidden');
+                editMode.classList.replace('hidden', 'block');
+                editBtn.innerText = 'Viewing Record';
+                editBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                editBtn.disabled = true;
+            } else {
+                viewMode.classList.replace('hidden', 'block');
+                editMode.classList.replace('block', 'hidden');
+                editBtn.innerText = 'Edit Details';
+                editBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                editBtn.disabled = false;
+            }
+        }
+    </script>
+
+    <!-- Footer -->
+    <footer class="bg-black/95 border-t border-white/10 py-16 px-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
+            <div class="flex flex-col items-center md:items-start text-center md:text-left">
+                <div class="bg-brand-yellow text-black font-black px-6 py-2 text-xl tracking-tighter mb-4 inline-block uppercase">
+                    CAMERA RENTAL
+                </div>
+                <p class="text-gray-400 text-sm max-w-xs leading-relaxed">
+                    Premium vintage camera rentals for your creative storytelling. Capture moments the old way with modern reliability.
+                </p>
+            </div>
+            <div class="flex flex-col items-center md:items-end text-center md:text-right">
+                <h3 class="text-gray-500 font-bold text-xs uppercase tracking-[0.2em] mb-3">Developed By</h3>
+                <div class="text-white font-black text-3xl md:text-4xl tracking-widest uppercase">
+                    เกรซ<span class="text-brand-yellow">นาย</span>หรั่ง
+                </div>
+                <div class="mt-6 flex gap-6 text-gray-500 text-sm">
+                    <span class="hover:text-brand-yellow transition cursor-default">CP252 Project</span>
+                    <span class="text-gray-700">|</span>
+                    <span>© 2026 Camera Rental</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
 </body>
 </html>

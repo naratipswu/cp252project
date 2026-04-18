@@ -98,7 +98,8 @@ exports.browseCameras = async (req, res) => {
         const lowerQuery = searchQuery.toLowerCase();
         filteredCameras = filteredCameras.filter(c =>
             c.brand.toLowerCase().includes(lowerQuery) ||
-            c.model.toLowerCase().includes(lowerQuery)
+            c.model.toLowerCase().includes(lowerQuery) ||
+            (c.categoryName && c.categoryName.toLowerCase().includes(lowerQuery))
         );
     }
 
@@ -167,12 +168,14 @@ exports.showAdminCameras = async (req, res) => {
             user: req.session.user,
             error: req.query.error || null,
             cameras: cameras.map(c => ({
-                id: c.EquipmentID,
-                brand: c.Brand,
-                model: c.ModelName,
-                status: c.Status,
-                pricePerDay: Number(c.DailyRate),
-                categoryName: c.Category ? c.Category.CategoryName : 'General'
+                EquipmentID: c.EquipmentID,
+                Brand: c.Brand,
+                ModelName: c.ModelName,
+                Status: c.Status,
+                DailyRate: c.DailyRate,
+                ImageURL: c.ImageURL,
+                SerialNumber: c.SerialNumber,
+                Category: c.Category
             }))
         });
     } catch (error) {
@@ -293,7 +296,7 @@ exports.bookCamera = async (req, res) => {
                 return createdRental;
             }
         );
-        return res.redirect(`/booking/${rental.RentalID}/confirm`);
+        return res.redirect('/cart');
     } catch (error) {
         let msg = 'Failed to create booking';
         if (error && error.statusCode) {
@@ -386,8 +389,7 @@ exports.confirmBooking = async (req, res) => {
 
     rental.RentalStatus = 'active';
     await rental.save();
-    // User requested: after confirm, warp back to the first page.
-    return res.redirect('/browse');
+    return res.redirect('/cart');
 };
 
 exports.showPaymentPage = (req, res) => {

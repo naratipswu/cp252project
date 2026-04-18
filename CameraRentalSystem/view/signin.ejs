@@ -19,10 +19,12 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center text-white font-serif-elegant bg-hero p-4">
+<body class="flex flex-col min-h-screen text-white font-serif-elegant bg-hero">
 
-    <!-- Floating Block (Card) -->
-    <div class="flex max-w-5xl w-full mx-auto rounded-xl overflow-hidden shadow-2xl">
+    <!-- Card Wrapper -->
+    <div class="flex-1 flex items-center justify-center p-4">
+        <!-- Floating Block (Card) -->
+        <div class="flex max-w-5xl w-full mx-auto rounded-xl overflow-hidden shadow-2xl">
         
         <!-- Left Panel -->
         <div class="hidden md:flex flex-col items-center justify-center w-1/2 bg-left-panel p-12 text-center h-[650px]">
@@ -76,7 +78,35 @@
             </div>
         </div>
         
+        </div>
+        
     </div>
 
+    <footer class="bg-black/95 border-t border-white/10 py-16 px-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
+            <!-- Branding Area -->
+            <div class="flex flex-col items-center md:items-start text-center md:text-left">
+                <div class="bg-brand-yellow text-black font-black px-6 py-2 text-xl tracking-tighter mb-4 inline-block">
+                    CAMERA RENTAL
+                </div>
+                <p class="text-gray-400 text-sm max-w-xs leading-relaxed">
+                    Premium vintage camera rentals for your creative storytelling. Capture moments the old way with modern reliability.
+                </p>
+            </div>
+
+            <!-- Group Credit Area -->
+            <div class="flex flex-col items-center md:items-end text-center md:text-right">
+                <h3 class="text-gray-500 font-bold text-xs uppercase tracking-[0.2em] mb-3">Developed By</h3>
+                <div class="text-white font-black text-3xl md:text-4xl tracking-widest uppercase">
+                    เกรซ<span class="text-brand-yellow">นาย</span>หรั่ง
+                </div>
+                <div class="mt-6 flex gap-6 text-gray-500 text-sm">
+                    <span class="hover:text-brand-yellow transition cursor-default">CP252 Project</span>
+                    <span class="text-gray-700">|</span>
+                    <span>© 2026 Camera Rental</span>
+                </div>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>

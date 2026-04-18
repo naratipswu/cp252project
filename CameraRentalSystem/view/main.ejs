@@ -35,6 +35,90 @@
             background-size: cover;
             background-position: center;
         }
+        .brand-slider-container {
+            position: relative;
+            padding: 0 40px;
+        }
+
+        .brand-slider-track-wrap {
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .brand-slider-track {
+            display: flex;
+            gap: 3rem;
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            align-items: center;
+        }
+
+        .brand-logo-item {
+            flex: 0 0 calc(25% - 2.25rem);
+            min-width: 150px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .brand-logo-item:hover {
+            transform: scale(1.1);
+        }
+
+        .brand-logo-item img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .slider-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(5px);
+            color: white;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .slider-btn:hover {
+            background: #d69e2e;
+            color: black;
+            border-color: #d69e2e;
+            box-shadow: 0 0 20px rgba(214, 158, 46, 0.4);
+        }
+
+        .slider-btn.disabled {
+            opacity: 0.2;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .slider-btn-right {
+            right: -10px;
+        }
+
+        .slider-btn-left {
+            left: -10px;
+        }
+
+        @media (max-width: 768px) {
+            .brand-logo-item {
+                flex: 0 0 calc(50% - 1.5rem);
+            }
+        }
     </style>
 </head>
 
@@ -43,10 +127,10 @@
     <!-- Navbar -->
     <nav class="flex h-16 w-full">
         <!-- Logo Area -->
-        <div
-            class="bg-brand-yellow text-black font-black text-lg md:text-xl flex items-center justify-center px-6 md:px-10 tracking-wider">
-            CAMERA TYPE
-        </div>
+        <a href="/welcome"
+            class="bg-brand-yellow text-black font-black text-lg md:text-xl flex items-center justify-center px-6 md:px-10 tracking-wider hover:bg-yellow-500 transition duration-300">
+            CAMERA RENTAL
+        </a>
 
         <!-- Navigation Links -->
         <div class="flex-1 bg-[#222] flex items-center justify-start px-8 gap-8 hidden md:flex">
@@ -54,8 +138,10 @@
                 class="text-white font-bold tracking-wider hover:text-brand-yellow transition">DIGITAL</a>
             <a href="/browse?type=film"
                 class="text-white font-bold tracking-wider hover:text-brand-yellow transition">FILM</a>
-            <a href="#" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">PROCESS</a>
-            <a href="#" class="text-white font-bold tracking-wider hover:text-brand-yellow transition">CONTACT</a>
+            <a href="/process"
+                class="text-white font-bold tracking-wider hover:text-brand-yellow transition">PROCESS</a>
+            <a href="/contact"
+                class="text-white font-bold tracking-wider hover:text-brand-yellow transition">CONTACT</a>
         </div>
 
         <!-- Icons Area -->
@@ -91,8 +177,13 @@
         </p>
 
         <a href="/browse"
-            class="bg-black text-white px-8 py-3 rounded-full font-medium hover:bg-gray-800 transition tracking-wide shadow-xl border border-gray-700">
-            Browse Cameras
+            class="group relative inline-flex items-center gap-3 bg-brand-yellow text-black px-10 py-4 rounded-full font-bold text-lg tracking-widest hover:bg-yellow-500 transition-all duration-300 shadow-[0_0_20px_rgba(214,158,46,0.3)] hover:shadow-[0_0_30px_rgba(214,158,46,0.5)] hover:-translate-y-1">
+            EXPLORE COLLECTION
+            <svg class="w-5 h-5 transform group-hover:translate-x-1 transition-transform duration-300" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3">
+                </path>
+            </svg>
         </a>
     </header>
 
@@ -101,19 +192,178 @@
         <h2 class="text-2xl font-bold mb-4">Brand</h2>
         <div class="h-px bg-white/30 w-full mb-10"></div>
 
-        <!-- Mock Logos -->
-        <div class="flex flex-wrap items-center justify-between gap-8 md:gap-16 opacity-90 mb-10">
-            <div class="text-4xl md:text-5xl font-black tracking-tighter">Canon</div>
-            <div class="text-4xl md:text-5xl font-black tracking-widest uppercase">FUJIFILM</div>
-            <div class="text-4xl md:text-5xl font-bold tracking-widest">SONY<span class="text-sm align-top">®</span>
+        <!-- Brand Slider -->
+        <div class="brand-slider-container group/slider">
+            <button id="prevBrand" class="slider-btn slider-btn-left disabled">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </button>
+
+            <div class="brand-slider-track-wrap">
+                <div id="brandTrack" class="brand-slider-track">
+                    <!-- Canon -->
+                    <a href="/browse?search=Canon" class="brand-logo-item">
+                        <img src="/brand_logo/canon.jpg" alt="Canon">
+                    </a>
+                    <!-- Fujifilm -->
+                    <a href="/browse?search=Fujifilm" class="brand-logo-item">
+                        <img src="/brand_logo/fujifilm.jpg" alt="Fujifilm">
+                    </a>
+                    <!-- Sony -->
+                    <a href="/browse?search=Sony" class="brand-logo-item">
+                        <img src="/brand_logo/sony.jpg" alt="Sony">
+                    </a>
+                    <!-- Kodak -->
+                    <a href="/browse?search=Kodak" class="brand-logo-item">
+                        <img src="/brand_logo/kodak.png" alt="Kodak">
+                    </a>
+                    <!-- Nikon -->
+                    <a href="/browse?search=Nikon" class="brand-logo-item">
+                        <img src="/brand_logo/nikon.png" alt="Nikon">
+                    </a>
+                    <!-- Panasonic -->
+                    <a href="/browse?search=Panasonic" class="brand-logo-item">
+                        <img src="/brand_logo/panasonic.png" alt="Panasonic">
+                    </a>
+                    <!-- Leica -->
+                    <a href="/browse?search=Leica" class="brand-logo-item">
+                        <img src="/brand_logo/leica.png" alt="Leica">
+                    </a>
+                </div>
             </div>
-            <div class="text-4xl md:text-5xl font-black font-serif-elegant">Kodak</div>
+
+            <button id="nextBrand" class="slider-btn slider-btn-right">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button>
         </div>
 
+        <div class="h-px bg-white/30 w-full mb-20"></div>
+
+        <h2 class="text-2xl font-bold mb-4">Category</h2>
         <div class="h-px bg-white/30 w-full mb-10"></div>
-        <h2 class="text-2xl font-bold mb-4">Category...</h2>
+
+        <!-- Category Slider -->
+        <div class="brand-slider-container group/slider mb-10">
+            <button id="prevCateg" class="slider-btn slider-btn-left disabled">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </button>
+
+            <div class="brand-slider-track-wrap">
+                <div id="categTrack" class="brand-slider-track">
+                    <!-- All Product -->
+                    <a href="/browse" class="brand-logo-item">
+                        <img src="/categ_main/all_products.png" alt="All Product">
+                        <div class="absolute bottom-0 left-0 right-0 py-2 bg-black/60 text-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">All Product</div>
+                    </a>
+                    <!-- General -->
+                    <a href="/browse?search=General" class="brand-logo-item">
+                        <img src="/categ_main/general.png" alt="General">
+                        <div class="absolute bottom-0 left-0 right-0 py-2 bg-black/60 text-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">General</div>
+                    </a>
+                    <!-- DSLR -->
+                    <a href="/browse?search=DSLR" class="brand-logo-item">
+                        <img src="/categ_main/dslr.png" alt="DSLR">
+                        <div class="absolute bottom-0 left-0 right-0 py-2 bg-black/60 text-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">DSLR</div>
+                    </a>
+                    <!-- Mirrorless -->
+                    <a href="/browse?search=Mirrorless" class="brand-logo-item">
+                        <img src="/categ_main/mirrorless.png" alt="Mirrorless">
+                        <div class="absolute bottom-0 left-0 right-0 py-2 bg-black/60 text-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">Mirrorless</div>
+                    </a>
+                    <!-- Lens -->
+                    <a href="/browse?search=Lens" class="brand-logo-item">
+                        <img src="/categ_main/lens.png" alt="Lens">
+                        <div class="absolute bottom-0 left-0 right-0 py-2 bg-black/60 text-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">Lens</div>
+                    </a>
+                    <!-- Action Camera -->
+                    <a href="/browse?search=Action%20Camera" class="brand-logo-item">
+                        <img src="/categ_main/action_camera.png" alt="Action Camera">
+                        <div class="absolute bottom-0 left-0 right-0 py-2 bg-black/60 text-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">Action Camera</div>
+                    </a>
+                </div>
+            </div>
+
+            <button id="nextCateg" class="slider-btn slider-btn-right">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </button>
+        </div>
     </section>
 
+    <footer class="bg-black/95 border-t border-white/10 py-16 px-6 mt-20">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
+            <!-- Branding Area -->
+            <div class="flex flex-col items-center md:items-start text-center md:text-left">
+                <div class="bg-brand-yellow text-black font-black px-6 py-2 text-xl tracking-tighter mb-4 inline-block">
+                    CAMERA RENTAL
+                </div>
+                <p class="text-gray-400 text-sm max-w-xs leading-relaxed">
+                    Premium vintage camera rentals for your creative storytelling. Capture moments the old way with modern reliability.
+                </p>
+            </div>
+
+            <!-- Group Credit Area -->
+            <div class="flex flex-col items-center md:items-end text-center md:text-right">
+                <h3 class="text-gray-500 font-bold text-xs uppercase tracking-[0.2em] mb-3">Developed By</h3>
+                <div class="text-white font-black text-3xl md:text-4xl tracking-widest uppercase">
+                    เกรซ<span class="text-brand-yellow">นาย</span>หรั่ง
+                </div>
+                <div class="mt-6 flex gap-6 text-gray-500 text-sm">
+                    <span class="hover:text-brand-yellow transition cursor-default">CP252 Project</span>
+                    <span class="text-gray-700">|</span>
+                    <span>© 2026 Camera Rental</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            function setupSlider(trackId, prevId, nextId) {
+                const track = document.getElementById(trackId);
+                const prevBtn = document.getElementById(prevId);
+                const nextBtn = document.getElementById(nextId);
+                if (!track || !prevBtn || !nextBtn) return;
+
+                let scrollAmount = 0;
+                const step = 300;
+
+                function updateButtons() {
+                    const maxScroll = track.scrollWidth - track.parentElement.clientWidth;
+                    prevBtn.classList.toggle('disabled', scrollAmount >= 0);
+                    nextBtn.classList.toggle('disabled', Math.abs(scrollAmount) >= maxScroll - 10);
+                }
+
+                nextBtn.addEventListener('click', () => {
+                    const maxScroll = track.scrollWidth - track.parentElement.clientWidth;
+                    scrollAmount -= step;
+                    if (Math.abs(scrollAmount) > maxScroll) scrollAmount = -maxScroll;
+                    track.style.transform = `translateX(${scrollAmount}px)`;
+                    updateButtons();
+                });
+
+                prevBtn.addEventListener('click', () => {
+                    scrollAmount += step;
+                    if (scrollAmount > 0) scrollAmount = 0;
+                    track.style.transform = `translateX(${scrollAmount}px)`;
+                    updateButtons();
+                });
+
+                window.addEventListener('resize', updateButtons);
+                setTimeout(updateButtons, 500);
+            }
+
+            // Initialize both sliders
+            setupSlider('brandTrack', 'prevBrand', 'nextBrand');
+            setupSlider('categTrack', 'prevCateg', 'nextCateg');
+        });
+    </script>
 </body>
 
 </html>

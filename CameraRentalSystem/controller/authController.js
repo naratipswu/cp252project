@@ -83,7 +83,11 @@ exports.showProfile = (req, res) => {
                     username: user.Username,
                     email: user.Email,
                     role: user.Role,
-                    avatar: user.AvatarPath || null
+                    avatar: user.AvatarPath || null,
+                    firstName: user.FirstName,
+                    lastName: user.LastName,
+                    phone: user.Phone,
+                    address: user.Address
                 }
             });
         })
@@ -103,6 +107,42 @@ exports.updateProfileAvatar = (req, res) => {
     )
         .then(() => res.redirect('/profile'))
         .catch(() => res.status(500).send('Failed to update avatar'));
+};
+
+exports.updateProfile = async (req, res) => {
+    const currentUsername = req.session.user && req.session.user.username;
+    const { firstName, lastName, email, phone, address } = req.body;
+
+    const normalizedFirstName = typeof firstName === 'string' ? firstName.trim() : '';
+    const normalizedLastName = typeof lastName === 'string' ? lastName.trim() : '';
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const normalizedPhone = typeof phone === 'string' ? phone.trim() : '';
+    const normalizedAddress = typeof address === 'string' ? address.trim() : '';
+
+    if (!normalizedFirstName || !normalizedLastName || !normalizedEmail || !normalizedPhone) {
+        return res.status(400).send('First Name, Last Name, Email and Phone are required');
+    }
+
+    if (!isValidEmail(normalizedEmail)) {
+        return res.status(400).send('Invalid email format');
+    }
+
+    try {
+        await Customer.update(
+            {
+                FirstName: normalizedFirstName,
+                LastName: normalizedLastName,
+                Email: normalizedEmail,
+                Phone: normalizedPhone,
+                Address: normalizedAddress || null
+            },
+            { where: { Username: currentUsername } }
+        );
+        return res.redirect('/profile');
+    } catch (error) {
+        console.error('Failed to update profile:', error);
+        return res.status(500).send('Failed to update profile');
+    }
 };
 
 exports.updateUserRole = (req, res) => {
@@ -302,7 +342,7 @@ exports.requireAdmin = (req, res, next) => {
     if (req.session.user && req.session.user.role === 'admin') {
         next();
     } else {
-        res.redirect('/');
+        res.redirect('/welcome');
     }
 };
 
