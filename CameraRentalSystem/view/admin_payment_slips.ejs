@@ -3,74 +3,129 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Slip Review</title>
+  <title>Payment Review | Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .zoom-img:hover { transform: scale(1.05); }
+  </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-  <nav class="bg-gray-900 shadow">
+<body class="bg-[#f8fafc] min-h-screen text-slate-800">
+  <!-- Navbar -->
+  <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between h-16 items-center">
         <div class="flex items-center gap-3">
-          <a href="/admin" class="text-white font-semibold hover:text-gray-200">Back to Dashboard</a>
-          <span class="text-gray-400 text-sm">Slip Review</span>
+          <div class="bg-amber-500 p-2 rounded-lg shadow-lg shadow-amber-100">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          </div>
+          <div>
+            <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Payment Verification</h1>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-0.5">Financial Audit</p>
+          </div>
         </div>
-        <div class="text-sm text-gray-300">Admin: <%= user.username %></div>
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-slate-400 mr-2 uppercase tracking-tighter">Admin Sessions</span>
+            <a href="/admin" class="px-4 py-2 text-sm font-bold border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-lg transition-all shadow-sm">Dashboard</a>
+        </div>
       </div>
     </div>
   </nav>
 
-  <main class="max-w-7xl mx-auto p-6">
-    <h1 class="text-2xl font-bold text-gray-900 mb-6">Payment Slips</h1>
+  <main class="max-w-7xl mx-auto p-6 sm:p-8 animate-[fadeIn_0.5s_ease-out]">
+    <header class="mb-10">
+        <h2 class="text-xs font-bold text-amber-600 uppercase tracking-widest mb-1">Queue Review,</h2>
+        <h1 class="text-3xl font-black text-slate-900">Submitted Payment Slips</h1>
+        <p class="text-sm font-medium text-slate-500 mt-2">Inspect and approve customer transactions to activate rentals</p>
+    </header>
 
     <% if (!slips || slips.length === 0) { %>
-      <div class="bg-white rounded-xl border p-10 text-center text-gray-600">No payment slips submitted yet.</div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-20 text-center shadow-sm">
+        <div class="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900">All clear!</h3>
+        <p class="text-sm text-slate-400 font-medium">No payment slips are currently awaiting review.</p>
+      </div>
     <% } else { %>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <% slips.forEach((slip) => { %>
-          <section class="bg-white border rounded-2xl shadow-sm overflow-hidden">
-            <div class="p-4 border-b bg-gray-50 flex items-center justify-between">
+          <section class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
+            <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <div>
-                <p class="text-sm text-gray-500">Payment #<%= slip.paymentId %> | Booking #<%= slip.rentalId %></p>
-                <p class="text-sm text-gray-500">Date: <%= slip.paymentDate %></p>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Reference</p>
+                <p class="text-sm font-bold text-slate-900 leading-none">P-<%= slip.paymentId %> / B-<%= slip.rentalId %></p>
               </div>
-              <span class="px-3 py-1 text-xs rounded-full <%= slip.paymentStatus === 'pending' ? 'bg-amber-100 text-amber-800' : (slip.paymentStatus === 'approved' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800') %>">
+              <span class="px-2.5 py-1 text-[11px] font-black rounded-full uppercase tracking-wider
+                <%= slip.paymentStatus === 'pending' ? 'bg-amber-50 text-amber-600 border border-amber-200' : (slip.paymentStatus === 'approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200') %>">
                 <%= slip.paymentStatus %>
               </span>
             </div>
 
-            <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="space-y-2 text-sm">
-                <p><span class="text-gray-500">Renter:</span> <span class="font-medium"><%= slip.customer.username %></span></p>
-                <p><span class="text-gray-500">Email:</span> <span class="font-medium"><%= slip.customer.email %></span></p>
-                <p><span class="text-gray-500">Camera:</span> <span class="font-medium"><%= slip.booking.cameraModel %></span></p>
-                <p><span class="text-gray-500">Dates:</span> <span class="font-medium"><%= slip.booking.startDate %> - <%= slip.booking.endDate %></span></p>
-                <p><span class="text-gray-500">Amount:</span> <span class="font-semibold"><%= slip.amount %> THB</span></p>
-                <p><span class="text-gray-500">Rental Status:</span> <span class="font-medium"><%= slip.rentalStatus %></span></p>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 flex-grow">
+              <div class="space-y-4">
+                <div class="bg-slate-50/80 p-3 rounded-xl border border-slate-100">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Customer</p>
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-indigo-500"></div>
+                        <span class="text-sm font-bold text-slate-800"><%= slip.customer.username %></span>
+                    </div>
+                    <p class="text-xs text-slate-500 font-medium ml-4 truncate"><%= slip.customer.email %></p>
+                </div>
+
+                <div class="space-y-2 mt-2">
+                    <div class="flex justify-between text-xs">
+                        <span class="font-bold text-slate-400">Order</span>
+                        <span class="font-bold text-slate-700 text-right truncate pl-4"><%= slip.booking.cameraModel %></span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="font-bold text-slate-400">Term</span>
+                        <span class="font-bold text-slate-700"><%= slip.booking.startDate %> - <%= slip.booking.endDate %></span>
+                    </div>
+                    <div class="flex justify-between text-xs">
+                        <span class="font-bold text-slate-400">Date</span>
+                        <span class="font-bold text-slate-700"><%= slip.paymentDate %></span>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100">
+                    <div class="flex items-end justify-between">
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Amount Paid</span>
+                        <span class="text-2xl font-black text-emerald-600 tracking-tight"><%= Number(slip.amount).toLocaleString() %> <span class="text-sm font-bold text-slate-300">฿</span></span>
+                    </div>
+                </div>
               </div>
 
-              <div class="flex items-center justify-center bg-gray-100 rounded-lg min-h-44">
+              <div class="relative group h-full min-h-[180px] bg-slate-50 rounded-2xl overflow-hidden border border-slate-100 flex items-center justify-center">
                 <% if (slip.slipPath) { %>
-                  <a href="<%= slip.slipPath %>" target="_blank" rel="noopener" class="block w-full h-full">
-                    <img src="<%= slip.slipPath %>" alt="Slip" class="w-full h-full object-cover rounded-lg">
+                  <a href="<%= slip.slipPath %>" target="_blank" rel="noopener" class="w-full h-full block">
+                    <img src="<%= slip.slipPath %>" alt="Slip" class="w-full h-full object-cover zoom-img transition-transform duration-500 cursor-zoom-in">
                   </a>
+                  <div class="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/20 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="text-[9px] font-bold text-white uppercase tracking-widest drop-shadow-sm">Click to Enlarge</span>
+                  </div>
                 <% } else { %>
-                  <span class="text-gray-500 text-sm">No slip file</span>
+                  <div class="flex flex-col items-center">
+                    <svg class="w-8 h-8 text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No file detected</span>
+                  </div>
                 <% } %>
               </div>
             </div>
 
             <% if (slip.paymentStatus === 'pending') { %>
-              <div class="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-                <form action="/admin/payment-slips/<%= slip.paymentId %>/approve" method="POST" onsubmit="return confirm('Approve this payment slip?');">
+              <div class="px-6 pb-6 pt-2 grid grid-cols-2 gap-4">
+                <form action="/admin/payment-slips/<%= slip.paymentId %>/approve" method="POST" onsubmit="return confirm('APPROVE: Are you sure the slip is valid?');">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                  <button type="submit" class="w-full py-2.5 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-500 transition">
-                    Approve Slip
+                  <button type="submit" class="w-full py-3 rounded-xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-slate-200 hover:bg-emerald-600 hover:shadow-emerald-100 transition-all active:scale-95">
+                    Approve
                   </button>
                 </form>
-                <form action="/admin/payment-slips/<%= slip.paymentId %>/reject" method="POST" onsubmit="return confirm('Reject this slip (suspected fake)?');">
+                <form action="/admin/payment-slips/<%= slip.paymentId %>/reject" method="POST" onsubmit="return confirm('REJECT: Are you sure this slip is invalid/fake?');">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                  <button type="submit" class="w-full py-2.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-500 transition">
-                    Reject Slip
+                  <button type="submit" class="w-full py-3 rounded-xl bg-white border-2 border-slate-100 text-slate-400 text-xs font-black uppercase tracking-widest hover:border-rose-200 hover:text-rose-600 transition-all active:scale-95">
+                    Reject
                   </button>
                 </form>
               </div>
@@ -80,5 +135,12 @@
       </div>
     <% } %>
   </main>
+
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 </body>
 </html>

@@ -2,128 +2,194 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Manage Returns</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Returns Management | Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <nav class="bg-gray-900 shadow">
+<body class="bg-[#f8fafc] min-h-screen text-slate-800">
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
-                <div class="flex items-center gap-2">
-                    <svg class="w-6 h-6 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                    <h1 class="text-xl font-bold text-white">Manage Returns</h1>
+                <div class="flex items-center gap-3">
+                    <div class="bg-rose-500 p-2 rounded-lg shadow-lg shadow-rose-100">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Returns Control</h1>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-0.5">Asset Recovery</p>
+                    </div>
                 </div>
-                <div class="flex items-center gap-4">
-                    <span class="text-gray-300 text-sm">Logged in as <%= user.username %></span>
-                    <a href="/admin" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Back to Dashboard</a>
+                <div class="flex items-center gap-3">
+                    <a href="/admin" class="px-4 py-2 text-sm font-bold border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-lg transition-all shadow-sm">Dashboard</a>
                     <form action="/logout" method="POST" class="inline">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <button type="submit" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Logout</button>
+                        <button type="submit" class="p-2 text-slate-400 hover:text-rose-600 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 animate-[fadeIn_0.5s_ease-out]">
+        
+        <!-- Pending Returns -->
         <section>
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Pending Returns</h2>
-            <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-900">Incoming Returns</h2>
+                    <p class="text-sm font-medium text-slate-500">Items currently being returned by customers</p>
+                </div>
+                <div class="px-4 py-1.5 bg-amber-50 rounded-lg text-xs font-bold text-amber-600 border border-amber-200">
+                    Pending: <span class="text-amber-700 ml-1"><%= pendingReturns.length %></span>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b border-slate-100">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device & User</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Booking</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process Return</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Equipment & Client</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Rental Period</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Base Amount</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Process Action</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="divide-y divide-slate-50">
                         <% pendingReturns.forEach(item => { %>
-                            <tr>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    <div class="font-bold"><%= item.camera %></div>
-                                    <div class="text-gray-500 text-xs">Customer: <%= item.customer %></div>
-                                    <div class="text-gray-500 text-xs">Rental #<%= item.rentalId %></div>
+                            <tr class="hover:bg-slate-50/50 transition-colors group">
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-black text-slate-900"><%= item.camera %></div>
+                                    <div class="flex items-center gap-1.5 mt-1">
+                                        <div class="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                        <span class="text-[11px] font-medium text-slate-400">Client: <%= item.customer %></span>
+                                    </div>
+                                    <div class="text-[10px] font-bold text-indigo-400 mt-0.5 uppercase tracking-tighter">Order #<%= item.rentalId %></div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <%= item.startDate %> <br/>
-                                    to <br/>
-                                    <%= item.endDate %>
+                                <td class="px-6 py-4">
+                                    <div class="text-xs font-bold text-slate-600"><%= item.startDate %></div>
+                                    <div class="text-[9px] font-black text-slate-300 uppercase mt-0.5">to <%= item.endDate %></div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
-                                    <%= item.totalAmount %> ฿
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm font-black text-emerald-600"><%= item.totalAmount %> <span class="text-[10px] font-bold text-slate-300">฿</span></span>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-900">
-                                    <form action="/admin/returns/<%= item.rentalDetailId %>" method="POST" class="flex flex-col gap-2 max-w-xs">
-                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-700">Late Fee (฿)</label>
-                                            <input type="number" name="lateFee" value="0" min="0" step="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm px-2 py-1 border">
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-700">Damage Fee (฿)</label>
-                                            <input type="number" name="damageFee" value="0" min="0" step="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm px-2 py-1 border">
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-700">Notes (Optional)</label>
-                                            <input type="text" name="notes" placeholder="Condition details..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-pink-500 focus:ring-pink-500 sm:text-sm px-2 py-1 border">
-                                        </div>
-                                        <button type="submit" class="bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded mt-1 transition w-full text-xs" onclick="return confirm('Confirm processing this return?');">
-                                            Confirm Return
-                                        </button>
-                                    </form>
+                                <td class="px-6 py-4 text-right">
+                                    <div class="inline-block text-left bg-slate-50 rounded-2xl border border-slate-100 p-4 shadow-inner max-w-sm">
+                                        <form action="/admin/returns/<%= item.rentalDetailId %>" method="POST" class="space-y-3">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Late Fee (฿)</label>
+                                                    <input type="number" name="lateFee" value="0" min="0" step="1" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Damage (฿)</label>
+                                                    <input type="number" name="damageFee" value="0" min="0" step="1" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all">
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Condition Notes</label>
+                                                <input type="text" name="notes" placeholder="Lens condition, sensor check..." class="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-medium focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all">
+                                            </div>
+                                            <button type="submit" class="w-full bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest py-2 rounded-xl hover:bg-rose-600 transition-all shadow-md shadow-slate-100 mt-1 active:scale-95" onclick="return confirm('Confirm finalizing this return process?');">
+                                                Finalize Return
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         <% }) %>
                         <% if(pendingReturns.length === 0) { %>
-                            <tr><td colspan="4" class="px-6 py-10 text-center text-gray-500">No pending returns found.</td></tr>
+                            <tr>
+                                <td colspan="4" class="px-6 py-20 text-center">
+                                    <div class="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                    </div>
+                                    <h3 class="text-lg font-bold text-slate-900">No pending returns</h3>
+                                    <p class="text-sm text-slate-400 font-medium">Enjoy the moment! All items are either in use or safely back in stock.</p>
+                                </td>
+                            </tr>
                         <% } %>
                     </tbody>
                 </table>
             </div>
         </section>
 
+        <!-- Completed History -->
         <section>
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Completed Returns (History)</h2>
-            <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-2xl font-black text-slate-900">Return History</h2>
+                    <p class="text-sm font-medium text-slate-500">Archived records of processed returns</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-50 border-b border-slate-100">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device & User</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actual Return Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fees</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Equipment & Client</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Resolved Date</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Fees & Adjustments</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Final Audit Notes</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="divide-y divide-slate-50">
                         <% completedReturns.forEach(item => { %>
-                            <tr class="bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    <div class="font-bold"><%= item.camera %></div>
-                                    <div class="text-gray-500 text-xs">Customer: <%= item.customer %></div>
-                                    <div class="text-gray-500 text-xs">Rental #<%= item.rentalId %></div>
+                            <tr class="hover:bg-slate-50/50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-bold text-slate-700"><%= item.camera %></div>
+                                    <div class="text-[10px] font-medium text-slate-400 mt-0.5">Order #<%= item.rentalId %> • <%= item.customer %></div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <%= new Date(item.actualReturnDate).toLocaleDateString() %> <br/>
-                                    <%= new Date(item.actualReturnDate).toLocaleTimeString() %>
+                                <td class="px-6 py-4">
+                                    <div class="text-xs font-bold text-slate-600"><%= new Date(item.actualReturnDate).toLocaleDateString() %></div>
+                                    <div class="text-[9px] font-black text-slate-300 mt-0.5 uppercase tracking-tighter"><%= new Date(item.actualReturnDate).toLocaleTimeString() %></div>
                                 </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    <div class="text-amber-600">Late: <%= item.lateFee %> ฿</div>
-                                    <div class="text-red-600">Damage: <%= item.damageFee %> ฿</div>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-col gap-1">
+                                        <% if(item.lateFee > 0) { %>
+                                            <span class="inline-flex items-center text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">LATE: +<%= item.lateFee %>฿</span>
+                                        <% } %>
+                                        <% if(item.damageFee > 0) { %>
+                                            <span class="inline-flex items-center text-[10px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">DMG: +<%= item.damageFee %>฿</span>
+                                        <% } %>
+                                        <% if(item.lateFee == 0 && item.damageFee == 0) { %>
+                                            <span class="text-xs font-bold text-emerald-500">Perfect Return</span>
+                                        <% } %>
+                                    </div>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-600 max-w-xs break-words whitespace-normal">
-                                    <%= item.notes || '-' %>
+                                <td class="px-6 py-4">
+                                    <p class="text-[11px] font-medium text-slate-400 max-w-xs italic leading-relaxed">
+                                        <%= item.notes || 'No specific notes recorded' %>
+                                    </p>
                                 </td>
                             </tr>
                         <% }) %>
                         <% if(completedReturns.length === 0) { %>
-                            <tr><td colspan="4" class="px-6 py-10 text-center text-gray-500">No history of returned items.</td></tr>
+                            <tr>
+                                <td colspan="4" class="px-6 py-10 text-center text-[11px] font-bold text-slate-300 uppercase tracking-widest italic">
+                                    Transaction history is empty
+                                </td>
+                            </tr>
                         <% } %>
                     </tbody>
                 </table>
             </div>
         </section>
     </main>
+
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </body>
+</html>>
 </html>

@@ -29,7 +29,11 @@ async function renderAdminAccounts(res, { status = 200, error = null, success = 
             username: r.Username,
             email: r.Email,
             role: r.Role,
-            avatar: r.AvatarPath || null
+            avatar: r.AvatarPath || null,
+            firstName: r.FirstName,
+            lastName: r.LastName,
+            phone: r.Phone,
+            address: r.Address
         })),
         error,
         success

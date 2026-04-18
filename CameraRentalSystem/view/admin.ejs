@@ -2,120 +2,261 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Camera Rental</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <nav class="bg-gray-900 shadow">
+<body class="bg-[#f8fafc] min-h-screen text-slate-800">
+    <!-- Navbar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
-                <div class="flex items-center gap-2">
-                    <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                    <h1 class="text-xl font-bold text-white">Admin Dashboard</h1>
+                <div class="flex items-center gap-3">
+                    <div class="bg-slate-900 p-2 rounded-lg shadow-lg">
+                        <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">Admin Dashboard</h1>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-0.5">Control Center</p>
+                    </div>
                 </div>
-                <div class="flex items-center gap-4">
-                    <span class="text-gray-300 text-sm">Logged in as <%= user.username %></span>
-                    <a href="/main" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Go to Main</a>
-                    <a href="/browse" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Go to Browse</a>
-                    <a href="/admin/accounts" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Accounts</a>
-                    <a href="/admin/payment-slips" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Review Slips</a>
-                    <a href="/admin/media" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Media</a>
-                    <a href="/admin/cameras" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Cameras</a>
-                    <a href="/admin/returns" class="bg-pink-600 hover:bg-pink-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Manage Returns</a>
-                    <a href="/admin/logs" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition">System Logs</a>
+                <div class="hidden lg:flex items-center gap-2">
+                    <a href="/main" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all">Storefront</a>
+                    <a href="/browse" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-all">Marketplace</a>
+                    <div class="h-6 w-px bg-slate-200 mx-2"></div>
                     <form action="/logout" method="POST" class="inline">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                        <button type="submit" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Logout Admin</button>
+                        <button type="submit" class="px-4 py-2 text-sm font-bold border border-slate-200 text-slate-600 hover:bg-slate-900 hover:text-white rounded-lg transition-all shadow-sm">Logout</button>
                     </form>
                 </div>
             </div>
         </div>
     </nav>
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-[fadeIn_0.5s_ease-out]">
+        <!-- Welcome Header -->
+        <header class="mb-10">
+            <h2 class="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">Welcome back,</h2>
+            <div class="flex items-center gap-3">
+                <h1 class="text-3xl font-black text-slate-900"><%= user.username %></h1>
+                <span class="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-full border border-indigo-100 uppercase tracking-wider">System Root</span>
+            </div>
+        </header>
+
         <% if (locals.stats) { %>
-        <section class="mb-10">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">Dashboard Overview</h2>
+        <section class="mb-12">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-green-500">
-                    <p class="text-sm text-gray-500 mb-1">Monthly Income (Approved)</p>
-                    <h3 class="text-3xl font-black text-gray-900"><%= Number(stats.monthlyIncome).toLocaleString() %> ฿</h3>
+                <!-- Monthly Income -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2.5 bg-emerald-50 rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300">
+                            <svg class="w-6 h-6 text-emerald-600 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">This Month</span>
+                    </div>
+                    <p class="text-sm font-bold text-slate-500 mb-1">Total Income</p>
+                    <h3 class="text-2xl font-black text-slate-900 leading-none"><%= Number(stats.monthlyIncome).toLocaleString() %> <span class="text-sm font-bold text-slate-400 ml-1">฿</span></h3>
                 </div>
-                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-yellow-500">
-                    <p class="text-sm text-gray-500 mb-1">Pending Payments</p>
-                    <h3 class="text-3xl font-black text-gray-900"><%= stats.pendingPayments %></h3>
+
+                <!-- Pending Payments -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2.5 bg-amber-50 rounded-xl group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+                            <svg class="w-6 h-6 text-amber-600 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Queue</span>
+                    </div>
+                    <p class="text-sm font-bold text-slate-500 mb-1">Pending Slips</p>
+                    <h3 class="text-2xl font-black text-slate-900 leading-none"><%= stats.pendingPayments %> <span class="text-sm font-bold text-slate-400 ml-1">Orders</span></h3>
                 </div>
-                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-blue-500">
-                    <p class="text-sm text-gray-500 mb-1">Active Deliveries Today</p>
-                    <h3 class="text-3xl font-black text-gray-900"><%= stats.deliveriesToday %></h3>
+
+                <!-- Deliveries Today -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2.5 bg-indigo-50 rounded-xl group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300">
+                            <svg class="w-6 h-6 text-indigo-600 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Today</span>
+                    </div>
+                    <p class="text-sm font-bold text-slate-500 mb-1">Active Deliveries</p>
+                    <h3 class="text-2xl font-black text-slate-900 leading-none"><%= stats.deliveriesToday %> <span class="text-sm font-bold text-slate-400 ml-1">Units</span></h3>
                 </div>
-                <div class="bg-white border rounded-xl p-5 shadow-sm text-center border-l-4 border-pink-500">
-                    <p class="text-sm text-gray-500 mb-1">Expected Returns Today</p>
-                    <h3 class="text-3xl font-black text-gray-900"><%= stats.returnsToday %></h3>
+
+                <!-- Returns Expected Today -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 group hover:shadow-md transition-all">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-2.5 bg-rose-50 rounded-xl group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
+                            <svg class="w-6 h-6 text-rose-600 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Due</span>
+                    </div>
+                    <p class="text-sm font-bold text-slate-500 mb-1">Expected Returns</p>
+                    <h3 class="text-2xl font-black text-slate-900 leading-none"><%= stats.returnsToday %> <span class="text-sm font-bold text-slate-400 ml-1">Items</span></h3>
                 </div>
             </div>
         </section>
         <% } %>
 
-        <section class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">Admin Command Center</h2>
-            <p class="text-gray-600 mb-4">เลือกเมนูที่ต้องการจัดการจากศูนย์รวมคำสั่งแอดมิน</p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <a href="/admin/cameras" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">Manage Cameras</h3>
-                    <p class="text-sm text-gray-600 mt-1">จัดการคลังสินค้า เปลี่ยนสถานะ และลบอุปกรณ์</p>
-                </a>
-                <a href="/admin/accounts" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">Manage Accounts</h3>
-                    <p class="text-sm text-gray-600 mt-1">จัดการสิทธิ์ผู้ใช้งานและสร้างแอดมิน</p>
-                </a>
-                <a href="/admin/payment-slips" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">Review Payment Slips</h3>
-                    <p class="text-sm text-gray-600 mt-1">ตรวจสลิปและอนุมัติการชำระเงิน</p>
-                </a>
-                <a href="/admin/media" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">Manage Media</h3>
-                    <p class="text-sm text-gray-600 mt-1">จัดการรูปภาพเว็บไซต์และไฟล์อัปโหลด</p>
-                </a>
-                <a href="/admin/returns" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">Manage Returns</h3>
-                    <p class="text-sm text-gray-600 mt-1">รับคืนอุปกรณ์และจัดการค่าปรับ</p>
-                </a>
-                <a href="/admin/logs" class="bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition">
-                    <h3 class="font-semibold text-gray-900">System Logs</h3>
-                    <p class="text-sm text-gray-600 mt-1">ตรวจสอบประวัติข้อผิดพลาดและการทำงาน</p>
-                </a>
-            </div>
-        </section>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Navigation Grid -->
+            <section class="lg:col-span-1">
+                <h2 class="text-lg font-bold text-slate-900 mb-5 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                    Command Center
+                </h2>
+                <div class="grid grid-cols-1 gap-3">
+                    <a href="/admin/cameras" class="group flex items-center justify-between bg-white p-4 rounded-xl border border-slate-100 hover:border-indigo-200 hover:shadow-sm transition-all duration-300">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-indigo-50 p-2.5 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900 leading-none">Cameras</h3>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Stock & Status</p>
+                            </div>
+                        </div>
+                        <svg class="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                    <a href="/admin/accounts" class="group flex items-center justify-between bg-white p-4 rounded-xl border border-slate-100 hover:border-indigo-200 hover:shadow-sm transition-all duration-300">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-slate-50 p-2.5 rounded-lg group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900 leading-none">Customers</h3>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Admin & User Access</p>
+                            </div>
+                        </div>
+                        <svg class="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                    <a href="/admin/payment-slips" class="group flex items-center justify-between bg-white p-4 rounded-xl border border-slate-100 hover:border-amber-200 hover:shadow-sm transition-all duration-300">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-amber-50 p-2.5 rounded-lg group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900 leading-none">Review Slips</h3>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Approve Payments</p>
+                            </div>
+                        </div>
+                        <svg class="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                    <a href="/admin/returns" class="group flex items-center justify-between bg-white p-4 rounded-xl border border-slate-100 hover:border-rose-200 hover:shadow-sm transition-all duration-300">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-rose-50 p-2.5 rounded-lg group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900 leading-none">Returns</h3>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Late Fees & Assets</p>
+                            </div>
+                        </div>
+                        <svg class="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                    <a href="/admin/media" class="group flex items-center justify-between bg-white p-4 rounded-xl border border-slate-100 hover:border-purple-200 hover:shadow-sm transition-all duration-300">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-purple-50 p-2.5 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900 leading-none">Asset Library</h3>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Image Management</p>
+                            </div>
+                        </div>
+                        <svg class="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                    <a href="/admin/logs" class="group flex items-center justify-between bg-white p-4 rounded-xl border border-slate-100 hover:border-slate-300 hover:shadow-sm transition-all duration-300">
+                        <div class="flex items-center gap-4">
+                            <div class="bg-slate-100 p-2.5 rounded-lg group-hover:bg-slate-900 group-hover:text-white transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900 leading-none">System Logs</h3>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase mt-1">Audit Trail</p>
+                            </div>
+                        </div>
+                        <svg class="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </a>
+                </div>
+            </section>
 
-        <h2 class="text-2xl font-bold text-gray-900 mb-6">Recent Bookings</h2>
+            <!-- Recent Activity -->
+            <section class="lg:col-span-2">
+                <div class="flex items-center justify-between mb-5">
+                    <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Recent Activity
+                    </h2>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live Updates</span>
+                </div>
 
-        <div class="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User (Gmail)</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Camera</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Price</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    <% bookings.forEach(b => { %>
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#<%= b.id %></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><%= b.user %></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600"><%= b.cameraModel %></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"><%= b.startDate %> to <%= b.endDate %></td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600"><%= b.totalPrice %> ฿</td>
-                        </tr>
-                    <% }) %>
-                    <% if(bookings.length === 0) { %>
-                        <tr><td colspan="5" class="px-6 py-10 text-center text-gray-500">No bookings have been made yet.</td></tr>
-                    <% } %>
-                </tbody>
-            </table>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50 border-b border-slate-100">
+                                <tr>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ID</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">User & Contact</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Equipment</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date Range</th>
+                                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-50">
+                                <% bookings.forEach(b => { %>
+                                    <tr class="hover:bg-slate-50/50 transition-colors group">
+                                        <td class="px-6 py-4 text-xs font-bold text-slate-400">#<%= b.id %></td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-bold text-slate-900"><%= b.user %></div>
+                                            <div class="text-[10px] font-medium text-slate-400">Verified Client</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-semibold text-slate-700"><%= b.cameraModel %></div>
+                                            <div class="text-[10px] font-medium text-indigo-400">Inventory Item</div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-xs font-bold text-slate-600"><%= b.startDate %></div>
+                                            <div class="text-[9px] font-black text-slate-300 uppercase tracking-tighter">to <%= b.endDate %></div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                                            <span class="text-sm font-black text-emerald-600"><%= b.totalPrice %> ฿</span>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                                <% if(bookings.length === 0) { %>
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-20 text-center">
+                                            <div class="flex flex-col items-center">
+                                                <div class="bg-slate-50 p-4 rounded-full mb-3">
+                                                    <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                </div>
+                                                <span class="text-sm font-bold text-slate-400">No recent activity detected</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </div>
     </main>
+
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </body>
 </html>
