@@ -264,7 +264,7 @@ graph TD
 🎥 Video: https://youtube.com/playlist?list=PL5leYMm09zHlTQg28mYUbLgPnmWBIGE0n&si=Q-dYDBKXvZ3g3Dzm
 
 ## Figma
-https://www.figma.com/proto/YVqTr3EiIpPg1v7y9oaU4G/CP252-Project?node-id=0-1&t=kSAoM3fooFb1x5MB-1
+https://www.figma.com/design/3SW7MYzpHPwNTQiI58PJWq/%E0%B8%99%E0%B8%B2%E0%B8%A2%E0%B9%80%E0%B8%81%E0%B8%A3%E0%B8%8B%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B9%88%E0%B8%87?m=auto&t=HxKDpHPNPr0ppA53-1
 
 
 ## 🚀 Getting Started
