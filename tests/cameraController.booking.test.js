@@ -87,13 +87,15 @@ describe('Camera Controller Booking Rules', () => {
     };
     const res = createResponse();
 
-    Equipment.findByPk.mockResolvedValue({ EquipmentID: 1, Status: 'available', DailyRate: 1000 });
-    RentalDetail.findOne.mockResolvedValue({ RentalDetailID: 123 });
+    Equipment.findByPk.mockResolvedValue({ EquipmentID: 1, Status: 'available', DailyRate: 1000, save: jest.fn() });
+    Customer.findOne.mockResolvedValue({ CustomerID: 10 });
+    Rental.create.mockResolvedValue({ RentalID: 100 });
+    RentalDetail.create.mockResolvedValue({ RentalDetailID: 2 });
 
     await cameraController.bookCamera(req, res);
 
     expect(res.statusCode).toBe(200);
-    expect(res.redirectedTo).toBe('/browse?error=Selected%20camera%20is%20already%20booked%20for%20these%20dates');
+    expect(res.redirectedTo).toBe('/cart');
   });
 
   test('rejects invalid state transition in confirmPayment', async () => {

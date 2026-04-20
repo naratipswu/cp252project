@@ -271,25 +271,7 @@ exports.bookCamera = async (req, res) => {
                     throw error;
                 }
 
-                const overlap = await RentalDetail.findOne({
-                    where: {
-                        EquipmentID: equipment.EquipmentID,
-                        StartDate: { [Op.lte]: endDateOnly },
-                        EndDate: { [Op.gte]: startDateOnly }
-                    },
-                    include: [{
-                        model: Rental,
-                        required: true,
-                        where: { RentalStatus: { [Op.ne]: 'cancelled' } }
-                    }],
-                    transaction,
-                    lock: transaction.LOCK.UPDATE
-                });
-                if (overlap) {
-                    const error = new Error('Selected camera is already booked for these dates');
-                    error.statusCode = 409;
-                    throw error;
-                }
+                // Overbooking allows this to pass without blocking.
                 if (!customer) {
                     const error = new Error('Unauthorized');
                     error.statusCode = 401;

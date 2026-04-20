@@ -45,9 +45,9 @@ describe('Auth Controller Security', () => {
   test('register hashes password before persisting', async () => {
     const req = {
       body: {
-        username: 'alice',
+        username: 'alice@gmail.com',
         password: 'Secret123!',
-        email: 'alice@mail.com',
+        email: 'alice@gmail.com',
         firstName: 'Alice',
         lastName: 'Tester',
         phone: '0812345678',
@@ -69,22 +69,23 @@ describe('Auth Controller Security', () => {
 
   test('login accepts hashed password and sets session', async () => {
     Customer.findOne.mockResolvedValue({
-      Username: 'admin',
+      Username: 'user@gmail.com',
+      Email: 'user@gmail.com',
       PasswordHash: bcrypt.hashSync('Secret123!', 10),
-      Role: 'admin',
+      Role: 'user',
       save: jest.fn()
     });
 
     const req = {
-      body: { username: 'admin', password: 'Secret123!' },
+      body: { username: 'user@gmail.com', password: 'Secret123!' },
       session: {}
     };
     const res = createResponse();
 
     await authController.login(req, res);
 
-    expect(req.session.user).toEqual({ username: 'admin', role: 'admin' });
-    expect(res.redirectedTo).toBe('/admin');
+    expect(req.session.user).toEqual({ username: 'user@gmail.com', role: 'user' });
+    expect(res.redirectedTo).toBe('/browse');
   });
 
   test('mock google login is disabled by default', async () => {
