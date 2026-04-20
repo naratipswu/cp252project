@@ -90,6 +90,7 @@ app.post(
 
 app.post('/login', authController.requireCsrf, authController.login);
 app.post('/register', authController.requireCsrf, authController.register);
+app.get('/auth/google/mock', authController.showMockGoogleAuth);
 app.post('/login/google', authController.requireCsrf, authController.loginGoogle);
 app.post('/logout', authController.requireAuth, authController.requireCsrf, authController.logout);
 

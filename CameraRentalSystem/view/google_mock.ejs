@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ลงชื่อเข้าใช้ - บัญชี Google</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f4f9;
+        }
+        .google-card {
+            background-color: white;
+            border-radius: 28px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .account-item:hover {
+            background-color: #f8f9fa;
+        }
+        .profile-img {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 500;
+        }
+        .input-google {
+            border: 1px solid #747775;
+            border-radius: 4px;
+            padding: 13px 15px;
+            font-size: 16px;
+        }
+        .input-google:focus {
+            border: 2px solid #0b57d0;
+            padding: 12px 14px;
+            outline: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    <div class="google-card w-full max-w-[1040px] h-[500px] flex flex-col md:flex-row p-8 overflow-hidden mx-4">
+        
+        <!-- Left Side: Welcome Text -->
+        <div class="w-full md:w-[45%] flex flex-col pt-4 pb-8 pl-8 pr-12 justify-between">
+            <div>
+                <svg viewBox="0 0 48 48" class="w-12 h-12 mb-4 block">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.9c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.13-10.36 7.13-17.65z"></path>
+                    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+                    <path fill="none" d="M0 0h48v48H0z"></path>
+                </svg>
+                <h1 class="text-[36px] text-[#1f1f1f] mb-4">เลือกบัญชี</h1>
+                <p class="text-[#1f1f1f] text-base leading-relaxed">
+                    ไปยัง <strong>Camera Rental</strong>
+                </p>
+            </div>
+            
+            <div class="text-sm mt-12 w-full">
+               <div class="flex gap-4">
+                  <select class="bg-transparent text-[#444746] hover:bg-[#f2f2f2] px-2 py-1 rounded border-none text-xs w-min cursor-pointer appearance-none outline-none">
+                     <option>ไทย</option>
+                     <option>English</option>
+                  </select>
+               </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Account List -->
+        <div class="w-full md:w-[55%] pt-8 pl-10 pr-12 h-full flex flex-col justify-center">
+            
+            <!-- Default Accounts View -->
+            <div id="accountList" class="flex flex-col border border-gray-300 rounded-lg overflow-hidden">
+                
+                <!-- Account 1 -->
+                <button type="button" onclick="submitAuth('user1@gmail.com')" class="account-item flex items-center gap-4 px-6 py-3 border-b border-gray-300 cursor-pointer w-full text-left transition">
+                    <div class="profile-img" style="background-color: #1a237e;">
+                        1
+                    </div>
+                    <div>
+                        <div class="text-[#1f1f1f] text-[15px] font-medium leading-none mb-1">User 1</div>
+                        <div class="text-[#444746] text-xs">user1@gmail.com</div>
+                    </div>
+                </button>
+
+                <!-- Account 2 -->
+                <button type="button" onclick="submitAuth('user2@gmail.com')" class="account-item flex items-center gap-4 px-6 py-3 border-b border-gray-300 cursor-pointer w-full text-left transition">
+                    <div class="profile-img" style="background-color: #795548;">
+                        2
+                    </div>
+                    <div>
+                        <div class="text-[#1f1f1f] text-[15px] font-medium leading-none mb-1">User 2</div>
+                        <div class="text-[#444746] text-xs">user2@gmail.com</div>
+                    </div>
+                </button>
+
+                <!-- Account 3 -->
+                <button type="button" onclick="submitAuth('user3@gmail.com')" class="account-item flex items-center gap-4 px-6 py-3 border-b border-gray-300 cursor-pointer w-full text-left transition">
+                    <div class="profile-img bg-orange-400">
+                        3
+                    </div>
+                    <div>
+                        <div class="text-[#1f1f1f] text-[15px] font-medium leading-none mb-1">User 3</div>
+                        <div class="text-[#444746] text-xs">user3@gmail.com</div>
+                    </div>
+                </button>
+
+                <!-- Use Another Account Option -->
+                <button type="button" onclick="showInputMode()" class="account-item flex items-center gap-4 px-6 py-[14px] cursor-pointer w-full text-left transition">
+                    <div class="w-[28px] h-[28px] flex items-center justify-center">
+                        <svg class="w-[20px] h-[20px] text-[#444746]" focusable="false" aria-hidden="true" viewBox="0 0 24 24">
+                            <path fill="currentColor" relative="true" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-4.43-.82-6.14-2.88C7.55 15.8 9.68 15 12 15s4.45.8 6.14 2.12C16.43 19.18 14.03 20 12 20z"></path>
+                        </svg>
+                    </div>
+                    <div class="text-[#1f1f1f] text-[14px] font-medium">
+                        ใช้บัญชีอื่น
+                    </div>
+                </button>
+            </div>
+
+            <!-- Custom Email Input View (Hidden by default) -->
+            <div id="emailInputForm" class="hidden flex-col h-full justify-center w-full max-w-[400px]">
+                <form onsubmit="submitCustomEmail(event)">
+                    <div class="relative mb-8">
+                        <input type="email" id="customEmail" class="input-google w-full" placeholder="อีเมลหรือโทรศัพท์" required>
+                    </div>
+                    <p class="text-[#0b57d0] text-[14px] font-medium mb-[40px] cursor-pointer hover:underline">หากลืมอีเมลใช่หรือไม่</p>
+                    
+                    <p class="text-[#444746] text-[14px] leading-[1.4] mb-8">
+                        ไม่ใช่คอมพิวเตอร์ของคุณใช่ไหม ใช้โหมดผู้มาเยือนเพื่อลงชื่อเข้าใช้แบบส่วนตัว <br>
+                        <a href="#" class="text-[#0b57d0] hover:underline font-medium">ดูข้อมูลเพิ่มเติมเกี่ยวกับการใช้โหมดผู้มาเยือน</a>
+                    </p>
+
+                    <div class="flex justify-between items-center mt-auto pb-4">
+                        <button type="button" class="text-[#0b57d0] text-[14px] font-medium px-2 py-2 hover:bg-[#f8f9fa] rounded">
+                            สร้างบัญชี
+                        </button>
+                        <button type="submit" class="bg-[#0b57d0] hover:bg-[#084298] text-white text-[14px] font-medium px-6 py-2 rounded-full transition">
+                            ถัดไป
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Hidden Form to submit to authController -->
+    <form id="googleAuthForm" method="POST" action="/login/google" class="hidden">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="email" id="targetEmail">
+    </form>
+
+    <script>
+        function submitAuth(email) {
+            document.getElementById('targetEmail').value = email;
+            document.getElementById('googleAuthForm').submit();
+        }
+
+        function showInputMode() {
+            document.getElementById('accountList').classList.add('hidden');
+            document.getElementById('emailInputForm').classList.remove('hidden');
+            document.getElementById('emailInputForm').classList.add('flex');
+            document.querySelector("h1").innerText = "ลงชื่อเข้าใช้";
+        }
+
+        function submitCustomEmail(e) {
+            e.preventDefault();
+            const email = document.getElementById('customEmail').value;
+            if (email) {
+                submitAuth(email);
+            }
+        }
+    </script>
+</body>
+</html>

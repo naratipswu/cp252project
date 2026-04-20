@@ -97,4 +97,26 @@ describe('Auth Controller Security', () => {
     expect(res.statusCode).toBe(403);
     expect(res.sent).toBe('Google login is disabled');
   });
+
+  test('showMockGoogleAuth renders google_mock when enabled', () => {
+    process.env.ENABLE_MOCK_GOOGLE_LOGIN = 'true';
+    process.env.NODE_ENV = 'development';
+    const req = {};
+    const res = createResponse();
+
+    authController.showMockGoogleAuth(req, res);
+    
+    expect(res.rendered).not.toBeNull();
+    expect(res.rendered.view).toBe('google_mock');
+  });
+
+  test('showMockGoogleAuth returns 403 if disabled', () => {
+    process.env.ENABLE_MOCK_GOOGLE_LOGIN = 'false';
+    const req = {};
+    const res = createResponse();
+
+    authController.showMockGoogleAuth(req, res);
+    
+    expect(res.statusCode).toBe(403);
+  });
 });

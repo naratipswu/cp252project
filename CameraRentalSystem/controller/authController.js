@@ -271,10 +271,23 @@ exports.login = async (req, res) => {
     res.render('signin', { error: 'Invalid username or password' });
 };
 
-// Mock Google Login
+// Render Mock Google Login UI
+exports.showMockGoogleAuth = (req, res) => {
+    const isMockGoogleEnabled = process.env.ENABLE_MOCK_GOOGLE_LOGIN === 'true';
+    const nodeEnv = String(process.env.NODE_ENV || 'development').toLowerCase();
+    const isSafeEnv = nodeEnv === 'development' || nodeEnv === 'dev' || nodeEnv === 'test';
+    
+    if (!isMockGoogleEnabled || !isSafeEnv) {
+        return res.status(403).send('Google login is disabled or not allowed in this environment');
+    }
+    
+    res.render('google_mock');
+};
+
+// Mock Google Login Process
 exports.loginGoogle = async (req, res) => {
     const isMockGoogleEnabled = process.env.ENABLE_MOCK_GOOGLE_LOGIN === 'true';
-    const nodeEnv = String(process.env.NODE_ENV || '').toLowerCase();
+    const nodeEnv = String(process.env.NODE_ENV || 'development').toLowerCase();
     const isSafeEnv = nodeEnv === 'development' || nodeEnv === 'dev' || nodeEnv === 'test';
     if (!isMockGoogleEnabled) {
         return res.status(403).send('Google login is disabled');
