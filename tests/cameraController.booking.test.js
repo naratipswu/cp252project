@@ -3,6 +3,12 @@ jest.mock('../CameraRentalSystem/service/cameraStore', () => ({
   getAllCameras: jest.fn(),
   addCamera: jest.fn()
 }));
+jest.mock('../config/db', () => ({
+  transaction: jest.fn(async (options, callback) => {
+    const cb = typeof options === 'function' ? options : callback;
+    return cb({ LOCK: { UPDATE: 'UPDATE' } });
+  })
+}));
 jest.mock('../models', () => ({
   Customer: { findOne: jest.fn(), findByPk: jest.fn() },
   Equipment: { findByPk: jest.fn(), update: jest.fn() },
@@ -60,7 +66,7 @@ describe('Camera Controller Booking Rules', () => {
     };
     const res = createResponse();
 
-    Equipment.findByPk.mockResolvedValue({ EquipmentID: 1, Status: 'available', DailyRate: 1000 });
+    Equipment.findByPk.mockResolvedValue({ EquipmentID: 1, Status: 'available', DailyRate: 1000, save: jest.fn() });
     RentalDetail.findOne.mockResolvedValue(null);
     Customer.findOne.mockResolvedValue({ CustomerID: 10 });
     Rental.create.mockResolvedValue({ RentalID: 99 });
@@ -69,7 +75,7 @@ describe('Camera Controller Booking Rules', () => {
     await cameraController.bookCamera(req, res);
 
     expect(res.statusCode).toBe(200);
-    expect(res.redirectedTo).toMatch(/^\/booking\/.+\/confirm$/);
+    expect(res.redirectedTo).toBe('/cart');
     expect(Rental.create).toHaveBeenCalledTimes(1);
     expect(RentalDetail.create).toHaveBeenCalledTimes(1);
   });
@@ -86,8 +92,8 @@ describe('Camera Controller Booking Rules', () => {
 
     await cameraController.bookCamera(req, res);
 
-    expect(res.statusCode).toBe(409);
-    expect(res.sent).toBe('Selected camera is already booked for these dates');
+    expect(res.statusCode).toBe(200);
+    expect(res.redirectedTo).toBe('/browse?error=Selected%20camera%20is%20already%20booked%20for%20these%20dates');
   });
 
   test('rejects invalid state transition in confirmPayment', async () => {

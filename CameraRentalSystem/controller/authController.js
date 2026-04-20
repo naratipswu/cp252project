@@ -109,6 +109,12 @@ exports.updateProfileAvatar = (req, res) => {
         .catch(() => res.status(500).send('Failed to update avatar'));
 };
 
+/**
+ * Updates an authenticated customer's profile details.
+ * Validates the email and normalizes name inputs before updating the database.
+ * @param {import('express').Request} req - Express request object containing body elements.
+ * @param {import('express').Response} res - Express response object.
+ */
 exports.updateProfile = async (req, res) => {
     const currentUsername = req.session.user && req.session.user.username;
     const { firstName, lastName, email, phone, address } = req.body;
@@ -214,6 +220,12 @@ exports.createAdminAccount = async (req, res) => {
     return renderAdminAccounts(res, { success: `Created admin account: ${normalizedUsername}` });
 };
 
+/**
+ * Authenticates a user and establishes a session.
+ * Compares passwords utilizing bcrypt. Migrates legacy plain-text passwords gracefully.
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
 exports.login = async (req, res) => {
     const { username, password } = req.body;
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
@@ -280,6 +292,12 @@ exports.loginGoogle = async (req, res) => {
 };
 
 // eslint-disable-next-line complexity
+/**
+ * Registers a new user customer account into the database.
+ * Computes the bcrypt hash for the password before saving.
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
 exports.register = async (req, res) => {
     const { username, password, email, firstName, lastName, phone, address } = req.body;
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
@@ -330,6 +348,12 @@ exports.logout = (req, res) => {
     });
 };
 
+/**
+ * Middleware: Requires the user to have an active authenticated session.
+ * @param {import('express').Request} req - Express request.
+ * @param {import('express').Response} res - Express response.
+ * @param {import('express').NextFunction} next - Express next middleware.
+ */
 exports.requireAuth = (req, res, next) => {
     if (req.session.user) {
         next();
@@ -346,6 +370,12 @@ exports.requireAdmin = (req, res, next) => {
     }
 };
 
+/**
+ * Middleware: Attaches a CSRF token to the session and response locals to prevent cross-site request forgery.
+ * @param {import('express').Request} req - Express request.
+ * @param {import('express').Response} res - Express response.
+ * @param {import('express').NextFunction} next - Express next middleware.
+ */
 exports.attachCsrfToken = (req, res, next) => {
     if (!req.session.csrfToken) {
         req.session.csrfToken = crypto.randomBytes(24).toString('hex');

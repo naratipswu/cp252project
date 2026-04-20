@@ -49,6 +49,12 @@ function cameraMatchesType(camera, type) {
     return true;
 }
 
+/**
+ * Handles camera browsing, searching, and filtering by category or price.
+ * Retrieves data from the inventory and groups by Brand and Model.
+ * @param {import('express').Request} req - Express request object containing query parameters.
+ * @param {import('express').Response} res - Express response object to render the view.
+ */
 exports.browseCameras = async (req, res) => {
     const searchQuery = req.query.search || '';
     const selectedType = String(req.query.type || '').toLowerCase();
@@ -157,6 +163,11 @@ exports.addCamera = async (req, res) => {
     return res.redirect('/browse');
 };
 
+/**
+ * Renders the admin camera management dashboard.
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
 exports.showAdminCameras = async (req, res) => {
     try {
         const cameras = await Equipment.findAll({
@@ -184,6 +195,11 @@ exports.showAdminCameras = async (req, res) => {
     }
 };
 
+/**
+ * Toggles the operational status of a camera between 'available' and 'maintenance' (Admin only).
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ */
 exports.toggleCameraStatus = async (req, res) => {
     const id = Number(req.params.id);
     const status = String(req.body.status || '').toLowerCase();
@@ -218,6 +234,12 @@ exports.deleteCamera = async (req, res) => {
     }
 };
 
+/**
+ * Processes a camera booking request, ensuring atomic transactions to prevent double booking.
+ * Calculates rental duration, validates stock availability, and checks overlapping dates.
+ * @param {import('express').Request} req - Express request object containing `cameraId`, `startDate`, `endDate`.
+ * @param {import('express').Response} res - Express response object for redirection.
+ */
 exports.bookCamera = async (req, res) => {
     const { cameraId, startDate, endDate } = req.body;
     const normalizedCameraId = Number(cameraId);
@@ -431,6 +453,12 @@ exports.showPaymentPage = (req, res) => {
         .catch(() => res.status(500).send('Failed to load payment page'));
 };
 
+/**
+ * Confirms a payment by uploading a payment slip and updating payment status.
+ * Uses a serializable database transaction to ensure atomicity.
+ * @param {import('express').Request} req - Express request object with the uploaded file.
+ * @param {import('express').Response} res - Express response object.
+ */
 exports.confirmPayment = async (req, res) => {
     const { bookingId } = req.params;
     const rentalId = Number(bookingId);
