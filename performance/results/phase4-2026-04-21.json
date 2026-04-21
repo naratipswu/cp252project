@@ -1,0 +1,72 @@
+[
+  {
+    "endpoint": "Homepage",
+    "path": "/",
+    "requests": 37895,
+    "throughput": 642117032,
+    "latency": {
+      "min": 1,
+      "max": 95,
+      "mean": 7.41,
+      "p99": 25
+    },
+    "errors": 0,
+    "timeouts": 0
+  },
+  {
+    "endpoint": "Camera List",
+    "path": "/cameras",
+    "requests": 206376,
+    "throughput": 123334862,
+    "latency": {
+      "min": 1,
+      "max": 17,
+      "mean": 0.89,
+      "p99": 5
+    },
+    "errors": 0,
+    "timeouts": 0
+  },
+  {
+    "endpoint": "Search Cameras",
+    "path": "/cameras?search=Canon",
+    "requests": 339649,
+    "throughput": 202982181,
+    "latency": {
+      "min": 1,
+      "max": 27,
+      "mean": 0.27,
+      "p99": 3
+    },
+    "errors": 0,
+    "timeouts": 0
+  },
+  {
+    "endpoint": "Register Page",
+    "path": "/register",
+    "requests": 331458,
+    "throughput": 198419348,
+    "latency": {
+      "min": 1,
+      "max": 10,
+      "mean": 0.29,
+      "p99": 3
+    },
+    "errors": 0,
+    "timeouts": 0
+  },
+  {
+    "endpoint": "Admin Dashboard",
+    "path": "/admin/dashboard",
+    "requests": 363664,
+    "throughput": 157693500,
+    "latency": {
+      "min": 1,
+      "max": 68,
+      "mean": 0.22,
+      "p99": 3
+    },
+    "errors": 0,
+    "timeouts": 0
+  }
+]
