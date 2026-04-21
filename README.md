@@ -1,15 +1,77 @@
-# Camera Rental System (ระบบเช่ากล้อง)
-> **Subject:** **CP252 Project**
+# 📷 Camera Rental System (ระบบเช่ากล้อง)
 
-## Member 
+> **Subject:** CP252 Software Engineering Project — Phase 4 Final
 
-* **1.นาย วัชรพงศ์ มาลัง 67102010174**
+[![CI/CD](https://github.com/naratipswu/cp252project/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/naratipswu/cp252project/actions)
 
-* 2.**นาย นราธิป สุวณิชย์ 67102010517**
+---
 
-* 3.**นาย ปกรณ์เกียรติ จิมแสง 67102010520**
+## 👥 ทีมผู้พัฒนา (Team Members)
+
+| # | ชื่อ | รหัสนักศึกษา | ความรับผิดชอบหลัก |
+|:---:|:---|:---:|:---|
+| 1 | นาย วัชรพงศ์ มาลัง | 67102010174 | CameraInventory & Search Logic |
+| 2 | นาย นราธิป สุวณิชย์ | 67102010517 | BookingQueue & CI/CD Pipeline |
+| 3 | นาย ปกรณ์เกียรติ จิมแสง | 67102010520 | UserRegistry & Authentication |
+
+---
+
+## 📋 ภาพรวมโครงการ (Project Overview)
+
+ระบบเช่าอุปกรณ์ถ่ายภาพแบบครบวงจร (Camera Rental Management System) พัฒนาด้วยสถาปัตยกรรม **MVC (Model-View-Controller)** บน Node.js + Express.js ตอบสนองปัญหาจริงของร้านเช่ากล้องที่ยังพึ่งพาการบันทึกด้วยมือ ซึ่งนำไปสู่ข้อผิดพลาดเรื่องการจองซ้อน (Double Booking) และสต็อกไม่ตรงกับความเป็นจริง
+
+### ✨ ฟีเจอร์หลัก
+
+**สำหรับผู้เช่า (Customer)**
+- 🔐 สมัครสมาชิกด้วย Email (บังคับ `@gmail.com`) พร้อม Bcrypt Password Hashing
+- 🔑 Login ได้ทั้งด้วย Username หรือ Email — หรือผ่าน Mock Google SSO
+- 🔎 ค้นหาและกรองอุปกรณ์ตามแบรนด์, รุ่น, หมวดหมู่ (DSLR, Mirrorless, Lens ฯลฯ)
+- 📅 เลือกวันเช่า-คืนผ่าน Calendar (Flatpickr) พร้อมคำนวณราคาอัตโนมัติ
+- 🛒 ดูตะกร้าสินค้าพร้อมสถานะการจอง (pending → active → completed)
+- 💳 แนบสลิปโอนเงินผ่านระบบอัปโหลด
+
+**สำหรับผู้ดูแลระบบ (Admin)**
+- 📦 CRUD อุปกรณ์ทั้งหมด พร้อมจัดการสถานะ (available / rented / maintenance)
+- ✅ อนุมัติหรือปฎิเสธการจองพร้อมหลักฐานสลิป
+- 📊 Dashboard สรุปรายการรับ-คืนประจำวัน
+- 🔧 Media Manager สำหรับจัดการภาพอุปกรณ์
+
+---
+
+## 🏗️ สถาปัตยกรรมระบบ (Architecture)
+
+```
+cp252project/
+├── CameraRentalSystem/         # แอปพลิเคชันหลัก
+│   ├── app.js                  # Entry point (Express server)
+│   ├── controller/             # Business logic handlers
+│   │   ├── authController.js   # Registration, Login, Session
+│   │   ├── cameraController.js # Browse, Search, Booking
+│   │   ├── cartController.js   # Cart & Order management
+│   │   ├── dashboardController.js # Admin dashboard
+│   │   └── returnController.js # Return & Late fee logic
+│   ├── view/                   # EJS templates (UI)
+│   └── public/                 # Static assets (CSS, JS, Images)
+├── models/                     # Sequelize ORM Models
+│   ├── customer.js             # Customer (User) schema
+│   ├── equipment.js            # Camera/Equipment schema
+│   ├── rental.js               # Rental header schema
+│   ├── rentalDetail.js         # Rental line items
+│   ├── payment.js              # Payment & Slip schema
+│   └── index.js                # Association definitions
+├── config/
+│   └── db.js                   # Sequelize DB connection
+├── cypress/e2e/                # UI End-to-End Tests
+├── tests/                      # Unit Tests (Jest)
+├── performance/                # Stress Testing (Autocannon)
+├── scripts/                    # Utility scripts (seed data)
+└── .github/workflows/          # GitHub Actions CI/CD
+```
+
+---
 
 ## 🗺️ Database ER Diagram
+
 ```mermaid
 erDiagram
     Category ||--o{ Equipment : "has"
@@ -23,7 +85,6 @@ erDiagram
         integer CategoryID PK
         varchar CategoryName
     }
-
     Equipment {
         integer EquipmentID PK
         varchar ModelName
@@ -31,28 +92,27 @@ erDiagram
         varchar SerialNumber
         decimal DailyRate
         varchar ImageURL
-        varchar Status
+        enum Status "available|rented|maintenance"
         integer CategoryID FK
     }
-
     Customer {
         integer CustomerID PK
         varchar FirstName
         varchar LastName
         varchar Username
-        varchar Phone
         varchar Email
+        varchar PasswordHash
+        enum Role "user|admin"
+        varchar Phone
         text Address
     }
-
     Rental {
         integer RentalID PK
         integer CustomerID FK
         timestamp RentalDate
         decimal TotalAmount
-        varchar RentalStatus
+        enum RentalStatus "pending|active|completed|cancelled"
     }
-
     RentalDetail {
         integer RentalDetailID PK
         integer RentalID FK
@@ -61,15 +121,15 @@ erDiagram
         date EndDate
         decimal SubTotal
     }
-
     Payment {
         integer PaymentID PK
         integer RentalID FK
         varchar PaymentMethod
         decimal Amount
         timestamp PaymentDate
+        varchar SlipPath
+        enum PaymentStatus "pending|approved|rejected"
     }
-
     Return {
         integer ReturnID PK
         integer RentalDetailID FK
@@ -80,112 +140,210 @@ erDiagram
     }
 ```
 
-## 1. ที่มาของปัญหาและความสำคัญ (Background & Significance)
-- ในปัจจุบันคนสมัยใหม่นิยมถ่ายรูปด้วยกล้องดิจิทัล กล้องฟิล์ม และโทรศัพท์มือถือรุ่นเก่า เพื่อให้ได้สไตล์ภาพที่แตกต่าง แต่กล้องหลายรุ่นมีราคาสูงหรือหายาก การเช่ากล้องจึงเป็นทางเลือกที่ได้รับความนิยม อย่างไรก็ตาม ร้านเช่ากล้องหลายแห่งยังมีปัญหาในการจัดการข้อมูลการเช่า–คืนและสถานะอุปกรณ์ จึงจำเป็นต้องมีระบบจัดการที่ช่วยให้การทำงานเป็นระเบียบ สะดวก และลดความผิดพลาดในการให้บริการ
-## 2. จุดประสงค์ของ Project (Objectives)
-* สร้างระบบเช่ากล้องครบวงจร ตั้งแต่การสมัครสมาชิก ค้นหาสินค้าตามหมวดหมู่ ไปจนถึงการจองออนไลน์ได้ในที่เดียว จัดการสต็อกได้แบบ Real-time ตรวจสอบสถานะอุปกรณ์ได้ทันทีว่าตัวไหนว่าง ถูกเช่า หรือกำลังส่งซ่อม เพื่อให้มีความสะดวก จองง่ายและรองรับมือถือ ออกแบบขั้นตอนการจองให้สั้น กระชับ เพียง 3-4 ขั้นตอน และใช้งานได้ลื่นไหลผ่านมือถือ ระบบคำนวณเงินแม่นยำ คิดค่าเช่าและค่าปรับถ้าหากคืนสายให้โดยอัตโนมัติ ช่วยลดความผิดพลาดในการทำบัญชี สร้างความปลอดภัยที่สูง ปกป้องข้อมูลผู้ใช้ด้วยการเข้ารหัส พร้อมระบบป้องกันการจองซ้อนที่ช่วยให้การจองราบรื่นไม่มีติดขัด สรุปภาพรวมธุรกิจได้เร็ว มีหน้า Dashboard สรุปรายได้และรายการงานรายวัน ช่วยให้วิเคราะห์ทิศทางธุรกิจได้ง่ายขึ้น
-## 3. ขอบเขตของ Project (Scope)
-### 3.1 กลุ่มผู้ใช้งานเป้าหมาย (Target Users) ระบบแบ่งผู้ใช้งานออกเป็น 2 กลุ่มหลัก
-* **ผู้เช่า** : ลูกค้าทั่วไปที่ต้องการเช่ากล้องและอุปกรณ์
-* **ผู้ดูแลระบบ** : เจ้าหน้าที่ผู้จัดการคลังสินค้าและดูแลรายการเช่า
+---
 
-### 3.2 ขอบเขตด้านฟังก์ชันการทำงาน (Functional)
-#### ส่วนของผู้เช่า (User Side)
-* **ระบบสมาชิก**: รองรับการสมัครสมาชิก เข้าสู่ระบบ และแก้ไขข้อมูลส่วนตัวได้
-* **การค้นหาสินค้า**: สามารถค้นหากล้องตามชื่อรุ่น/แบรนด์ และกรอง ตามหมวดหมู่สินค้าได้ รวมถึงดูรายละเอียดสเปกและสถานะว่าง/ไม่ว่างของสินค้า
-* **การจองเช่า** : ผู้ใช้เลือกช่วงเวลาเช่า โดยระบบจะคำนวณราคารวมอัตโนมัติ และตรวจสอบสต็อกสินค้าแบบ Real-time
-* **การชำระเงินและติดตามสถานะ**: รองรับการแนบหลักฐานการโอนเงิน และสามารถดูประวัติการเช่าพร้อมสถานะปัจจุบัน (เช่น รอตรวจสอบ, อนุมัติแล้ว, คืนแล้ว)
+## 🚀 Getting Started
 
+### Prerequisites
+- **Node.js** v18+
+- **PostgreSQL** v14+ และสร้าง Database ชื่อ `camera_rental`
 
-#### ส่วนของผู้ดูแลระบบ (Admin Side)
-* การจัดการคลังสินค้า : สามารถ เพิ่ม/ลบ/แก้ไข ข้อมูลอุปกรณ์ และกำหนดสถานะอุปกรณ์ได้ (เช่น ส่งซ่อม)
-* การจัดการคำสั่งเช่า : ตรวจสอบสลิปโอนเงินเพื่อกด "อนุมัติ" หรือ "ปฏิเสธ" การจอง รวมถึงอัปเดตสถานะการรับของ/คืนของ และระบบคำนวณค่าปรับกรณีคืนล่าช้า 
-* รายงานผล : แสดงรายการที่ต้องส่งมอบ/รับคืนในแต่ละวัน และรายงานสรุปรายได้ประจำเดือน
+### 1. ติดตั้ง Dependencies
 
-### 3.3 ขอบเขตด้านเทคนิคและประสิทธิภาพ (Non-Functional)
-* Platform: พัฒนาเป็น Web Application ที่รองรับการแสดงผลบนมือถือ 
-Performance : หน้าเว็บต้องโหลดเสร็จภายใน 3 วินาที และรองรับผู้ใช้งานพร้อมกันได้ไม่ต่ำกว่า 50 Users
-Data Integrity : มีระบบป้องกันการจองซ้อน (Double Booking Prevention)
-Security : มีการเข้ารหัสรหัสผ่าน (Encryption/Hashing) และรับส่งข้อมูลผ่าน HTTPS โดยจำกัดสิทธิ์ให้เฉพาะ Admin เท่านั้นที่เข้าถึงระบบหลังบ้านได้
-### 3.4 เครื่องมือและการพัฒนา (Tools & Methodology)
-* ใช้กระบวนการพัฒนาแบบ Agile (Scrum)
-* **Backend**: Node.js, Express.js
-* **Frontend**: EJS, TailwindCSS, Vanilla JS
-* **Database**: PostgreSQL (Primary) / SQLite (Fallback) via Sequelize ORM
-* **Design Tools**: Figma, Canva
-* **Development Tools**: VS Code, Git, GitHub Projects 
+```bash
+npm install
+```
 
-### 4. Requirement
-#### Functional Requirements
-##### สำหรับผู้เช่า 
+### 2. ตั้งค่าไฟล์ `.env`
 
-* Authentication
-ผู้ใช้งานสามารถสมัครสมาชิก โดยใช้อีเมลและเบอร์โทรศัพท์
-ผู้ใช้งานสามารถเข้าสู่ระบบ และออกจากระบบ ได้
-ผู้ใช้งานสามารถแก้ไขข้อมูลส่วนตัว เช่น ที่อยู่สำหรับการจัดส่ง หรือเบอร์โทรติดต่อ
-* Product Catalog
-สามารถค้นหากล้อง ตามชื่อรุ่น หรือแบรนด์ได้
-สามารถกรอง สินค้าตามหมวดหมู่ได้ เช่น DSLR, Mirrorless, Lens, Action Camera
-สามารถดูรายละเอียดสินค้า เช่น สเปก, ราคาเช่าต่อวัน, และสถานะว่าง/ไม่ว่าง
-* Booking & Reservation
-ผู้ใช้งานสามารถเลือกช่วงเวลาที่ต้องการเช่า 
-ระบบต้องคำนวณราคาค่าเช่ารวม  ตามจำนวนวันที่เลือกโดยอัตโนมัติ
-ระบบต้องตรวจสอบจำนวนสินค้าใน Stock แบบ Real-time ว่าว่างหรือไม่ในช่วงเวลานั้น
-* Order & Payment
-ผู้ใช้งานสามารถยืนยันการจองและแนบหลักฐานการโอนเงิน ได้
-สามารถดูประวัติการเช่า และสถานะของคำสั่งเช่าปัจจุบันได้ 
+คัดลอกจาก template แล้วแก้ค่า:
 
-##### B. สำหรับผู้ดูแลระบบ (Admin)
-* Stock Management
-Admin สามารถ เพิ่ม/ลบ/แก้ไข ข้อมูลกล้องและอุปกรณ์ (CRUD Operations) Admin สามารถกำหนดสถานะของอุปกรณ์ได้ 
-* Order Management
-Admin สามารถตรวจสอบสลิปการโอนเงินและกด อนุมัติ หรือ ปฏิเสธ การจองได้ Admin สามารถอัปเดตสถานะเมื่อมีการรับของและคืนของ  ระบบต้องมีการคำนวณค่าปรับ กรณีคืนล่าช้ากว่ากำหนด 
-* Dashboard & Report
-แสดงภาพรวมรายการที่ต้องส่งมอบและรับคืนในแต่ละวัน แสดงรายงานสรุปรายได้ ประจำเดือน
+```bash
+cp .env.example .env
+```
 
-#### Non-Functional Requirements
+```env
+# Database
+DB_DIALECT=postgres
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=camera_rental
+DB_USER=postgres
+DB_PASSWORD=YOUR_PASSWORD
 
-* Performance (ประสิทธิภาพ)
-หน้าเว็บไซต์ต้องใช้เวลาโหลด ไม่เกิน 3 วินาที สำหรับการใช้งานอินเทอร์เน็ตความเร็วปกติ 
-ระบบต้องรองรับการใช้งานพร้อมกัน ได้อย่างน้อย 50 Users โดยไม่ล่ม
-* Reliability & Data Integrity (ความน่าเชื่อถือ)
-ระบบต้องมีกลไกป้องกันการจองซ้อน โดยใช้ Transaction Management ในฐานข้อมูล
-ข้อมูลสถานะสินค้า ต้องเป็นปัจจุบันเสมอ
-* Security (ความปลอดภัย)
-รหัสผ่านของผู้ใช้งานต้องถูกเข้ารหัส ก่อนบันทึกลงฐานข้อมูล (เช่นใช้ bcrypt)
-การรับส่งข้อมูลต้องผ่านโปรโตคอล HTTPS เพื่อความปลอดภัย
-จำกัดสิทธิ์การเข้าถึง ให้เฉพาะ Admin เท่านั้นที่สามารถเข้าถึงหน้าจัดการหลังบ้านได้
-* User Interface ต้องรองรับการแสดงผลบนอุปกรณ์มือถือ เนื่องจากกลุ่มเป้าหมายมักใช้สมาร์ตโฟน
-ขั้นตอนการจอง ต้องกระชับ ไม่เกิน 3-4 ขั้นตอน เพื่อความสะดวกรวดเร็ว
-* Source Code ต้องมีการเขียน Comment อธิบายการทำงาน และตั้งชื่อตัวแปรที่สื่อความหมาย 
-ระบบต้องออกแบบในลักษณะ Modular เพื่อให้ง่ายต่อการเพิ่มฟีเจอร์ใหม่ในอนาคต
+# Session
+SESSION_SECRET=your-secret-key-here
 
+# Admin account (สร้างอัตโนมัติตอน startup)
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=admin1234
 
-### 5. Use Case Diagram
+# Optional: เปิดใช้ Mock Google Login (สำหรับ demo เท่านั้น)
+ENABLE_MOCK_GOOGLE_LOGIN=true
+```
+
+### 3. เริ่มต้นระบบ
+
+```bash
+npm start
+```
+
+ระบบจะสร้างตารางฐานข้อมูลอัตโนมัติ (Auto Schema Sync) และสร้าง Admin Account ให้ทันที
+
+เปิดเบราว์เซอร์: **http://localhost:3000**
+
+### 4. เติมข้อมูลตัวอย่าง (Optional)
+
+```bash
+npm run seed
+```
+
+---
+
+## 🧪 การทดสอบ (Testing)
+
+### Unit Tests (Jest) — 19 Tests
+
+```bash
+# รัน Unit Tests
+npm test
+
+# รัน พร้อมแสดง Coverage Report  
+npm run test:cov
+```
+
+**ครอบคลุมการทดสอบ:** Auth Logic, Camera Booking, Payment, Promotion, Database Integration
+
+### UI / End-to-End Tests (Cypress) — 5 Test Cases
+
+```bash
+# เปิด Cypress Test Runner (Interactive)
+npm run cypress
+
+# รันแบบ Headless (CI Mode)
+npm run cypress:headless
+
+# รัน Server + UI Tests พร้อมกันอัตโนมัติ
+npm run test:ui
+```
+
+| Test ID | สิ่งที่ทดสอบ | ผลลัพธ์ |
+|:---:|:---|:---:|
+| TC001 | Homepage Visibility | ✅ Pass |
+| TC002 | User Registration Flow | ✅ Pass |
+| TC003 | Search & Filter Logic | ✅ Pass |
+| TC004 | Price Display (฿ symbol) | ✅ Pass |
+| TC005 | Full Booking Lifecycle (E2E) | ✅ Pass |
+
+### Performance Profiling (Autocannon)
+
+```bash
+npm run profile
+```
+
+**ผลลัพธ์ล่าสุด (Phase 4):**
+- Mean Latency: **0.22 – 7.41 ms**
+- Throughput: **123,000+ req/sec**
+
+---
+
+## ⚙️ npm Scripts Reference
+
+| Script | คำอธิบาย |
+|:---|:---|
+| `npm start` | รัน Express server |
+| `npm test` | รัน Unit Tests ทั้งหมด |
+| `npm run test:cov` | รัน Tests + สร้าง Coverage Report |
+| `npm run lint` | ตรวจสอบ Code Style ด้วย ESLint |
+| `npm run lint:fix` | แก้ไข Code Style อัตโนมัติ |
+| `npm run cypress` | เปิด Cypress GUI |
+| `npm run cypress:headless` | รัน UI Tests ใน Terminal |
+| `npm run test:ui` | รัน Server + UI Tests อัตโนมัติ |
+| `npm run seed` | เติมข้อมูลตัวอย่างเข้าฐานข้อมูล |
+| `npm run profile` | รัน Performance Stress Test |
+| `npm run profile:report` | สร้าง Performance Report |
+
+---
+
+## 🔄 CI/CD Pipeline (GitHub Actions)
+
+ทุกครั้งที่ Push โค้ดไปยัง `main` หรือ `develop` ระบบจะรันโดยอัตโนมัติ 7 ขั้นตอน:
+
+```
+Push Code
+    │
+    ▼
+[1] 📝 ESLint Code Quality Check
+    │
+    ▼
+[2] ✅ Jest Unit Tests (19 Tests)
+    │
+    ▼
+[3] 🏗️ Build Verification
+    │
+    ├──────────────────────┐
+    ▼                      ▼
+[4] 🎬 Cypress E2E      [5] ⚡ Performance
+    UI Tests              Profiling
+    │                      │
+    └──────────┬───────────┘
+               ▼
+         [6] 🔐 Security Scan
+         (npm audit + OWASP)
+               │
+               ▼
+         [7] 🚀 Deploy Ready
+```
+
+**ไฟล์ Workflow:**
+- `.github/workflows/ci-cd.yml` — Pipeline หลัก (7 jobs)
+- `.github/workflows/performance-matrix.yml` — Parallel Performance Tests
+- `.github/workflows/test-report.yml` — Test Report Generator
+
+---
+
+## 🧩 Class Structure & Responsibilities
+
+### 1. `CameraInventory` — จัดการคลังสินค้า
+> 👤 **นาย วัชรพงศ์ มาลัง**
+- `findCamerasByBrand(brandName)` — ค้นหากล้องตามยี่ห้อ
+- `calculateAverageDailyPrice()` — คำนวณค่าเช่าเฉลี่ยเพื่อวิเคราะห์ตลาด
+
+### 2. `BookingQueue` — จัดการคิวการจอง
+> 👤 **นาย นราธิป สุวณิชย์**
+- `findBookingByCustomerName(name)` — ค้นหาการจองจากชื่อลูกค้า
+- `getHighestValueBooking()` — หาบิลที่มียอดชำระสูงสุด (VIP Tracking)
+
+### 3. `UserRegistry` — ทะเบียนสมาชิก
+> 👤 **นาย ปกรณ์เกียรติ จิมแสง**
+- `countUsersByMembership(type)` — นับสมาชิกตามประเภท
+- `findUserWithLeastRentals()` — หาสมาชิกที่เช่าน้อยสุดสำหรับทำโปรโมชั่น
+
+---
+
+## 📌 Use Case Diagram
 
 ```mermaid
 graph TD
-    %% Actors
     User[["ผู้เช่า (Customer)"]]
     Admin[["ผู้ดูแลระบบ (Admin)"]]
 
-    %% Use Cases
     subgraph "Camera Rental System"
-        UC1("สมัครสมาชิก / เข้าสู่ระบบ<br/>(Register & Login)")
-        UC2("จัดการข้อมูลส่วนตัว<br/>(Edit Profile)")
-        UC3("ค้นหาและกรองสินค้า<br/>(Search & Filter)")
-        UC4("ดูรายละเอียดสินค้า<br/>(View Details)")
-        UC5("จองเช่ากล้อง (Booking)<br/>(เลือกวัน & คำนวณราคา)")
-        UC6("แนบสลิปโอนเงิน<br/>(Upload Payment Slip)")
-        UC7("ดูประวัติการเช่า<br/>(View Order History)")
-        UC8("จัดการสต็อกสินค้า<br/>(Manage Stock: CRUD)")
-        UC9("ตรวจสอบและอนุมัติการจอง<br/>(Approve/Reject Orders)")
-        UC10("อัปเดตสถานะ รับ/คืน ของ<br/>(Pick-up & Return)")
-        UC11("ดูรายงานและ Dashboard<br/>(View Reports)")
+        UC1("สมัครสมาชิก / เข้าสู่ระบบ")
+        UC2("จัดการข้อมูลส่วนตัว")
+        UC3("ค้นหาและกรองสินค้า")
+        UC4("ดูรายละเอียดสินค้า")
+        UC5("จองเช่ากล้อง (เลือกวัน & คำนวณราคา)")
+        UC6("แนบสลิปโอนเงิน")
+        UC7("ดูประวัติการเช่า")
+        UC8("จัดการสต็อกสินค้า (CRUD)")
+        UC9("ตรวจสอบและอนุมัติการจอง")
+        UC10("อัปเดตสถานะ รับ/คืน ของ")
+        UC11("ดูรายงานและ Dashboard")
         UC_Fine("คำนวณค่าปรับ (Fine Calculation)")
     end
 
-    %% ความสัมพันธ์ของผู้เช่า
     User --> UC1
     User --> UC2
     User --> UC3
@@ -194,101 +352,46 @@ graph TD
     User --> UC6
     User --> UC7
 
-    %% ความสัมพันธ์ของ Admin
     Admin --> UC1
     Admin --> UC8
     Admin --> UC9
     Admin --> UC10
     Admin --> UC11
 
-    %% ความสัมพันธ์เพิ่มเติม (Internal Logic)
     UC10 -.-> UC_Fine
     UC5 -.-> UC1
     UC7 -.-> UC1
 ```
-    
-#### Core Use Cases
-##### ผู้เช่า (Customer/User)
-* สมัครสมาชิกและยืนยันตัวตน 
-* ค้นหาและดูรายละเอียดสินค้า 
-* ทำการจองเช่า 
-* แนบสลิปโอนเงิน 
-* ดูประวัติการเช่า 
 
-##### ผู้ดูแลระบบ (Admin)
-* จัดการสต็อกสินค้า 
-* อนุมัติ/ปฏิเสธ คำสั่งเช่า
-* ดำเนินการรับ/คืนของ และคำนวณค่าปรับ 
-* ดูรายงานสรุปรายได้
+---
 
-### 6. กระบวนการทำงาน (Process, Methods, and Tools)
-**เราใช้กระบวนการพัฒนาแบบ Agile (Scrum Framework) แบ่งการทำงานเป็น Sprints**
-* Process: Weekly Stand-up meeting, Sprint Planning, Retrospective
-* Design Tools: Figma (สำหรับ UI/UX) , Canva
-* Development Tools: VS Code, Git
-* Project Management: GitHub Projects
-* Communication: Discord / line
+## 🔧 Tech Stack
 
-### 🧩 Class Structure & Responsibilities
+| Layer | Technology |
+|:---|:---|
+| **Backend** | Node.js, Express.js v5 |
+| **Frontend** | EJS (Embedded JS Templates), Vanilla CSS/JS |
+| **ORM** | Sequelize v6 |
+| **Database** | PostgreSQL 16 (Primary), SQLite (Fallback) |
+| **Authentication** | bcryptjs, express-session, CSRF Protection |
+| **File Upload** | Multer |
+| **Unit Testing** | Jest |
+| **UI Testing** | Cypress |
+| **Performance** | Autocannon |
+| **Linting** | ESLint + eslint-plugin-jsdoc |
+| **CI/CD** | GitHub Actions |
+| **Design** | Figma, Canva |
 
-#### 1. Class: `CameraInventory` (จัดการคลังสินค้า)
-> **👤 ผู้รับผิดชอบ:** นาย วัชรพงศ์ มาลัง
-* `findCamerasByBrand(brandName)`
-  * **Description:** ค้นหากล้องตามยี่ห้อ (Search Logic)
-* `calculateAverageDailyPrice()`
-  * **Description:** คำนวณค่าเช่าเฉลี่ยเพื่อวิเคราะห์ราคาตลาด
+---
 
-#### 2. Class: `BookingQueue` (จัดการคิวจอง)
-> **👤 ผู้รับผิดชอบ:** นาย นราธิป สุวณิชย์
-* `findBookingByCustomerName(name)`
-  * **Description:** ค้นหาการจองเพื่อเช็คสถานะ (Search Logic)
-* `getHighestValueBooking()`
-  * **Description:** หาบิลที่มียอดชำระสูงสุดเพื่อดูแลลูกค้า VIP
+## 📎 Links
 
-#### 3. Class: `UserRegistry` (ทะเบียนสมาชิก)
-> **👤 ผู้รับผิดชอบ:** นาย ปกรณ์เกียรติ จิมแสง
-* `countUsersByMembership(type)`
-  * **Description:** นับจำนวนสมาชิกตามประเภท (Count Logic)
-* `findUserWithLeastRentals()`
-  * **Description:** หาสมาชิกที่เช่าน้อยสุดเพื่อทำโปรโมชั่นกระตุ้นยอด
+- 🎨 **Figma Design:** https://www.figma.com/proto/YVqTr3EiIpPg1v7y9oaU4G/CP252-Project?node-id=0-1&t=kSAoM3fooFb1x5MB-1
+- 🎥 **Interview Video:** https://youtu.be/NaG_dEiouVI
+- 🎥 **Retrospective Playlist:** https://youtube.com/playlist?list=PL5leYMm09zHlTQg28mYUbLgPnmWBIGE0n&si=Q-dYDBKXvZ3g3Dzm
 
+---
 
-### 7. สรุปขั้นตอนการทำ Requirement (Requirement Gathering)
-🎥 Interview Video: https://youtu.be/NaG_dEiouVI
+## 📄 License
 
-
-### 8. สรุปการประชุม Retrospective (playlist ทุก phase)
-🎥 Video: https://youtube.com/playlist?list=PL5leYMm09zHlTQg28mYUbLgPnmWBIGE0n&si=Q-dYDBKXvZ3g3Dzm
-
-## Figma
-https://www.figma.com/proto/YVqTr3EiIpPg1v7y9oaU4G/CP252-Project?node-id=0-1&t=kSAoM3fooFb1x5MB-1
-
-
-## 🚀 Getting Started
-
-### 1. Prerequisites
-- **Node.js**: ติดตั้ง Node.js เวอร์ชันล่าสุด
-- **PostgreSQL**: ติดตั้งและสร้าง Database ชื่อ `camera_rental`
-
-### 2. Configuration
-สร้างไฟล์ `.env` ที่ Root เพื่อเชื่อมต่อฐานข้อมูล:
-```env
-DB_DIALECT=postgres
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=camera_rental
-DB_USER=postgres
-DB_PASSWORD=YOUR_PASSWORD
-```
-
-### 3. Installation
-```powershell
-npm install
-```
-
-### 4. Start Application
-```powershell
-node app.js
-```
-เปิดบราวเซอร์ไปที่: **http://localhost:3000**
-
+Academic project for **CP252 — Software Engineering**, 2024.
