@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - CameraRentalSystem/controller/cartController.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="https://github.com/the-simian/es6-plato">ES6 Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+      <li class="active">
+        <a href="display.html">Summary Display</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>CameraRentalSystem/controller/cartController.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">63.11</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">92</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">29.06</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.32</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">const { Op } = require(&#039;sequelize&#039;);
+const { Customer, Rental, RentalDetail, Equipment, Payment } = require(&#039;../../models&#039;);
+
+async function getCustomerForSession(req) {
+  const username = req.session.user &amp;&amp; req.session.user.username;
+  if (!username) return null;
+  return Customer.findOne({ where: { Username: username } });
+}
+
+function toCartItem(detail, paymentByRentalId) {
+  const rental = detail.Rental;
+  const equipment = detail.Equipment;
+  const payment = paymentByRentalId.get(detail.RentalID) || null;
+  const paymentStatus = payment ? (payment.PaymentStatus || &#039;approved&#039;) : &#039;unpaid&#039;;
+  return {
+    rentalId: detail.RentalID,
+    rentalStatus: rental.RentalStatus,
+    paymentStatus: paymentStatus === &#039;approved&#039; ? &#039;paid&#039; : paymentStatus,
+    slipPath: payment ? payment.SlipPath || null : null,
+    startDate: detail.StartDate,
+    endDate: detail.EndDate,
+    totalAmount: Number(rental.TotalAmount),
+    camera: {
+      id: equipment.EquipmentID,
+      brand: equipment.Brand,
+      model: equipment.ModelName,
+      image: equipment.ImageURL || null
+    }
+  };
+}
+
+exports.showCart = async (req, res) =&gt; {
+  const customer = await getCustomerForSession(req);
+  if (!customer) return res.status(401).send(&#039;Unauthorized&#039;);
+
+  const details = await RentalDetail.findAll({
+    include: [
+      { model: Rental, required: true, where: { CustomerID: customer.CustomerID } },
+      { model: Equipment, required: true }
+    ],
+    order: [[&#039;RentalDetailID&#039;, &#039;DESC&#039;]]
+  });
+
+  const rentalIds = details.map((d) =&gt; d.RentalID);
+  const payments = rentalIds.length &gt; 0
+    ? await Payment.findAll({ where: { RentalID: { [Op.in]: rentalIds } } })
+    : [];
+  const paymentByRentalId = new Map(payments.map((p) =&gt; [p.RentalID, p]));
+
+  const items = details.map((d) =&gt; toCartItem(d, paymentByRentalId));
+  const openItems = items.filter((i) =&gt; i.rentalStatus === &#039;pending&#039; || i.rentalStatus === &#039;active&#039;);
+  const historyItems = items.filter((i) =&gt; i.rentalStatus !== &#039;pending&#039; &amp;&amp; i.rentalStatus !== &#039;active&#039;);
+
+  return res.render(&#039;cart&#039;, {
+    user: req.session.user,
+    items: openItems,
+    historyItems
+  });
+};
+
+exports.cancelCartItem = async (req, res) =&gt; {
+  const rentalId = Number(req.params.rentalId);
+  if (!Number.isFinite(rentalId) || rentalId &lt;= 0) return res.status(400).send(&#039;Invalid rental id&#039;);
+
+  const customer = await getCustomerForSession(req);
+  if (!customer) return res.status(401).send(&#039;Unauthorized&#039;);
+
+  const rental = await Rental.findByPk(rentalId);
+  if (!rental) return res.status(404).send(&#039;Booking not found&#039;);
+  if (Number(rental.CustomerID) !== Number(customer.CustomerID) &amp;&amp; req.session.user.role !== &#039;admin&#039;) {
+    return res.status(403).send(&#039;Forbidden&#039;);
+  }
+
+  const payment = await Payment.findOne({ where: { RentalID: rental.RentalID } });
+  if (payment) return res.status(409).send(&#039;Cannot cancel booking after payment submission&#039;);
+
+  rental.RentalStatus = &#039;cancelled&#039;;
+  await rental.save();
+
+  const details = await RentalDetail.findAll({ where: { RentalID: rental.RentalID } });
+  for (const d of details) {
+    const eq = await Equipment.findByPk(d.EquipmentID);
+    if (eq &amp;&amp; eq.Status === &#039;rented&#039;) {
+      eq.Status = &#039;available&#039;;
+      await eq.save();
+    }
+  }
+
+  return res.redirect(&#039;/cart&#039;);
+};
+
+</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

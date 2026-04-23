@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - CameraRentalSystem/service/schemaSync.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="https://github.com/the-simian/es6-plato">ES6 Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+      <li class="active">
+        <a href="display.html">Summary Display</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>CameraRentalSystem/service/schemaSync.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">60.11</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">238</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">22.50</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.08</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">const sequelize = require(&#039;../../config/db&#039;);
+const { DataTypes } = require(&#039;sequelize&#039;);
+const {
+  Category,
+  Equipment,
+  Customer,
+  Rental,
+  RentalDetail,
+  Payment,
+  Return,
+  SyncLog
+} = require(&#039;../../models&#039;);
+
+function normalizeTableName(table) {
+  if (typeof table === &#039;string&#039;) return table;
+  if (table &amp;&amp; typeof table.tableName === &#039;string&#039;) return table.tableName;
+  return String(table || &#039;&#039;);
+}
+
+async function getExistingTablesSet() {
+  const queryInterface = sequelize.getQueryInterface();
+  const tables = await queryInterface.showAllTables();
+  return new Set(tables.map(normalizeTableName));
+}
+
+// eslint-disable-next-line complexity
+async function migrateLegacyPostgresTables() {
+  const tables = await getExistingTablesSet();
+  const hasUsers = tables.has(&#039;Users&#039;);
+  const hasCameras = tables.has(&#039;Cameras&#039;);
+  const hasBookings = tables.has(&#039;Bookings&#039;);
+  const hasPayments = tables.has(&#039;Payments&#039;);
+
+  // Nothing to migrate.
+  if (!hasUsers &amp;&amp; !hasCameras &amp;&amp; !hasBookings &amp;&amp; !hasPayments) return;
+
+  await sequelize.query(`
+    INSERT INTO &quot;Category&quot; (&quot;CategoryName&quot;)
+    VALUES (&#039;General&#039;)
+    ON CONFLICT DO NOTHING
+  `);
+
+  if (hasUsers) {
+    await sequelize.query(`
+      INSERT INTO &quot;Customer&quot; (&quot;FirstName&quot;, &quot;LastName&quot;, &quot;Username&quot;, &quot;Phone&quot;, &quot;Email&quot;, &quot;Address&quot;)
+      SELECT
+        COALESCE(NULLIF(TRIM(u.&quot;firstName&quot;), &#039;&#039;), COALESCE(NULLIF(TRIM(u.&quot;username&quot;), &#039;&#039;), &#039;User&#039;)),
+        COALESCE(NULLIF(TRIM(u.&quot;lastName&quot;), &#039;&#039;), &#039;User&#039;),
+        u.&quot;username&quot;,
+        COALESCE(NULLIF(TRIM(u.&quot;phone&quot;), &#039;&#039;), &#039;0000000000&#039;),
+        LOWER(COALESCE(NULLIF(TRIM(u.&quot;email&quot;), &#039;&#039;), CONCAT(COALESCE(NULLIF(TRIM(u.&quot;username&quot;), &#039;&#039;), &#039;user&#039;), &#039;@legacy.local&#039;))),
+        NULLIF(TRIM(u.&quot;address&quot;), &#039;&#039;)
+      FROM &quot;Users&quot; u
+      ON CONFLICT (&quot;Email&quot;)
+      DO UPDATE SET
+        &quot;FirstName&quot; = EXCLUDED.&quot;FirstName&quot;,
+        &quot;LastName&quot; = EXCLUDED.&quot;LastName&quot;,
+        &quot;Username&quot; = EXCLUDED.&quot;Username&quot;,
+        &quot;Phone&quot; = EXCLUDED.&quot;Phone&quot;,
+        &quot;Address&quot; = EXCLUDED.&quot;Address&quot;
+    `);
+  }
+
+  if (hasCameras) {
+    await sequelize.query(`
+      INSERT INTO &quot;Equipment&quot; (&quot;ModelName&quot;, &quot;Brand&quot;, &quot;SerialNumber&quot;, &quot;DailyRate&quot;, &quot;ImageURL&quot;, &quot;Status&quot;, &quot;CategoryID&quot;)
+      SELECT
+        COALESCE(NULLIF(TRIM(c.&quot;model&quot;), &#039;&#039;), &#039;Unknown&#039;),
+        COALESCE(NULLIF(TRIM(c.&quot;brand&quot;), &#039;&#039;), &#039;Unknown&#039;),
+        CONCAT(&#039;legacy-camera-&#039;, c.&quot;id&quot;),
+        COALESCE(c.&quot;pricePerDay&quot;, 0),
+        c.&quot;image&quot;,
+        CASE WHEN COALESCE(c.&quot;stock&quot;, 0) &gt; 0 THEN &#039;available&#039; ELSE &#039;maintenance&#039; END,
+        1
+      FROM &quot;Cameras&quot; c
+      ON CONFLICT (&quot;SerialNumber&quot;)
+      DO UPDATE SET
+        &quot;ModelName&quot; = EXCLUDED.&quot;ModelName&quot;,
+        &quot;Brand&quot; = EXCLUDED.&quot;Brand&quot;,
+        &quot;DailyRate&quot; = EXCLUDED.&quot;DailyRate&quot;,
+        &quot;ImageURL&quot; = EXCLUDED.&quot;ImageURL&quot;,
+        &quot;Status&quot; = EXCLUDED.&quot;Status&quot;
+    `);
+  }
+
+  if (hasBookings) {
+    const bookingCustomerJoinSql = hasUsers
+      ? &#039;JOIN &quot;Users&quot; u ON u.&quot;username&quot; = b.&quot;user&quot; JOIN &quot;Customer&quot; c ON c.&quot;Email&quot; = LOWER(COALESCE(NULLIF(TRIM(u.&quot;email&quot;), \&#039;\&#039;), CONCAT(COALESCE(NULLIF(TRIM(u.&quot;username&quot;), \&#039;\&#039;), \&#039;user\&#039;), \&#039;@legacy.local\&#039;)))&#039;
+      : &#039;JOIN &quot;Customer&quot; c ON c.&quot;Email&quot; = LOWER(COALESCE(NULLIF(TRIM(b.&quot;user&quot;), \&#039;\&#039;), \&#039;unknown@legacy.local\&#039;))&#039;;
+
+    await sequelize.query(`
+      INSERT INTO &quot;Rental&quot; (&quot;RentalDate&quot;, &quot;TotalAmount&quot;, &quot;RentalStatus&quot;, &quot;CustomerID&quot;)
+      SELECT
+        COALESCE(b.&quot;createdAt&quot;, NOW()),
+        COALESCE(b.&quot;totalPrice&quot;, 0),
+        CASE
+          WHEN b.&quot;paymentStatus&quot; = &#039;cancelled&#039; OR b.&quot;bookingStatus&quot; = &#039;cancelled&#039; THEN &#039;cancelled&#039;
+          WHEN b.&quot;paymentStatus&quot; = &#039;paid&#039; OR b.&quot;bookingStatus&quot; = &#039;completed&#039; THEN &#039;completed&#039;
+          WHEN b.&quot;bookingStatus&quot; = &#039;confirmed&#039; THEN &#039;active&#039;
+          ELSE &#039;pending&#039;
+        END,
+        c.&quot;CustomerID&quot;
+      FROM &quot;Bookings&quot; b
+      ${bookingCustomerJoinSql}
+      WHERE NOT EXISTS (
+        SELECT 1 FROM &quot;Rental&quot; r
+        WHERE r.&quot;CustomerID&quot; = c.&quot;CustomerID&quot;
+          AND r.&quot;RentalDate&quot; = COALESCE(b.&quot;createdAt&quot;, NOW())
+          AND r.&quot;TotalAmount&quot; = COALESCE(b.&quot;totalPrice&quot;, 0)
+      )
+    `);
+
+    await sequelize.query(`
+      INSERT INTO &quot;RentalDetail&quot; (&quot;RentalID&quot;, &quot;EquipmentID&quot;, &quot;StartDate&quot;, &quot;EndDate&quot;, &quot;SubTotal&quot;)
+      SELECT
+        r.&quot;RentalID&quot;,
+        e.&quot;EquipmentID&quot;,
+        b.&quot;startDate&quot;,
+        b.&quot;endDate&quot;,
+        COALESCE(b.&quot;totalPrice&quot;, 0)
+      FROM &quot;Bookings&quot; b
+      ${bookingCustomerJoinSql}
+      JOIN &quot;Equipment&quot; e ON e.&quot;SerialNumber&quot; = CONCAT(&#039;legacy-camera-&#039;, b.&quot;cameraId&quot;)
+      JOIN &quot;Rental&quot; r ON r.&quot;CustomerID&quot; = c.&quot;CustomerID&quot;
+        AND r.&quot;TotalAmount&quot; = COALESCE(b.&quot;totalPrice&quot;, 0)
+        AND r.&quot;RentalDate&quot; = COALESCE(b.&quot;createdAt&quot;, NOW())
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM &quot;RentalDetail&quot; rd
+        WHERE rd.&quot;RentalID&quot; = r.&quot;RentalID&quot;
+          AND rd.&quot;EquipmentID&quot; = e.&quot;EquipmentID&quot;
+          AND rd.&quot;StartDate&quot; = b.&quot;startDate&quot;
+          AND rd.&quot;EndDate&quot; = b.&quot;endDate&quot;
+      )
+    `);
+  }
+
+  if (hasPayments &amp;&amp; hasBookings) {
+    const paymentCustomerJoinSql = hasUsers
+      ? &#039;JOIN &quot;Users&quot; u ON u.&quot;username&quot; = b.&quot;user&quot; JOIN &quot;Customer&quot; c ON c.&quot;Email&quot; = LOWER(COALESCE(NULLIF(TRIM(u.&quot;email&quot;), \&#039;\&#039;), CONCAT(COALESCE(NULLIF(TRIM(u.&quot;username&quot;), \&#039;\&#039;), \&#039;user\&#039;), \&#039;@legacy.local\&#039;)))&#039;
+      : &#039;JOIN &quot;Customer&quot; c ON c.&quot;Email&quot; = LOWER(COALESCE(NULLIF(TRIM(b.&quot;user&quot;), \&#039;\&#039;), \&#039;unknown@legacy.local\&#039;))&#039;;
+
+    await sequelize.query(`
+      INSERT INTO &quot;Payment&quot; (&quot;RentalID&quot;, &quot;PaymentMethod&quot;, &quot;Amount&quot;, &quot;PaymentDate&quot;)
+      SELECT
+        r.&quot;RentalID&quot;,
+        COALESCE(NULLIF(TRIM(p.&quot;PaymentMethod&quot;), &#039;&#039;), &#039;legacy-payment&#039;),
+        COALESCE(p.&quot;Amount&quot;, 0),
+        COALESCE(p.&quot;PaymentDate&quot;, NOW())
+      FROM &quot;Payments&quot; p
+      JOIN &quot;Bookings&quot; b ON b.&quot;id&quot; = p.&quot;BookingID&quot;
+      ${paymentCustomerJoinSql}
+      JOIN &quot;Rental&quot; r ON r.&quot;CustomerID&quot; = c.&quot;CustomerID&quot;
+        AND r.&quot;TotalAmount&quot; = COALESCE(b.&quot;totalPrice&quot;, 0)
+        AND r.&quot;RentalDate&quot; = COALESCE(b.&quot;createdAt&quot;, NOW())
+      WHERE NOT EXISTS (
+        SELECT 1 FROM &quot;Payment&quot; np
+        WHERE np.&quot;RentalID&quot; = r.&quot;RentalID&quot;
+          AND np.&quot;Amount&quot; = COALESCE(p.&quot;Amount&quot;, 0)
+          AND np.&quot;PaymentDate&quot; = COALESCE(p.&quot;PaymentDate&quot;, NOW())
+      )
+    `);
+  }
+}
+
+async function ensureCustomerAuthColumns() {
+  const qi = sequelize.getQueryInterface();
+  const columns = await qi.describeTable(&#039;Customer&#039;);
+  const ops = [];
+
+  if (!columns.PasswordHash) {
+    ops.push(qi.addColumn(&#039;Customer&#039;, &#039;PasswordHash&#039;, { type: DataTypes.STRING, allowNull: true }));
+  }
+  if (!columns.AvatarPath) {
+    ops.push(qi.addColumn(&#039;Customer&#039;, &#039;AvatarPath&#039;, { type: DataTypes.STRING, allowNull: true }));
+  }
+  if (!columns.Role) {
+    ops.push(qi.addColumn(&#039;Customer&#039;, &#039;Role&#039;, {
+      type: DataTypes.ENUM(&#039;user&#039;, &#039;admin&#039;),
+      allowNull: false,
+      defaultValue: &#039;user&#039;
+    }));
+  }
+
+  if (ops.length &gt; 0) {
+    await Promise.all(ops);
+    // Ensure existing rows have a role.
+    await sequelize.query(`UPDATE &quot;Customer&quot; SET &quot;Role&quot; = &#039;user&#039; WHERE &quot;Role&quot; IS NULL`);
+  }
+}
+
+async function ensurePaymentSlipColumn() {
+  const qi = sequelize.getQueryInterface();
+  const columns = await qi.describeTable(&#039;Payment&#039;);
+  if (!columns.SlipPath) {
+    await qi.addColumn(&#039;Payment&#039;, &#039;SlipPath&#039;, { type: DataTypes.STRING, allowNull: true });
+  }
+  if (!columns.PaymentStatus) {
+    await qi.addColumn(&#039;Payment&#039;, &#039;PaymentStatus&#039;, {
+      type: DataTypes.ENUM(&#039;pending&#039;, &#039;approved&#039;, &#039;rejected&#039;),
+      allowNull: false,
+      defaultValue: &#039;approved&#039;
+    });
+  }
+  await sequelize.query(`
+    UPDATE &quot;Payment&quot;
+    SET &quot;PaymentStatus&quot; = &#039;approved&#039;
+    WHERE &quot;PaymentStatus&quot; IS NULL
+  `);
+}
+
+async function ensureFullSchemaReady() {
+  await sequelize.authenticate();
+
+  // Sync in dependency order to avoid FK creation issues.
+  const allowAlter = String(process.env.DB_SYNC_ALTER || &#039;&#039;).toLowerCase() === &#039;true&#039;;
+  const syncOptions = allowAlter ? { alter: true } : {};
+  await Category.sync(syncOptions);
+  await Equipment.sync(syncOptions);
+  await Customer.sync(syncOptions);
+  await Rental.sync(syncOptions);
+  await RentalDetail.sync(syncOptions);
+  await Payment.sync(syncOptions);
+  await Return.sync(syncOptions);
+  await SyncLog.sync(syncOptions);
+
+  // Guardrail: ensure auth-related columns exist even on older schemas.
+  await ensureCustomerAuthColumns();
+  await ensurePaymentSlipColumn();
+
+  // If older class schema exists, migrate it into ERD tables.
+  await migrateLegacyPostgresTables();
+}
+
+module.exports = {
+  ensureFullSchemaReady
+};
+</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

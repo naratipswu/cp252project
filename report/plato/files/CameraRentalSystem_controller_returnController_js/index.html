@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - CameraRentalSystem/controller/returnController.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="https://github.com/the-simian/es6-plato">ES6 Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+      <li class="active">
+        <a href="display.html">Summary Display</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>CameraRentalSystem/controller/returnController.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">47.23</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">131</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">29.77</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.36</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">const { Op, Transaction } = require(&#039;sequelize&#039;);
+const sequelize = require(&#039;../../config/db&#039;);
+const { Customer, Equipment, Rental, RentalDetail, Return, SyncLog } = require(&#039;../../models&#039;);
+
+exports.showAdminReturns = async (req, res) =&gt; {
+    try {
+        const rentalDetails = await RentalDetail.findAll({
+            include: [
+                { 
+                    model: Rental, 
+                    required: true, 
+                    where: { RentalStatus: &#039;completed&#039; },
+                    include: [{ model: Customer, required: true }]
+                },
+                { model: Equipment, required: true },
+                { model: Return, required: false }
+            ],
+            order: [[&#039;RentalDetailID&#039;, &#039;DESC&#039;]]
+        });
+
+        const pendingReturns = [];
+        const completedReturns = [];
+
+        for (const detail of rentalDetails) {
+            const row = {
+                rentalDetailId: detail.RentalDetailID,
+                rentalId: detail.Rental.RentalID,
+                customer: detail.Rental.Customer.Username || detail.Rental.Customer.Email,
+                camera: `${detail.Equipment.Brand} ${detail.Equipment.ModelName}`,
+                startDate: detail.StartDate,
+                endDate: detail.EndDate,
+                totalAmount: Number(detail.Rental.TotalAmount)
+            };
+
+            if (detail.Return) {
+                row.actualReturnDate = detail.Return.ActualReturnDate;
+                row.lateFee = Number(detail.Return.LateFee);
+                row.damageFee = Number(detail.Return.DamageFee);
+                row.notes = detail.Return.Notes;
+                completedReturns.push(row);
+            } else {
+                pendingReturns.push(row);
+            }
+        }
+
+        res.render(&#039;admin_returns&#039;, {
+            user: req.session.user,
+            pendingReturns,
+            completedReturns
+        });
+    } catch (error) {
+        console.error(&#039;Error fetching returns:&#039;, error);
+        res.status(500).send(&#039;Failed to load returns dashboard&#039;);
+    }
+};
+
+exports.processReturn = async (req, res) =&gt; {
+    const detailId = Number(req.params.rentalDetailId);
+    if (!Number.isFinite(detailId) || detailId &lt;= 0) {
+        return res.status(400).send(&#039;Invalid rental detail id&#039;);
+    }
+
+    const { lateFee, damageFee, notes } = req.body;
+    const lFee = Number(lateFee) || 0;
+    const dFee = Number(damageFee) || 0;
+
+    try {
+        await sequelize.transaction(
+            { isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE },
+            async (transaction) =&gt; {
+                const detail = await RentalDetail.findByPk(detailId, {
+                    include: [{ model: Rental, required: true }],
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+
+                if (!detail) {
+                    const error = new Error(&#039;Rental detail not found&#039;);
+                    error.statusCode = 404;
+                    throw error;
+                }
+
+                if (detail.Rental.RentalStatus !== &#039;completed&#039;) {
+                    const error = new Error(&#039;Rental is not in a state to be returned&#039;);
+                    error.statusCode = 400;
+                    throw error;
+                }
+
+                const existingReturn = await Return.findOne({
+                    where: { RentalDetailID: detailId },
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+
+                if (existingReturn) {
+                    const error = new Error(&#039;This item has already been returned&#039;);
+                    error.statusCode = 409;
+                    throw error;
+                }
+
+                // Create the Return record
+                await Return.create({
+                    RentalDetailID: detailId,
+                    ActualReturnDate: new Date(),
+                    LateFee: lFee,
+                    DamageFee: dFee,
+                    Notes: notes || null
+                }, { transaction });
+
+                // Update the Equipment status back to &#039;available&#039;
+                const equipment = await Equipment.findByPk(detail.EquipmentID, { transaction });
+                if (equipment) {
+                    equipment.Status = &#039;available&#039;;
+                    await equipment.save({ transaction });
+                }
+
+                // We keep RentalStatus as &#039;completed&#039; (which means paid and fulfilled)
+                // The existence of the Return record signifies it&#039;s physically returned.
+            }
+        );
+        return res.redirect(&#039;/admin/returns&#039;);
+    } catch (error) {
+        if (error &amp;&amp; error.statusCode) {
+            return res.status(error.statusCode).send(error.message);
+        }
+        try { await SyncLog.create({ Source: &#039;processReturn&#039;, Status: &#039;failed&#039;, Message: error ? (error.message || String(error)) : &#039;Unknown error&#039; }); } catch(logErr) {}
+        console.error(&#039;Error processing return:&#039;, error);
+        return res.status(500).send(&#039;Failed to process return&#039;);
+    }
+};
+</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

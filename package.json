@@ -11,7 +11,8 @@
     "seed": "node scripts/seed-data.js",
     "profile": "node performance/profile.js",
     "profile:report": "node performance/generate-report.js",
-    "build": "echo 'Build verification complete'"
+    "build": "echo 'Build verification complete'",
+    "plato": "es6-plato -r -d report/plato -e .eslintrc.plato.json CameraRentalSystem models utils"
   },
   "jest": {
     "collectCoverageFrom": [
@@ -25,6 +26,7 @@
     "@eslint/js": "^10.0.1",
     "autocannon": "^8.0.0",
     "cypress": "^15.13.1",
+    "es6-plato": "^1.2.3",
     "eslint": "^10.1.0",
     "eslint-plugin-jsdoc": "^62.8.1",
     "globals": "^17.4.0",

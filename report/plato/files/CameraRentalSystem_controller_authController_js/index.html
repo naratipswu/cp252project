@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - CameraRentalSystem/controller/authController.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="https://github.com/the-simian/es6-plato">ES6 Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+      <li class="active">
+        <a href="display.html">Summary Display</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>CameraRentalSystem/controller/authController.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">62.81</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">427</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">67.23</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">5.77</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">const crypto = require(&#039;crypto&#039;);
+const bcrypt = require(&#039;bcryptjs&#039;);
+const { Op } = require(&#039;sequelize&#039;);
+const Customer = require(&#039;../../models/customer&#039;);
+const PASSWORD_HASH_ROUNDS = Number(process.env.PASSWORD_HASH_ROUNDS || 10);
+
+function isHash(value) {
+    return typeof value === &#039;string&#039; &amp;&amp; value.startsWith(&#039;$2&#039;);
+}
+
+function splitName(username) {
+    const safe = String(username || &#039;User&#039;).trim();
+    const chunks = safe.split(/\s+/).filter(Boolean);
+    if (chunks.length === 0) return { firstName: &#039;User&#039;, lastName: &#039;Unknown&#039; };
+    if (chunks.length === 1) return { firstName: chunks[0], lastName: &#039;User&#039; };
+    return { firstName: chunks[0], lastName: chunks.slice(1).join(&#039; &#039;) };
+}
+
+function isValidEmail(email) {
+    if (typeof email !== &#039;string&#039;) return false;
+    const normalized = email.trim().toLowerCase();
+    if (!normalized || normalized.length &gt; 254) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
+}
+
+async function renderAdminAccounts(res, { status = 200, error = null, success = null } = {}) {
+    const rows = await Customer.findAll({ order: [[&#039;CustomerID&#039;, &#039;ASC&#039;]] });
+    return res.status(status).render(&#039;admin_accounts&#039;, {
+        users: rows.map((r) =&gt; ({
+            username: r.Username,
+            email: r.Email,
+            role: r.Role,
+            avatar: r.AvatarPath || null,
+            firstName: r.FirstName,
+            lastName: r.LastName,
+            phone: r.Phone,
+            address: r.Address
+        })),
+        error,
+        success
+    });
+}
+
+exports.showMain = (req, res) =&gt; {
+    // If already logged in, redirect
+    if (req.session.user) {
+        if (req.session.user.role === &#039;admin&#039;) return res.redirect(&#039;/admin&#039;);
+        return res.redirect(&#039;/browse&#039;);
+    }
+    res.render(&#039;main&#039;, { error: null, user: null });
+};
+
+exports.showLanding = (req, res) =&gt; {
+    res.render(&#039;main&#039;, { error: null, user: req.session.user || null });
+};
+
+exports.showSignIn = (req, res) =&gt; {
+    res.render(&#039;signin&#039;, { error: null });
+};
+
+exports.showSignUp = (req, res) =&gt; {
+    res.render(&#039;signup&#039;, { error: null });
+};
+
+exports.showProcess = (req, res) =&gt; {
+    res.render(&#039;process&#039;, { error: null, user: req.session.user || null });
+};
+
+exports.showContact = (req, res) =&gt; {
+    res.render(&#039;contact&#039;, { error: null, user: req.session.user || null });
+};
+
+exports.showAdminAccounts = (req, res) =&gt; {
+    return renderAdminAccounts(res).catch(() =&gt; res.status(500).send(&#039;Failed to load accounts&#039;));
+};
+
+exports.showProfile = (req, res) =&gt; {
+    const currentUsername = req.session.user &amp;&amp; req.session.user.username;
+    return Customer.findOne({ where: { Username: currentUsername } })
+        .then((user) =&gt; {
+            if (!user) return res.status(404).send(&#039;User not found&#039;);
+            return res.render(&#039;profile&#039;, {
+                user: {
+                    username: user.Username,
+                    email: user.Email,
+                    role: user.Role,
+                    avatar: user.AvatarPath || null,
+                    firstName: user.FirstName,
+                    lastName: user.LastName,
+                    phone: user.Phone,
+                    address: user.Address
+                }
+            });
+        })
+        .catch(() =&gt; res.status(500).send(&#039;Failed to load profile&#039;));
+};
+
+exports.updateProfileAvatar = (req, res) =&gt; {
+    const currentUsername = req.session.user &amp;&amp; req.session.user.username;
+    if (!req.file) {
+        return res.status(400).send(&#039;Please upload an image&#039;);
+    }
+
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    return Customer.update(
+        { AvatarPath: avatarPath },
+        { where: { Username: currentUsername } }
+    )
+        .then(() =&gt; res.redirect(&#039;/profile&#039;))
+        .catch(() =&gt; res.status(500).send(&#039;Failed to update avatar&#039;));
+};
+
+/**
+ * Updates an authenticated customer&#039;s profile details.
+ * Validates the email and normalizes name inputs before updating the database.
+ * @param {import(&#039;express&#039;).Request} req - Express request object containing body elements.
+ * @param {import(&#039;express&#039;).Response} res - Express response object.
+ */
+exports.updateProfile = async (req, res) =&gt; {
+    const currentUsername = req.session.user &amp;&amp; req.session.user.username;
+    const { firstName, lastName, email, phone, address } = req.body;
+
+    const normalizedFirstName = typeof firstName === &#039;string&#039; ? firstName.trim() : &#039;&#039;;
+    const normalizedLastName = typeof lastName === &#039;string&#039; ? lastName.trim() : &#039;&#039;;
+    const normalizedEmail = typeof email === &#039;string&#039; ? email.trim().toLowerCase() : &#039;&#039;;
+    const normalizedPhone = typeof phone === &#039;string&#039; ? phone.trim() : &#039;&#039;;
+    const normalizedAddress = typeof address === &#039;string&#039; ? address.trim() : &#039;&#039;;
+
+    if (!normalizedFirstName || !normalizedLastName || !normalizedEmail || !normalizedPhone) {
+        return res.status(400).send(&#039;First Name, Last Name, Email and Phone are required&#039;);
+    }
+
+    if (!isValidEmail(normalizedEmail)) {
+        return res.status(400).send(&#039;Invalid email format&#039;);
+    }
+
+    try {
+        await Customer.update(
+            {
+                FirstName: normalizedFirstName,
+                LastName: normalizedLastName,
+                Email: normalizedEmail,
+                Phone: normalizedPhone,
+                Address: normalizedAddress || null
+            },
+            { where: { Username: currentUsername } }
+        );
+        return res.redirect(&#039;/profile&#039;);
+    } catch (error) {
+        console.error(&#039;Failed to update profile:&#039;, error);
+        return res.status(500).send(&#039;Failed to update profile&#039;);
+    }
+};
+
+exports.updateUserRole = (req, res) =&gt; {
+    const { username, role } = req.body;
+    const normalizedUsername = typeof username === &#039;string&#039; ? username.trim() : &#039;&#039;;
+    const normalizedRole = role === &#039;admin&#039; ? &#039;admin&#039; : &#039;user&#039;;
+
+    return Customer.count({ where: { Role: &#039;admin&#039; } })
+        .then((adminCount) =&gt; Customer.findOne({ where: { Username: normalizedUsername } })
+            .then((targetUser) =&gt; {
+                if (!targetUser) return { error: &#039;User not found&#039;, code: 404 };
+                if (targetUser.Role === &#039;admin&#039; &amp;&amp; normalizedRole === &#039;user&#039; &amp;&amp; adminCount &lt;= 1) {
+                    return { error: &#039;Cannot demote the last admin account&#039;, code: 400 };
+                }
+                return targetUser.update({ Role: normalizedRole }).then(() =&gt; ({ code: 200 }));
+            }))
+        .then((result) =&gt; {
+            if (result &amp;&amp; result.error) {
+                return renderAdminAccounts(res, { status: result.code, error: result.error, success: null });
+            }
+            return renderAdminAccounts(res, {
+                status: 200,
+                error: null,
+                success: `Updated role for ${normalizedUsername} to ${normalizedRole}`
+            });
+        })
+        .catch(() =&gt; res.status(500).send(&#039;Failed to update role&#039;));
+};
+
+// eslint-disable-next-line complexity
+exports.createAdminAccount = async (req, res) =&gt; {
+    const { username, email, password } = req.body;
+    const normalizedUsername = typeof username === &#039;string&#039; ? username.trim() : &#039;&#039;;
+    const normalizedEmail = typeof email === &#039;string&#039; ? email.trim().toLowerCase() : &#039;&#039;;
+    const normalizedPassword = typeof password === &#039;string&#039; ? password : &#039;&#039;;
+
+    if (!normalizedUsername || !normalizedEmail || !normalizedPassword) {
+        return renderAdminAccounts(res, { status: 400, error: &#039;Username, email and password are required&#039; });
+    }
+    if (!isValidEmail(normalizedEmail)) {
+        return renderAdminAccounts(res, { status: 400, error: &#039;Please provide a valid email address&#039; });
+    }
+    if (normalizedPassword.length &lt; 8) {
+        return renderAdminAccounts(res, { status: 400, error: &#039;Password must be at least 8 characters&#039; });
+    }
+    const duplicate = await Customer.findOne({
+        where: { Email: normalizedEmail }
+    });
+    const duplicateUsername = await Customer.findOne({
+        where: { Username: normalizedUsername }
+    });
+    if (duplicate || duplicateUsername) {
+        return renderAdminAccounts(res, { status: 400, error: &#039;Username or email already exists&#039; });
+    }
+
+    const name = splitName(normalizedUsername);
+    await Customer.create({
+        FirstName: name.firstName,
+        LastName: name.lastName,
+        Username: normalizedUsername,
+        Phone: &#039;0000000000&#039;,
+        Email: normalizedEmail,
+        Address: null,
+        PasswordHash: bcrypt.hashSync(normalizedPassword, PASSWORD_HASH_ROUNDS),
+        Role: &#039;admin&#039;,
+        AvatarPath: null
+    });
+
+    return renderAdminAccounts(res, { success: `Created admin account: ${normalizedUsername}` });
+};
+
+/**
+ * Authenticates a user and establishes a session.
+ * Compares passwords utilizing bcrypt. Migrates legacy plain-text passwords gracefully.
+ * @param {import(&#039;express&#039;).Request} req - Express request object.
+ * @param {import(&#039;express&#039;).Response} res - Express response object.
+ */
+exports.login = async (req, res) =&gt; {
+    const { username, password } = req.body;
+    const normalizedUsername = typeof username === &#039;string&#039; ? username.trim() : &#039;&#039;;
+    const normalizedPassword = typeof password === &#039;string&#039; ? password : &#039;&#039;;
+
+    if (normalizedUsername === &#039;admin&#039; &amp;&amp; normalizedPassword === &#039;admin1234&#039;) {
+        req.session.user = { username: &#039;admin&#039;, role: &#039;admin&#039; };
+        return res.redirect(&#039;/admin&#039;);
+    }
+
+    const matchedUser = await Customer.findOne({
+        where: {
+            [Op.or]: [
+                { Username: normalizedUsername },
+                { Email: normalizedUsername }
+            ]
+        }
+    });
+
+    if (!matchedUser || !matchedUser.PasswordHash) {
+        return res.render(&#039;signin&#039;, { error: &#039;Invalid username or password&#039; });
+    }
+
+    if (!matchedUser.Email || !matchedUser.Email.endsWith(&#039;@gmail.com&#039;)) {
+        return res.render(&#039;signin&#039;, { error: &#039;General users must use a @gmail.com account&#039; });
+    }
+
+    const passwordMatches = isHash(matchedUser.PasswordHash)
+        ? await bcrypt.compare(normalizedPassword, matchedUser.PasswordHash)
+        : matchedUser.PasswordHash === normalizedPassword;
+
+    if (passwordMatches) {
+        // Opportunistically migrate legacy plaintext passwords.
+        if (!isHash(matchedUser.PasswordHash)) {
+            matchedUser.PasswordHash = await bcrypt.hash(normalizedPassword, PASSWORD_HASH_ROUNDS);
+            await matchedUser.save();
+        }
+        req.session.user = { username: matchedUser.Username, role: matchedUser.Role };
+        if (matchedUser.Role === &#039;admin&#039;) return res.redirect(&#039;/admin&#039;);
+        return res.redirect(&#039;/browse&#039;);
+    }
+    res.render(&#039;signin&#039;, { error: &#039;Invalid username or password&#039; });
+};
+
+// Render Mock Google Login UI
+exports.showMockGoogleAuth = (req, res) =&gt; {
+    const isMockGoogleEnabled = process.env.ENABLE_MOCK_GOOGLE_LOGIN === &#039;true&#039;;
+    const nodeEnv = String(process.env.NODE_ENV || &#039;development&#039;).toLowerCase();
+    const isSafeEnv = nodeEnv === &#039;development&#039; || nodeEnv === &#039;dev&#039; || nodeEnv === &#039;test&#039;;
+
+    if (!isMockGoogleEnabled || !isSafeEnv) {
+        return res.status(403).send(&#039;Google login is disabled or not allowed in this environment&#039;);
+    }
+
+    res.render(&#039;google_mock&#039;);
+};
+
+// Mock Google Login Process
+exports.loginGoogle = async (req, res) =&gt; {
+    const isMockGoogleEnabled = process.env.ENABLE_MOCK_GOOGLE_LOGIN === &#039;true&#039;;
+    const nodeEnv = String(process.env.NODE_ENV || &#039;development&#039;).toLowerCase();
+    const isSafeEnv = nodeEnv === &#039;development&#039; || nodeEnv === &#039;dev&#039; || nodeEnv === &#039;test&#039;;
+    if (!isMockGoogleEnabled) {
+        return res.status(403).send(&#039;Google login is disabled&#039;);
+    }
+    if (!isSafeEnv) {
+        return res.status(403).send(&#039;Google mock login is only available in development/test&#039;);
+    }
+
+    const { email } = req.body;
+    const normalizedEmail = typeof email === &#039;string&#039; ? email.trim().toLowerCase() : &#039;&#039;;
+    if (!isValidEmail(normalizedEmail)) {
+        return res.render(&#039;signin&#039;, { error: &#039;Please provide a valid email&#039; });
+    }
+
+    let matchedUser = await Customer.findOne({ where: { Email: normalizedEmail } });
+    if (!matchedUser) {
+        const name = splitName(normalizedEmail);
+        matchedUser = await Customer.create({
+            FirstName: name.firstName,
+            LastName: name.lastName,
+            Username: normalizedEmail,
+            Phone: &#039;0000000000&#039;,
+            Email: normalizedEmail,
+            Address: null,
+            PasswordHash: null,
+            Role: &#039;user&#039;,
+            AvatarPath: null
+        });
+    }
+
+    req.session.user = { username: matchedUser.Username, role: matchedUser.Role };
+    return res.redirect(&#039;/browse&#039;);
+};
+
+// eslint-disable-next-line complexity
+/**
+ * Registers a new user customer account into the database.
+ * Computes the bcrypt hash for the password before saving.
+ * @param {import(&#039;express&#039;).Request} req - Express request object.
+ * @param {import(&#039;express&#039;).Response} res - Express response object.
+ */
+exports.register = async (req, res) =&gt; {
+    const { username, password, email, firstName, lastName, phone, address } = req.body;
+    const normalizedUsername = typeof username === &#039;string&#039; ? username.trim() : &#039;&#039;;
+    const normalizedPassword = typeof password === &#039;string&#039; ? password : &#039;&#039;;
+    const normalizedEmail = typeof email === &#039;string&#039; ? email.trim().toLowerCase() : &#039;&#039;;
+    const normalizedFirstName = typeof firstName === &#039;string&#039; ? firstName.trim() : &#039;&#039;;
+    const normalizedLastName = typeof lastName === &#039;string&#039; ? lastName.trim() : &#039;&#039;;
+    const normalizedPhone = typeof phone === &#039;string&#039; ? phone.trim() : &#039;&#039;;
+    const normalizedAddress = typeof address === &#039;string&#039; ? address.trim() : &#039;&#039;;
+
+    if (!normalizedUsername || !normalizedPassword || !normalizedEmail || !normalizedFirstName || !normalizedLastName || !normalizedPhone) {
+        return res.render(&#039;signup&#039;, { error: &#039;All fields are required&#039; });
+    }
+    if (!isValidEmail(normalizedEmail)) {
+        return res.render(&#039;signup&#039;, { error: &#039;Please provide a valid email address&#039; });
+    }
+    if (!normalizedEmail.endsWith(&#039;@gmail.com&#039;)) {
+        return res.render(&#039;signup&#039;, { error: &#039;Please provide a @gmail.com address&#039; });
+    }
+
+    if (normalizedPassword.length &lt; 8) {
+        return res.render(&#039;signup&#039;, { error: &#039;Password must be at least 8 characters&#039; });
+    }
+
+    const duplicateUser = await Customer.findOne({ where: { Username: normalizedUsername } });
+    const duplicateEmail = await Customer.findOne({ where: { Email: normalizedEmail } });
+    if (duplicateUser || duplicateEmail) {
+        return res.render(&#039;signup&#039;, { error: &#039;Username or email already exists&#039; });
+    }
+
+    await Customer.create({
+        FirstName: normalizedFirstName,
+        LastName: normalizedLastName,
+        Username: normalizedUsername,
+        Phone: normalizedPhone,
+        Email: normalizedEmail,
+        Address: normalizedAddress || null,
+        PasswordHash: bcrypt.hashSync(normalizedPassword, PASSWORD_HASH_ROUNDS),
+        Role: &#039;user&#039;,
+        AvatarPath: null
+    });
+
+    req.session.user = { username: normalizedUsername, role: &#039;user&#039; };
+    return res.redirect(&#039;/browse&#039;);
+};
+
+exports.logout = (req, res) =&gt; {
+    req.session.destroy((err) =&gt; {
+        if (err) return res.status(500).send(&#039;Could not log out&#039;);
+        res.redirect(&#039;/&#039;);
+    });
+};
+
+/**
+ * Middleware: Requires the user to have an active authenticated session.
+ * @param {import(&#039;express&#039;).Request} req - Express request.
+ * @param {import(&#039;express&#039;).Response} res - Express response.
+ * @param {import(&#039;express&#039;).NextFunction} next - Express next middleware.
+ */
+exports.requireAuth = (req, res, next) =&gt; {
+    if (req.session.user) {
+        next();
+    } else {
+        res.redirect(&#039;/signin&#039;);
+    }
+};
+
+exports.requireAdmin = (req, res, next) =&gt; {
+    if (req.session.user &amp;&amp; req.session.user.role === &#039;admin&#039;) {
+        next();
+    } else {
+        res.redirect(&#039;/welcome&#039;);
+    }
+};
+
+/**
+ * Middleware: Attaches a CSRF token to the session and response locals to prevent cross-site request forgery.
+ * @param {import(&#039;express&#039;).Request} req - Express request.
+ * @param {import(&#039;express&#039;).Response} res - Express response.
+ * @param {import(&#039;express&#039;).NextFunction} next - Express next middleware.
+ */
+exports.attachCsrfToken = (req, res, next) =&gt; {
+    if (!req.session.csrfToken) {
+        req.session.csrfToken = crypto.randomBytes(24).toString(&#039;hex&#039;);
+    }
+    res.locals.csrfToken = req.session.csrfToken;
+    next();
+};
+
+exports.requireCsrf = (req, res, next) =&gt; {
+    const csrfFromBody = req.body &amp;&amp; req.body._csrf;
+    if (!csrfFromBody || !req.session.csrfToken || csrfFromBody !== req.session.csrfToken) {
+        return res.status(403).send(&#039;Invalid CSRF token&#039;);
+    }
+    next();
+};</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

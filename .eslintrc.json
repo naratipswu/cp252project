@@ -1,9 +1,19 @@
 {
-  "env": { "node": true, "jest": true, "es2021": true },
+  //"env": { "node": true, "jest": true, "es2021": true },
+  "env": {
+    "node": true,
+    "jest": true,
+    "es6": true
+  },
   "extends": "eslint:recommended",
-  "plugins": ["jsdoc"],
+  "plugins": [
+    "jsdoc"
+  ],
   "rules": {
-    "complexity": ["error", 5], 
+    "complexity": [
+      "error",
+      5
+    ],
     "jsdoc/require-jsdoc": "warn",
     "no-unused-vars": "warn"
   }

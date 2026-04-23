@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - CameraRentalSystem/service/pgRealtime.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="https://github.com/the-simian/es6-plato">ES6 Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+      <li class="active">
+        <a href="display.html">Summary Display</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>CameraRentalSystem/service/pgRealtime.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">61.52</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">110</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">30.41</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.89</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">/**
+ * PostgreSQL realtime/report mode (disabled by default).
+ *
+ * Enable when ready:
+ *   ENABLE_PG_REALTIME=true
+ *   PGHOST=localhost
+ *   PGPORT=5432
+ *   PGDATABASE=your_db
+ *   PGUSER=your_user
+ *   PGPASSWORD=your_password
+ */
+function registerPgRealtimeRoutes(app, requireAdmin) {
+  const isEnabled = process.env.ENABLE_PG_REALTIME === &#039;true&#039;;
+  if (!isEnabled) return;
+  if (typeof requireAdmin !== &#039;function&#039;) {
+    throw new Error(&#039;registerPgRealtimeRoutes requires an admin middleware&#039;);
+  }
+
+  // Lazy-load pg only when this feature is enabled.
+  // This keeps local app development simple when pg is not installed yet.
+  const { Pool } = require(&#039;pg&#039;);
+  const pool = new Pool({
+    host: process.env.PGHOST || &#039;localhost&#039;,
+    port: Number(process.env.PGPORT || 5432),
+    database: process.env.PGDATABASE || &#039;camera_rental&#039;,
+    user: process.env.PGUSER || &#039;postgres&#039;,
+    password: process.env.PGPASSWORD || &#039;&#039;
+  });
+
+  const requestCounter = new Map();
+  function sqlRateLimit(req, res, next) {
+    const ip = req.ip || req.socket.remoteAddress || &#039;unknown&#039;;
+    const currentMinute = Math.floor(Date.now() / 60000);
+    const key = `${ip}:${currentMinute}`;
+    const current = requestCounter.get(key) || 0;
+    // Prevent unbounded growth: keep only a small window of minutes.
+    if (requestCounter.size &gt; 500) {
+      const cutoffMinute = currentMinute - 2;
+      for (const existingKey of requestCounter.keys()) {
+        const minutePart = Number(existingKey.split(&#039;:&#039;).pop());
+        if (Number.isFinite(minutePart) &amp;&amp; minutePart &lt;= cutoffMinute) {
+          requestCounter.delete(existingKey);
+        }
+      }
+    }
+    if (current &gt;= 60) {
+      return res.status(429).json({ error: &#039;Too many SQL API requests&#039; });
+    }
+    requestCounter.set(key, current + 1);
+    return next();
+  }
+
+  // Health check for pgAdmin/PostgreSQL connectivity.
+  app.get(&#039;/api/sql/health&#039;, requireAdmin, sqlRateLimit, async (req, res) =&gt; {
+    try {
+      const result = await pool.query(&#039;SELECT NOW() AS server_time&#039;);
+      res.json({ ok: true, serverTime: result.rows[0].server_time });
+    } catch (error) {
+      res.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  // Daily revenue report (SQL-first endpoint for classroom demo).
+  app.get(&#039;/api/sql/revenue-daily&#039;, requireAdmin, sqlRateLimit, async (req, res) =&gt; {
+    try {
+      const query = `
+        SELECT DATE(&quot;PaymentDate&quot;) AS pay_day, SUM(&quot;Amount&quot;)::numeric(10,2) AS total_revenue
+        FROM &quot;Payment&quot;
+        GROUP BY DATE(&quot;PaymentDate&quot;)
+        ORDER BY pay_day DESC
+      `;
+      const result = await pool.query(query);
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Active rentals report.
+  app.get(&#039;/api/sql/active-rentals&#039;, requireAdmin, sqlRateLimit, async (req, res) =&gt; {
+    try {
+      const query = `
+        SELECT
+          r.&quot;RentalID&quot;,
+          r.&quot;RentalDate&quot;,
+          r.&quot;TotalAmount&quot;,
+          r.&quot;RentalStatus&quot;,
+          c.&quot;FirstName&quot;,
+          c.&quot;LastName&quot;
+        FROM &quot;Rental&quot; r
+        JOIN &quot;Customer&quot; c ON c.&quot;CustomerID&quot; = r.&quot;CustomerID&quot;
+        WHERE r.&quot;RentalStatus&quot; IN (&#039;pending&#039;, &#039;active&#039;)
+        ORDER BY r.&quot;RentalDate&quot; DESC
+      `;
+      const result = await pool.query(query);
+      res.json(result.rows);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Cleanup pool on shutdown.
+  process.on(&#039;SIGINT&#039;, async () =&gt; {
+    await pool.end();
+    process.exit(0);
+  });
+}
+
+module.exports = { registerPgRealtimeRoutes };
+</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - CameraRentalSystem/controller/cameraController.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="https://github.com/the-simian/es6-plato">ES6 Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+      <li class="active">
+        <a href="display.html">Summary Display</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>CameraRentalSystem/controller/cameraController.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">60.37</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">638</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">89.73</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">8.82</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">const { Op, Transaction } = require(&#039;sequelize&#039;);
+const sequelize = require(&#039;../../config/db&#039;);
+const { getAllCameras, addCamera, DEFAULT_IMAGE } = require(&#039;../service/cameraStore&#039;);
+const { Customer, Equipment, Rental, RentalDetail, Payment, Category } = require(&#039;../../models&#039;);
+
+function getDateOrNull(dateString) {
+    const parsed = new Date(dateString);
+    if (Number.isNaN(parsed.getTime())) return null;
+    // Don&#039;t use setHours(0,0,0,0) as it uses local time and causes shift
+    return parsed;
+}
+
+async function getCameraById(cameraId) {
+    const allCameras = await getAllCameras();
+    return allCameras.find((item) =&gt; item.id === cameraId) || null;
+}
+
+async function getCustomerForSession(req) {
+    const username = req.session.user &amp;&amp; req.session.user.username;
+    if (!username) return null;
+    return Customer.findOne({ where: { Username: username } });
+}
+
+function deriveBookingStatusFromRental(rentalStatus) {
+    if (rentalStatus === &#039;cancelled&#039;) return &#039;cancelled&#039;;
+    if (rentalStatus === &#039;completed&#039;) return &#039;completed&#039;;
+    if (rentalStatus === &#039;active&#039;) return &#039;confirmed&#039;;
+    return &#039;awaiting_confirmation&#039;;
+}
+
+function isFilmLikeCamera(brand, text) {
+    if (text.includes(&#039;film&#039;)) return true;
+    if (text.includes(&#039;instax&#039;)) return true;
+    if (brand.includes(&#039;kodak&#039;)) return true;
+    if (brand.includes(&#039;fujifilm&#039;)) return true;
+    return false;
+}
+
+function cameraMatchesType(camera, type) {
+    const normalizedType = String(type || &#039;&#039;).toLowerCase();
+    if (!normalizedType) return true;
+    const brand = String(camera.brand || &#039;&#039;).toLowerCase();
+    const model = String(camera.model || &#039;&#039;).toLowerCase();
+    const text = `${brand} ${model}`;
+    const isFilmLike = isFilmLikeCamera(brand, text);
+
+    if (normalizedType === &#039;film&#039;) return isFilmLike;
+    if (normalizedType === &#039;digital&#039;) return !isFilmLike;
+    return true;
+}
+
+/**
+ * Handles camera browsing, searching, and filtering by category or price.
+ * Retrieves data from the inventory and groups by Brand and Model.
+ * @param {import(&#039;express&#039;).Request} req - Express request object containing query parameters.
+ * @param {import(&#039;express&#039;).Response} res - Express response object to render the view.
+ */
+exports.browseCameras = async (req, res) =&gt; {
+    const searchQuery = req.query.search || &#039;&#039;;
+    const selectedType = String(req.query.type || &#039;&#039;).toLowerCase();
+    const minPrice = req.query.minPrice !== undefined ? Number(req.query.minPrice) : null;
+    const maxPrice = req.query.maxPrice !== undefined ? Number(req.query.maxPrice) : null;
+
+    // Fetch categories with IDs for filtering and forms
+    const categoryRecords = await Category.findAll();
+    const categories = categoryRecords.map(cat =&gt; ({ id: cat.CategoryID, name: cat.CategoryName }));
+
+    // Get all cameras
+    let rawCameras = await getAllCameras();
+    
+    // Extract unique brands for the sidebar
+    const brands = [...new Set(rawCameras.map(c =&gt; c.brand))].sort();
+
+    // Grouping by Brand + Model
+    const modelGroups = new Map();
+    rawCameras.forEach(cam =&gt; {
+        const key = `${cam.brand}|${cam.model}`;
+        if (!modelGroups.has(key)) {
+            modelGroups.set(key, {
+                ...cam,
+                availableCount: cam.status === &#039;available&#039; ? 1 : 0,
+                totalStock: 1
+            });
+        } else {
+            const group = modelGroups.get(key);
+            group.totalStock += 1;
+            if (cam.status === &#039;available&#039;) {
+                group.availableCount += 1;
+                // If the group representative isn&#039;t available, pick this one
+                if (group.status !== &#039;available&#039;) {
+                    group.id = cam.id;
+                    group.status = &#039;available&#039;;
+                }
+            }
+        }
+    });
+
+    let filteredCameras = Array.from(modelGroups.values());
+
+    if (selectedType) {
+        filteredCameras = filteredCameras.filter((camera) =&gt; cameraMatchesType(camera, selectedType));
+    }
+    if (searchQuery) {
+        const lowerQuery = searchQuery.toLowerCase();
+        filteredCameras = filteredCameras.filter(c =&gt;
+            c.brand.toLowerCase().includes(lowerQuery) ||
+            c.model.toLowerCase().includes(lowerQuery) ||
+            (c.categoryName &amp;&amp; c.categoryName.toLowerCase().includes(lowerQuery))
+        );
+    }
+
+    // Filter by price
+    if (minPrice !== null) {
+        filteredCameras = filteredCameras.filter(c =&gt; c.pricePerDay &gt;= minPrice);
+    }
+    if (maxPrice !== null) {
+        filteredCameras = filteredCameras.filter(c =&gt; c.pricePerDay &lt;= maxPrice);
+    }
+
+    res.render(&#039;browse_camera&#039;, {
+        cameras: filteredCameras,
+        user: req.session.user,
+        searchQuery,
+        selectedType,
+        minPrice,
+        maxPrice,
+        categories,
+        brands
+    });
+};
+
+// eslint-disable-next-line complexity
+exports.addCamera = async (req, res) =&gt; {
+    const { brand, model, stock, pricePerDay, imageUrl } = req.body;
+    const normalizedBrand = typeof brand === &#039;string&#039; ? brand.trim() : &#039;&#039;;
+    const normalizedModel = typeof model === &#039;string&#039; ? model.trim() : &#039;&#039;;
+    const normalizedStock = Number(stock);
+    const normalizedPricePerDay = Number(pricePerDay);
+    const normalizedImageUrl = typeof imageUrl === &#039;string&#039; ? imageUrl.trim() : &#039;&#039;;
+    const uploadedImagePath = req.file ? `/uploads/products/${req.file.filename}` : &#039;&#039;;
+
+    const normalizedCategoryId = Number(req.body.categoryId) || null;
+
+    if (!normalizedBrand || !normalizedModel) {
+        return res.status(400).send(&#039;Brand and model are required&#039;);
+    }
+    if (!Number.isInteger(normalizedStock) || normalizedStock &lt; 0) {
+        return res.status(400).send(&#039;Stock must be a non-negative integer&#039;);
+    }
+    if (!Number.isFinite(normalizedPricePerDay) || normalizedPricePerDay &lt;= 0) {
+        return res.status(400).send(&#039;Price per day must be greater than 0&#039;);
+    }
+
+    await addCamera({
+        brand: normalizedBrand,
+        model: normalizedModel,
+        stock: normalizedStock,
+        pricePerDay: normalizedPricePerDay,
+        categoryId: normalizedCategoryId,
+        image: uploadedImagePath || normalizedImageUrl || DEFAULT_IMAGE
+    });
+
+    return res.redirect(&#039;/browse&#039;);
+};
+
+/**
+ * Renders the admin camera management dashboard.
+ * @param {import(&#039;express&#039;).Request} req - Express request object.
+ * @param {import(&#039;express&#039;).Response} res - Express response object.
+ */
+exports.showAdminCameras = async (req, res) =&gt; {
+    try {
+        const cameras = await Equipment.findAll({
+            include: [{ model: Category, required: false }],
+            order: [[&#039;EquipmentID&#039;, &#039;ASC&#039;]]
+        });
+
+        return res.render(&#039;admin_cameras&#039;, {
+            user: req.session.user,
+            error: req.query.error || null,
+            cameras: cameras.map(c =&gt; ({
+                EquipmentID: c.EquipmentID,
+                Brand: c.Brand,
+                ModelName: c.ModelName,
+                Status: c.Status,
+                DailyRate: c.DailyRate,
+                ImageURL: c.ImageURL,
+                SerialNumber: c.SerialNumber,
+                Category: c.Category
+            }))
+        });
+    } catch (error) {
+        console.error(&#039;Failed to load admin cameras:&#039;, error);
+        return res.status(500).send(&#039;Failed to load cameras&#039;);
+    }
+};
+
+/**
+ * Toggles the operational status of a camera between &#039;available&#039; and &#039;maintenance&#039; (Admin only).
+ * @param {import(&#039;express&#039;).Request} req - Express request object.
+ * @param {import(&#039;express&#039;).Response} res - Express response object.
+ */
+exports.toggleCameraStatus = async (req, res) =&gt; {
+    const id = Number(req.params.id);
+    const status = String(req.body.status || &#039;&#039;).toLowerCase();
+
+    if (!Number.isFinite(id) || id &lt;= 0) return res.status(400).send(&#039;Invalid camera id&#039;);
+    if (![&#039;available&#039;, &#039;maintenance&#039;].includes(status)) return res.status(400).send(&#039;Invalid status&#039;);
+
+    try {
+        const camera = await Equipment.findByPk(id);
+        if (!camera) return res.status(404).send(&#039;Camera not found&#039;);
+        camera.Status = status;
+        await camera.save();
+        return res.redirect(&#039;/admin/cameras&#039;);
+    } catch (error) {
+        console.error(&#039;Failed to update camera status:&#039;, error);
+        return res.status(500).send(&#039;Failed to update status&#039;);
+    }
+};
+
+exports.deleteCamera = async (req, res) =&gt; {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id &lt;= 0) return res.status(400).send(&#039;Invalid camera id&#039;);
+
+    try {
+        const camera = await Equipment.findByPk(id);
+        if (!camera) return res.status(404).send(&#039;Camera not found&#039;);
+        await camera.destroy();
+        return res.redirect(&#039;/admin/cameras&#039;);
+    } catch (error) {
+        console.error(&#039;Failed to delete camera:&#039;, error);
+        return res.status(409).send(&#039;Cannot delete camera (it may have related bookings)&#039;);
+    }
+};
+
+/**
+ * Processes a camera booking request, ensuring atomic transactions to prevent double booking.
+ * Calculates rental duration, validates stock availability, and checks overlapping dates.
+ * @param {import(&#039;express&#039;).Request} req - Express request object containing `cameraId`, `startDate`, `endDate`.
+ * @param {import(&#039;express&#039;).Response} res - Express response object for redirection.
+ */
+exports.bookCamera = async (req, res) =&gt; {
+    const { cameraId, startDate, endDate } = req.body;
+    const normalizedCameraId = Number(cameraId);
+    if (!Number.isFinite(normalizedCameraId) || normalizedCameraId &lt;= 0 || !startDate || !endDate) {
+        return res.status(400).send(&#039;Invalid input&#039;);
+    }
+
+    const start = getDateOrNull(startDate);
+    const end = getDateOrNull(endDate);
+    if (!start || !end || start &gt; end) {
+        return res.status(400).send(&#039;Invalid booking dates&#039;);
+    }
+    const startDateOnly = start.toISOString().slice(0, 10);
+    const endDateOnly = end.toISOString().slice(0, 10);
+    const customer = await getCustomerForSession(req);
+
+    try {
+        const rental = await sequelize.transaction(
+            { isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE },
+            async (transaction) =&gt; {
+                const equipment = await Equipment.findByPk(normalizedCameraId, {
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+                if (!equipment) {
+                    const error = new Error(&#039;Camera not found&#039;);
+                    error.statusCode = 404;
+                    throw error;
+                }
+                if (equipment.Status !== &#039;available&#039;) {
+                    const error = new Error(&#039;Camera is out of stock&#039;);
+                    error.statusCode = 400;
+                    throw error;
+                }
+
+                // Overbooking allows this to pass without blocking.
+                if (!customer) {
+                    const error = new Error(&#039;Unauthorized&#039;);
+                    error.statusCode = 401;
+                    throw error;
+                }
+
+                const rentalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                const totalPrice = rentalDays * Number(equipment.DailyRate);
+                const createdRental = await Rental.create({
+                    RentalDate: new Date(),
+                    TotalAmount: totalPrice,
+                    RentalStatus: &#039;pending&#039;,
+                    CustomerID: customer.CustomerID
+                }, { transaction });
+                await RentalDetail.create({
+                    RentalID: createdRental.RentalID,
+                    EquipmentID: equipment.EquipmentID,
+                    StartDate: startDateOnly,
+                    EndDate: endDateOnly,
+                    SubTotal: totalPrice
+                }, { transaction });
+
+                equipment.Status = &#039;rented&#039;;
+                await equipment.save({ transaction });
+
+                return createdRental;
+            }
+        );
+        return res.redirect(&#039;/cart&#039;);
+    } catch (error) {
+        let msg = &#039;Failed to create booking&#039;;
+        if (error &amp;&amp; error.statusCode) {
+            msg = error.message;
+        }
+        return res.redirect(`/browse?error=${encodeURIComponent(msg)}`);
+    }
+};
+
+exports.showAdminDashboard = (req, res) =&gt; {
+    return RentalDetail.findAll({
+        include: [
+            { model: Rental, required: true, include: [{ model: Customer, required: true }] },
+            { model: Equipment, required: true }
+        ],
+        order: [[&#039;RentalDetailID&#039;, &#039;DESC&#039;]],
+        limit: 50
+    })
+        .then((rows) =&gt; rows.map((row) =&gt; row.toJSON()))
+        .then((rows) =&gt; res.render(&#039;admin&#039;, {
+            bookings: rows.map((row) =&gt; ({
+                id: row.Rental.RentalID,
+                user: row.Rental.Customer.Email || row.Rental.Customer.Username,
+                cameraModel: `${row.Equipment.Brand} ${row.Equipment.ModelName}`,
+                startDate: row.StartDate,
+                endDate: row.EndDate,
+                totalPrice: Number(row.Rental.TotalAmount)
+            })),
+            user: req.session.user
+        }))
+        .catch(() =&gt; res.status(500).send(&#039;Failed to load dashboard&#039;));
+};
+
+exports.showBookingConfirm = async (req, res) =&gt; {
+    const { bookingId } = req.params;
+    const rentalId = Number(bookingId);
+    const rental = await Rental.findByPk(rentalId);
+    if (!rental) return res.status(404).send(&#039;Booking not found&#039;);
+    const customer = await Customer.findByPk(rental.CustomerID);
+    if (!customer) return res.status(404).send(&#039;Booking not found&#039;);
+    if (customer.Username !== req.session.user.username &amp;&amp; req.session.user.role !== &#039;admin&#039;) {
+        return res.status(403).send(&#039;Forbidden&#039;);
+    }
+
+    // If already confirmed/completed/cancelled, don&#039;t show a raw error page.
+    if (rental.RentalStatus !== &#039;pending&#039;) {
+        if (rental.RentalStatus === &#039;active&#039;) {
+            return res.redirect(`/booking/${rental.RentalID}/payment`);
+        }
+        return res.redirect(&#039;/browse&#039;);
+    }
+
+    const detail = await RentalDetail.findOne({ where: { RentalID: rental.RentalID } });
+    if (!detail) return res.status(404).send(&#039;Booking not found&#039;);
+    const camera = await getCameraById(detail.EquipmentID);
+    if (!camera) return res.status(404).send(&#039;Camera not found&#039;);
+
+    res.render(&#039;booking_confirm&#039;, {
+        booking: {
+            id: rental.RentalID,
+            cameraId: detail.EquipmentID,
+            cameraModel: camera.model,
+            user: customer.Username,
+            startDate: detail.StartDate,
+            endDate: detail.EndDate,
+            totalPrice: Number(rental.TotalAmount),
+            bookingStatus: deriveBookingStatusFromRental(rental.RentalStatus),
+            paymentStatus: &#039;unpaid&#039;
+        },
+        camera
+    });
+};
+
+exports.confirmBooking = async (req, res) =&gt; {
+    const { bookingId } = req.params;
+    const rentalId = Number(bookingId);
+    const rental = await Rental.findByPk(rentalId);
+    if (!rental) return res.status(404).send(&#039;Booking not found&#039;);
+    const customer = await Customer.findByPk(rental.CustomerID);
+    if (!customer) return res.status(404).send(&#039;Booking not found&#039;);
+    if (customer.Username !== req.session.user.username &amp;&amp; req.session.user.role !== &#039;admin&#039;) {
+        return res.status(403).send(&#039;Forbidden&#039;);
+    }
+
+    const payment = await Payment.findOne({ where: { RentalID: rental.RentalID } });
+    if (rental.RentalStatus !== &#039;pending&#039; || payment) {
+        // If already confirmed, just go to the first page.
+        return res.redirect(&#039;/browse&#039;);
+    }
+
+    rental.RentalStatus = &#039;active&#039;;
+    await rental.save();
+    return res.redirect(&#039;/cart&#039;);
+};
+
+exports.showPaymentPage = (req, res) =&gt; {
+    const { bookingId } = req.params;
+    const rentalId = Number(bookingId);
+    return Rental.findByPk(rentalId)
+        .then((rental) =&gt; {
+            if (!rental) return res.status(404).send(&#039;Booking not found&#039;);
+            return Customer.findByPk(rental.CustomerID).then((customer) =&gt; {
+                if (!customer) return res.status(404).send(&#039;Booking not found&#039;);
+                if (customer.Username !== req.session.user.username &amp;&amp; req.session.user.role !== &#039;admin&#039;) {
+                    return res.status(403).send(&#039;Forbidden&#039;);
+                }
+                return Payment.findOne({ where: { RentalID: rental.RentalID } }).then((payment) =&gt; {
+                    if (payment) {
+                        if (payment.PaymentStatus === &#039;pending&#039;) {
+                            return res.status(409).send(&#039;Your slip is pending admin approval&#039;);
+                        }
+                        if (payment.PaymentStatus === &#039;approved&#039;) {
+                            return res.status(409).send(&#039;Payment has already been approved&#039;);
+                        }
+                        return res.render(&#039;payment&#039;, {
+                            booking: {
+                                id: rental.RentalID,
+                                totalPrice: Number(rental.TotalAmount),
+                                previousSlipRejected: true
+                            }
+                        });
+                    }
+                    return res.render(&#039;payment&#039;, {
+                        booking: {
+                            id: rental.RentalID,
+                            totalPrice: Number(rental.TotalAmount)
+                        }
+                    });
+                });
+            });
+        })
+        .catch(() =&gt; res.status(500).send(&#039;Failed to load payment page&#039;));
+};
+
+/**
+ * Confirms a payment by uploading a payment slip and updating payment status.
+ * Uses a serializable database transaction to ensure atomicity.
+ * @param {import(&#039;express&#039;).Request} req - Express request object with the uploaded file.
+ * @param {import(&#039;express&#039;).Response} res - Express response object.
+ */
+exports.confirmPayment = async (req, res) =&gt; {
+    const { bookingId } = req.params;
+    const rentalId = Number(bookingId);
+    const rental = await Rental.findByPk(rentalId);
+    if (!rental) return res.status(404).send(&#039;Booking not found&#039;);
+    const customer = await Customer.findByPk(rental.CustomerID);
+    if (!customer) return res.status(404).send(&#039;Booking not found&#039;);
+    if (customer.Username !== req.session.user.username &amp;&amp; req.session.user.role !== &#039;admin&#039;) {
+        return res.status(403).send(&#039;Forbidden&#039;);
+    }
+
+    try {
+        await sequelize.transaction(
+            { isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE },
+            async (transaction) =&gt; {
+                const lockedRental = await Rental.findByPk(rentalId, {
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+                if (!lockedRental) {
+                    const error = new Error(&#039;Booking not found&#039;);
+                    error.statusCode = 404;
+                    throw error;
+                }
+
+                const payment = await Payment.findOne({
+                    where: { RentalID: lockedRental.RentalID },
+                    transaction,
+                    lock: transaction.LOCK.UPDATE
+                });
+                if (lockedRental.RentalStatus !== &#039;active&#039;) {
+                    const error = new Error(&#039;Payment cannot be confirmed from its current state&#039;);
+                    error.statusCode = 409;
+                    throw error;
+                }
+                if (!req.file) {
+                    const error = new Error(&#039;Please upload a payment slip&#039;);
+                    error.statusCode = 400;
+                    throw error;
+                }
+
+                if (!payment) {
+                    await Payment.create({
+                        RentalID: lockedRental.RentalID,
+                        PaymentMethod: &#039;app-payment&#039;,
+                        Amount: lockedRental.TotalAmount,
+                        PaymentDate: new Date(),
+                        SlipPath: `/uploads/slips/${req.file.filename}`,
+                        PaymentStatus: &#039;pending&#039;
+                    }, { transaction });
+                } else if (payment.PaymentStatus === &#039;rejected&#039;) {
+                    payment.PaymentDate = new Date();
+                    payment.Amount = lockedRental.TotalAmount;
+                    payment.SlipPath = `/uploads/slips/${req.file.filename}`;
+                    payment.PaymentStatus = &#039;pending&#039;;
+                    await payment.save({ transaction });
+                } else {
+                    const error = new Error(&#039;Payment cannot be confirmed from its current state&#039;);
+                    error.statusCode = 409;
+                    throw error;
+                }
+            }
+        );
+    } catch (error) {
+        if (error &amp;&amp; error.statusCode) {
+            return res.status(error.statusCode).send(error.message);
+        }
+        if (error &amp;&amp; error.name === &#039;SequelizeUniqueConstraintError&#039;) {
+            return res.status(409).send(&#039;Payment cannot be confirmed from its current state&#039;);
+        }
+        return res.status(500).send(&#039;Failed to confirm payment&#039;);
+    }
+
+    return res.redirect(&#039;/cart&#039;);
+};
+
+exports.showAdminPaymentSlips = async (req, res) =&gt; {
+    const payments = await Payment.findAll({
+        include: [
+            {
+                model: Rental,
+                required: true,
+                include: [
+                    { model: Customer, required: true },
+                    {
+                        model: RentalDetail,
+                        required: false,
+                        include: [{ model: Equipment, required: false }]
+                    }
+                ]
+            }
+        ],
+        order: [[&#039;PaymentDate&#039;, &#039;DESC&#039;]]
+    });
+
+    return res.render(&#039;admin_payment_slips&#039;, {
+        user: req.session.user,
+        slips: payments.map((payment) =&gt; {
+            const rental = payment.Rental;
+            const detail = rental.RentalDetails &amp;&amp; rental.RentalDetails.length &gt; 0 ? rental.RentalDetails[0] : null;
+            const equipment = detail ? detail.Equipment : null;
+            return {
+                paymentId: payment.PaymentID,
+                paymentStatus: payment.PaymentStatus || &#039;approved&#039;,
+                paymentDate: payment.PaymentDate,
+                amount: Number(payment.Amount),
+                slipPath: payment.SlipPath || null,
+                rentalId: rental.RentalID,
+                rentalStatus: rental.RentalStatus,
+                customer: {
+                    username: rental.Customer.Username,
+                    email: rental.Customer.Email
+                },
+                booking: {
+                    startDate: detail ? detail.StartDate : &#039;-&#039;,
+                    endDate: detail ? detail.EndDate : &#039;-&#039;,
+                    cameraModel: equipment ? `${equipment.Brand} ${equipment.ModelName}` : &#039;-&#039;
+                }
+            };
+        })
+    });
+};
+
+exports.approvePaymentSlip = async (req, res) =&gt; {
+    const paymentId = Number(req.params.paymentId);
+    if (!Number.isFinite(paymentId) || paymentId &lt;= 0) {
+        return res.status(400).send(&#039;Invalid payment id&#039;);
+    }
+
+    const payment = await Payment.findByPk(paymentId);
+    if (!payment) return res.status(404).send(&#039;Payment not found&#039;);
+    if (payment.PaymentStatus !== &#039;pending&#039;) {
+        return res.status(409).send(&#039;This slip is not pending approval&#039;);
+    }
+
+    const rental = await Rental.findByPk(payment.RentalID);
+    if (!rental) return res.status(404).send(&#039;Booking not found&#039;);
+
+    payment.PaymentStatus = &#039;approved&#039;;
+    await payment.save();
+    rental.RentalStatus = &#039;completed&#039;;
+    await rental.save();
+    return res.redirect(&#039;/admin/payment-slips&#039;);
+};
+
+exports.rejectPaymentSlip = async (req, res) =&gt; {
+    const paymentId = Number(req.params.paymentId);
+    if (!Number.isFinite(paymentId) || paymentId &lt;= 0) {
+        return res.status(400).send(&#039;Invalid payment id&#039;);
+    }
+
+    const payment = await Payment.findByPk(paymentId);
+    if (!payment) return res.status(404).send(&#039;Payment not found&#039;);
+    if (payment.PaymentStatus !== &#039;pending&#039;) {
+        return res.status(409).send(&#039;This slip is not pending review&#039;);
+    }
+
+    payment.PaymentStatus = &#039;rejected&#039;;
+    await payment.save();
+
+    const rental = await Rental.findByPk(payment.RentalID);
+    if (rental &amp;&amp; rental.RentalStatus === &#039;completed&#039;) {
+        rental.RentalStatus = &#039;active&#039;;
+        await rental.save();
+    }
+    return res.redirect(&#039;/admin/payment-slips&#039;);
+};
+
+exports.getBookedDates = async (req, res) =&gt; {
+    const { cameraId } = req.params;
+    try {
+        const bookings = await RentalDetail.findAll({
+            where: { EquipmentID: cameraId },
+            include: [{
+                model: Rental,
+                required: true,
+                where: { RentalStatus: { [Op.ne]: &#039;cancelled&#039; } }
+            }]
+        });
+
+        const formattedBookings = bookings.map(b =&gt; ({
+            from: b.StartDate, // expected format YYYY-MM-DD
+            to: b.EndDate
+        }));
+
+        res.json(formattedBookings);
+    } catch (error) {
+        console.error(&#039;Error fetching booked dates:&#039;, error);
+        res.status(500).json({ error: &#039;Failed to fetch booked dates&#039; });
+    }
+};</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

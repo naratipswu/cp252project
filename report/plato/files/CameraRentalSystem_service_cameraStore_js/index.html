@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - CameraRentalSystem/service/cameraStore.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="https://github.com/the-simian/es6-plato">ES6 Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+      <li class="active">
+        <a href="display.html">Summary Display</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>CameraRentalSystem/service/cameraStore.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">54.81</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">121</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">40.38</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.49</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">const sequelize = require(&#039;../../config/db&#039;);
+const Equipment = require(&#039;../../models/equipment&#039;);
+const Category = require(&#039;../../models/category&#039;);
+
+const DEFAULT_IMAGE = &#039;https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&amp;fit=crop&amp;q=80&amp;w=400&#039;;
+
+const SEED_EQUIPMENT = [
+  { brand: &#039;Sony&#039;, model: &#039;A7III&#039;, stock: 5, pricePerDay: 800, image: DEFAULT_IMAGE },
+  { brand: &#039;Canon&#039;, model: &#039;EOS R5&#039;, stock: 2, pricePerDay: 1500, image: DEFAULT_IMAGE },
+  { brand: &#039;Fujifilm&#039;, model: &#039;X-T4&#039;, stock: 3, pricePerDay: 700, image: DEFAULT_IMAGE },
+  { brand: &#039;Nikon&#039;, model: &#039;Z6 II&#039;, stock: 4, pricePerDay: 900, image: DEFAULT_IMAGE }
+];
+
+async function ensureCameraStoreReady() {
+  await sequelize.authenticate();
+  await Category.sync();
+  await Equipment.sync();
+  const existingCount = await Equipment.count();
+  const cNames = [&#039;DSLR&#039;, &#039;Mirrorless&#039;, &#039;Lens&#039;, &#039;Action Camera&#039;, &#039;General&#039;];
+  for (const cName of cNames) {
+    try {
+      const existing = await Category.findOne({ where: { CategoryName: cName } });
+      if (!existing) {
+        // Find max ID and increment to avoid sequence issues
+        const maxCat = await Category.max(&#039;CategoryID&#039;) || 0;
+        await Category.create({ CategoryID: maxCat + 1, CategoryName: cName });
+      }
+    } catch(err) {
+      console.log(&#039;Category seed error for&#039;, cName, err.message);
+    }
+  }
+
+  let defaultCategory = await Category.findOne({ where: { CategoryName: &#039;Mirrorless&#039; } }) || await Category.findOne();
+  if (existingCount === 0 &amp;&amp; SEED_EQUIPMENT.length &gt; 0) {
+    const now = Date.now();
+    const toCreate = [];
+    SEED_EQUIPMENT.forEach((item, index) =&gt; {
+      const count = Number.isInteger(item.stock) &amp;&amp; item.stock &gt; 0 ? item.stock : 1;
+      for (let i = 0; i &lt; count; i += 1) {
+        toCreate.push({
+          ModelName: item.model,
+          Brand: item.brand,
+          SerialNumber: `seed-${index}-${now}-${i}`,
+          DailyRate: item.pricePerDay,
+          ImageURL: item.image || DEFAULT_IMAGE,
+          Status: &#039;available&#039;,
+          CategoryID: defaultCategory.CategoryID
+        });
+      }
+    });
+    await Equipment.bulkCreate(toCreate);
+  }
+}
+
+async function getAllCameras() {
+  const rows = await Equipment.findAll({ 
+      include: [{ model: Category }],
+      order: [[&#039;EquipmentID&#039;, &#039;ASC&#039;]] 
+  });
+  return rows.map((item) =&gt; {
+    const row = item.toJSON();
+    return {
+      id: row.EquipmentID,
+      model: row.ModelName,
+      brand: row.Brand,
+      pricePerDay: Number(row.DailyRate),
+      stock: row.Status === &#039;available&#039; ? 1 : 0,
+      status: row.Status,
+      image: row.ImageURL || DEFAULT_IMAGE,
+      categoryId: row.CategoryID,
+      categoryName: row.Category ? row.Category.CategoryName : &#039;General&#039;
+    };
+  });
+}
+
+async function addCamera(cameraInput) {
+  const payload = {
+    brand: cameraInput.brand,
+    model: cameraInput.model,
+    stock: cameraInput.stock,
+    pricePerDay: cameraInput.pricePerDay,
+    image: cameraInput.image || DEFAULT_IMAGE
+  };
+
+  const catId = cameraInput.categoryId;
+  let defaultCategory = await Category.findByPk(catId || 1) || await Category.findOne();
+  const now = Date.now();
+  const count = Number.isInteger(payload.stock) &amp;&amp; payload.stock &gt; 0 ? payload.stock : 1;
+  const createdRows = [];
+  for (let i = 0; i &lt; count; i += 1) {
+    const serialNumber = `eq-${now}-${Math.floor(Math.random() * 10000)}-${i}`;
+    const created = await Equipment.create({
+      ModelName: payload.model,
+      Brand: payload.brand,
+      SerialNumber: serialNumber,
+      DailyRate: payload.pricePerDay,
+      ImageURL: payload.image,
+      Status: &#039;available&#039;,
+      CategoryID: defaultCategory.CategoryID
+    });
+    createdRows.push(created.toJSON());
+  }
+
+  const first = createdRows[0];
+  return {
+    id: first.EquipmentID,
+    model: first.ModelName,
+    brand: first.Brand,
+    pricePerDay: Number(first.DailyRate),
+    stock: 1,
+    image: first.ImageURL || DEFAULT_IMAGE
+  };
+}
+
+module.exports = {
+  DEFAULT_IMAGE,
+  ensureCameraStoreReady,
+  getAllCameras,
+  addCamera
+};
+</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - CameraRentalSystem/app.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="https://github.com/the-simian/es6-plato">ES6 Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+      <li class="active">
+        <a href="display.html">Summary Display</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>CameraRentalSystem/app.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">89.87</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">167</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">22.08</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">2.20</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">const express = require(&#039;express&#039;);
+const session = require(&#039;express-session&#039;);
+const MemoryStore = require(&#039;memorystore&#039;)(session);
+const path = require(&#039;path&#039;);
+const authController = require(&#039;./controller/authController&#039;);
+const cameraController = require(&#039;./controller/cameraController&#039;);
+const mediaController = require(&#039;./controller/mediaController&#039;);
+const cartController = require(&#039;./controller/cartController&#039;);
+const dashboardController = require(&#039;./controller/dashboardController&#039;);
+const logController = require(&#039;./controller/logController&#039;);
+const returnController = require(&#039;./controller/returnController&#039;);
+const { registerPgRealtimeRoutes } = require(&#039;./service/pgRealtime&#039;);
+const { ensureUploadDirectories, uploadImage } = require(&#039;./service/uploadService&#039;);
+const { ensureCameraStoreReady } = require(&#039;./service/cameraStore&#039;);
+const { ensureFullSchemaReady } = require(&#039;./service/schemaSync&#039;);
+const { ensureAdminSeed } = require(&#039;./service/adminSeed&#039;);
+
+const app = express();
+const isProduction = process.env.NODE_ENV === &#039;production&#039;;
+const sessionSecret = process.env.SESSION_SECRET;
+const forceSecureCookie = process.env.SESSION_COOKIE_SECURE === &#039;true&#039;;
+const useSecureCookie = forceSecureCookie ? true : (isProduction ? &#039;auto&#039; : false);
+
+if (!sessionSecret || sessionSecret === &#039;change-this-session-secret&#039;) {
+  throw new Error(&#039;SESSION_SECRET must be set to a strong value&#039;);
+}
+if (isProduction &amp;&amp; process.env.ENABLE_MOCK_GOOGLE_LOGIN === &#039;true&#039;) {
+  throw new Error(&#039;ENABLE_MOCK_GOOGLE_LOGIN must be disabled in production&#039;);
+}
+
+if (isProduction || forceSecureCookie) {
+  app.set(&#039;trust proxy&#039;, 1);
+}
+
+app.set(&#039;view engine&#039;, &#039;ejs&#039;);
+app.set(&#039;views&#039;, path.join(__dirname, &#039;view&#039;));
+ensureUploadDirectories();
+app.use(&#039;/uploads&#039;, express.static(path.join(__dirname, &#039;public&#039;, &#039;uploads&#039;)));
+app.use(&#039;/brand_logo&#039;, express.static(path.join(__dirname, &#039;public&#039;, &#039;brand_logo&#039;)));
+app.use(&#039;/categ_main&#039;, express.static(path.join(__dirname, &#039;public&#039;, &#039;categ_main&#039;)));
+app.use(&#039;/process&#039;, express.static(path.join(__dirname, &#039;public&#039;, &#039;process&#039;)));
+async function initializeApp() {
+  await ensureFullSchemaReady();
+  await ensureCameraStoreReady();
+  await ensureAdminSeed();
+}
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(session({
+  secret: sessionSecret,
+  store: new MemoryStore({
+    checkPeriod: 1000 * 60 * 60
+  }),
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: &#039;lax&#039;,
+    secure: useSecureCookie,
+    maxAge: 1000 * 60 * 60 * 4
+  }
+}));
+app.use(authController.attachCsrfToken);
+
+// Routes
+// 1. Auth &amp; Main
+app.get(&#039;/&#039;, authController.showMain);
+app.get(&#039;/main&#039;, authController.showMain);
+app.get(&#039;/welcome&#039;, authController.showLanding);
+app.get(&#039;/process&#039;, authController.showProcess);
+app.get(&#039;/contact&#039;, authController.showContact);
+
+app.get(&#039;/signin&#039;, authController.showSignIn);
+app.get(&#039;/signup&#039;, authController.showSignUp);
+app.get(&#039;/profile&#039;, authController.requireAuth, authController.showProfile);
+app.post(
+  &#039;/profile/avatar&#039;,
+  authController.requireAuth,
+  uploadImage.single(&#039;avatarFile&#039;),
+  authController.requireCsrf,
+  authController.updateProfileAvatar
+);
+app.post(
+  &#039;/profile/update&#039;,
+  authController.requireAuth,
+  authController.requireCsrf,
+  authController.updateProfile
+);
+
+app.post(&#039;/login&#039;, authController.requireCsrf, authController.login);
+app.post(&#039;/register&#039;, authController.requireCsrf, authController.register);
+app.get(&#039;/auth/google/mock&#039;, authController.showMockGoogleAuth);
+app.post(&#039;/login/google&#039;, authController.requireCsrf, authController.loginGoogle);
+app.post(&#039;/logout&#039;, authController.requireAuth, authController.requireCsrf, authController.logout);
+
+// 2. Camera Browsing &amp; Booking
+app.get(&#039;/browse&#039;, cameraController.browseCameras);
+app.get(&#039;/api/cameras/:cameraId/booked-dates&#039;, cameraController.getBookedDates);
+app.get(&#039;/cart&#039;, authController.requireAuth, cartController.showCart);
+app.post(&#039;/cart/:rentalId/cancel&#039;, authController.requireAuth, authController.requireCsrf, cartController.cancelCartItem);
+app.post(
+  &#039;/admin/cameras&#039;,
+  authController.requireAdmin,
+  uploadImage.single(&#039;imageFile&#039;),
+  authController.requireCsrf,
+  cameraController.addCamera
+);
+app.post(&#039;/book&#039;, authController.requireAuth, authController.requireCsrf, cameraController.bookCamera);
+app.get(&#039;/booking/:bookingId/confirm&#039;, authController.requireAuth, cameraController.showBookingConfirm);
+app.post(&#039;/booking/:bookingId/confirm&#039;, authController.requireAuth, authController.requireCsrf, cameraController.confirmBooking);
+app.get(&#039;/booking/:bookingId/payment&#039;, authController.requireAuth, cameraController.showPaymentPage);
+app.post(
+  &#039;/booking/:bookingId/payment/confirm&#039;,
+  authController.requireAuth,
+  uploadImage.single(&#039;slipFile&#039;),
+  authController.requireCsrf,
+  cameraController.confirmPayment
+);
+
+// Centralized Admin Protection
+app.use(&#039;/admin&#039;, authController.requireAdmin);
+
+// Admin dashboard 
+app.get(&#039;/admin&#039;, dashboardController.showDashboard);
+app.get(&#039;/admin/cameras&#039;, cameraController.showAdminCameras);
+app.post(&#039;/admin/cameras/:id/status&#039;, authController.requireCsrf, cameraController.toggleCameraStatus);
+app.post(&#039;/admin/cameras/:id/delete&#039;, authController.requireCsrf, cameraController.deleteCamera);
+
+app.get(&#039;/admin/returns&#039;, returnController.showAdminReturns);
+app.post(&#039;/admin/returns/:rentalDetailId&#039;, authController.requireCsrf, returnController.processReturn);
+
+app.get(&#039;/admin/logs&#039;, logController.showAdminLogs);
+
+app.get(&#039;/admin/accounts&#039;, authController.showAdminAccounts);
+app.post(&#039;/admin/accounts/role&#039;, authController.requireCsrf, authController.updateUserRole);
+app.post(&#039;/admin/accounts/create-admin&#039;, authController.requireCsrf, authController.createAdminAccount);
+app.get(&#039;/admin/payment-slips&#039;, cameraController.showAdminPaymentSlips);
+app.post(&#039;/admin/payment-slips/:paymentId/approve&#039;, authController.requireCsrf, cameraController.approvePaymentSlip);
+app.post(&#039;/admin/payment-slips/:paymentId/reject&#039;, authController.requireCsrf, cameraController.rejectPaymentSlip);
+app.get(&#039;/admin/media&#039;, mediaController.showMediaManager);
+app.post(
+  &#039;/admin/media/upload&#039;,
+  uploadImage.single(&#039;imageFile&#039;),
+  authController.requireCsrf,
+  mediaController.uploadMedia
+);
+
+// Optional PostgreSQL SQL/report endpoints for pgAdmin class demo.
+// Disabled by default (ENABLE_PG_REALTIME=false or unset).
+registerPgRealtimeRoutes(app);
+
+const port = Number(process.env.PORT || 3000);
+if (require.main === module) {
+  initializeApp()
+    .then(() =&gt; {
+      app.listen(port, () =&gt; console.log(`Server running on http://localhost:${port}`));
+    })
+    .catch((error) =&gt; {
+      // Print full error details (Sequelize validation often hides root cause in .errors).
+      console.error(&#039;Initialization failed:&#039;, error);
+      process.exit(1);
+    });
+}
+
+module.exports = app;
+</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>
