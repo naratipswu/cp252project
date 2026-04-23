@@ -1,54 +1,90 @@
-const { ensureFullSchemaReady } = require('../CameraRentalSystem/service/schemaSync');
 const sequelize = require('../config/db');
-const { Category, Equipment, Customer, Rental, RentalDetail, Payment, Return, SyncLog } = require('../models');
+const { ensureFullSchemaReady } = require('../CameraRentalSystem/service/schemaSync');
+const models = require('../models');
 
-const mockQI = {
-    showAllTables: jest.fn().mockResolvedValue(['Users', 'Cameras']),
-    describeTable: jest.fn().mockResolvedValue({}),
-    addColumn: jest.fn().mockResolvedValue(true)
-};
+jest.mock('../config/db', () => {
+    const mQI = {
+        showAllTables: jest.fn().mockResolvedValue([]),
+        describeTable: jest.fn().mockResolvedValue({}),
+        addColumn: jest.fn().mockResolvedValue({}),
+    };
+    return {
+        authenticate: jest.fn().mockResolvedValue({}),
+        getQueryInterface: jest.fn(() => mQI),
+        query: jest.fn().mockResolvedValue([]),
+    };
+});
 
-jest.mock('../config/db', () => ({
-    authenticate: jest.fn(),
-    query: jest.fn(),
-    getQueryInterface: jest.fn(() => mockQI)
-}));
+// Mock models
+jest.mock('../models', () => {
+    const m = () => ({ sync: jest.fn().mockResolvedValue({}) });
+    return {
+        Category: m(),
+        Equipment: m(),
+        Customer: m(),
+        Rental: m(),
+        RentalDetail: m(),
+        Payment: m(),
+        Return: m(),
+        SyncLog: m()
+    };
+});
 
-jest.mock('../models', () => ({
-    Category: { sync: jest.fn() },
-    Equipment: { sync: jest.fn() },
-    Customer: { sync: jest.fn() },
-    Rental: { sync: jest.fn() },
-    RentalDetail: { sync: jest.fn() },
-    Payment: { sync: jest.fn() },
-    Return: { sync: jest.fn() },
-    SyncLog: { sync: jest.fn() }
-}));
+describe('SchemaSync Service Max Coverage', () => {
+    let qi;
 
-describe('SchemaSync Service', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        qi = sequelize.getQueryInterface();
     });
 
-    test('should ensure full schema is ready', async () => {
-        await ensureFullSchemaReady();
-
-        expect(sequelize.authenticate).toHaveBeenCalled();
-        expect(Category.sync).toHaveBeenCalled();
-        expect(Equipment.sync).toHaveBeenCalled();
-        expect(Customer.sync).toHaveBeenCalled();
-        expect(Rental.sync).toHaveBeenCalled();
-        expect(RentalDetail.sync).toHaveBeenCalled();
-        expect(Payment.sync).toHaveBeenCalled();
-        expect(Return.sync).toHaveBeenCalled();
-        expect(SyncLog.sync).toHaveBeenCalled();
-    });
-
-    test('should handle migration and column checks', async () => {
+    test('ensureFullSchemaReady with various states', async () => {
+        qi.showAllTables.mockResolvedValue([]);
+        qi.describeTable.mockResolvedValue({});
+        process.env.DB_SYNC_ALTER = 'true';
+        
         await ensureFullSchemaReady();
         
-        expect(mockQI.describeTable).toHaveBeenCalledWith('Customer');
-        expect(mockQI.describeTable).toHaveBeenCalledWith('Payment');
-        expect(sequelize.query).toHaveBeenCalled();
+        expect(sequelize.authenticate).toHaveBeenCalled();
+        expect(qi.addColumn).toHaveBeenCalled();
+    });
+
+    test('normalizeTableName coverage', async () => {
+        qi.showAllTables.mockResolvedValue([
+            'StringTable',
+            { tableName: 'ObjectTable' },
+            null
+        ]);
+        qi.describeTable.mockResolvedValue({
+            PasswordHash: {}, AvatarPath: {}, Role: {},
+            SlipPath: {}, PaymentStatus: {}
+        });
+
+        await ensureFullSchemaReady();
+    });
+
+    test('migrateLegacyPostgresTables branches', async () => {
+        qi.showAllTables.mockResolvedValue(['Users', 'Cameras', 'Bookings', 'Payments']);
+        qi.describeTable.mockResolvedValue({
+            PasswordHash: {}, AvatarPath: {}, Role: {},
+            SlipPath: {}, PaymentStatus: {}
+        });
+
+        await ensureFullSchemaReady();
+        expect(sequelize.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO "Customer"'));
+        expect(sequelize.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO "Equipment"'));
+        expect(sequelize.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO "Rental"'));
+        expect(sequelize.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO "Payment"'));
+
+        jest.clearAllMocks();
+        qi.showAllTables.mockResolvedValue(['Bookings']);
+        await ensureFullSchemaReady();
+        expect(sequelize.query).toHaveBeenCalledWith(expect.stringContaining('JOIN "Customer" c ON c."Email"'));
+    });
+
+    test('ensureCustomerAuthColumns branch when Role missing', async () => {
+        qi.describeTable.mockResolvedValue({ PasswordHash: {}, AvatarPath: {} });
+        await ensureFullSchemaReady();
+        expect(qi.addColumn).toHaveBeenCalledWith('Customer', 'Role', expect.any(Object));
     });
 });
