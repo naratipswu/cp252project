@@ -44,7 +44,7 @@ async function renderAdminAccounts(res, { status = 200, error = null, success = 
 exports.showMain = (req, res) => {
     // If already logged in, redirect
     if (req.session.user) {
-        if(req.session.user.role === 'admin') return res.redirect('/admin');
+        if (req.session.user.role === 'admin') return res.redirect('/admin');
         return res.redirect('/browse');
     }
     res.render('main', { error: null, user: null });
@@ -245,7 +245,7 @@ exports.login = async (req, res) => {
             ]
         }
     });
-    
+
     if (!matchedUser || !matchedUser.PasswordHash) {
         return res.render('signin', { error: 'Invalid username or password' });
     }
@@ -276,11 +276,11 @@ exports.showMockGoogleAuth = (req, res) => {
     const isMockGoogleEnabled = process.env.ENABLE_MOCK_GOOGLE_LOGIN === 'true';
     const nodeEnv = String(process.env.NODE_ENV || 'development').toLowerCase();
     const isSafeEnv = nodeEnv === 'development' || nodeEnv === 'dev' || nodeEnv === 'test';
-    
+
     if (!isMockGoogleEnabled || !isSafeEnv) {
         return res.status(403).send('Google login is disabled or not allowed in this environment');
     }
-    
+
     res.render('google_mock');
 };
 
