@@ -243,6 +243,10 @@ exports.deleteCamera = async (req, res) => {
 exports.bookCamera = async (req, res) => {
     const { cameraId, startDate, endDate } = req.body;
     const normalizedCameraId = Number(cameraId);
+    if (!Number.isFinite(normalizedCameraId) || normalizedCameraId <= 0 || !startDate || !endDate) {
+        return res.status(400).send('Invalid input');
+    }
+
     const start = getDateOrNull(startDate);
     const end = getDateOrNull(endDate);
     if (!start || !end || start > end) {
