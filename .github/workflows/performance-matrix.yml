@@ -56,7 +56,7 @@ jobs:
           DB_PASSWORD: postgres
           ADMIN_USERNAME: admin
           ADMIN_EMAIL: admin@example.com
-          ADMIN_PASSWORD: admin1234
+          ADMIN_PASSWORD: admin12345678
 
       - name: ⏳ Wait for server
         run: |
