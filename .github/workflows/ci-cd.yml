@@ -1,4 +1,4 @@
-name: 🚀 CI/CD Pipeline - Camera Rental System
+name:  CI/CD Pipeline - Camera Rental System
 
 on:
   push:

@@ -1,4 +1,4 @@
-name: ⚡ Performance Testing (Matrix)
+name: Performance Testing (Matrix)
 
 on:
   schedule:
