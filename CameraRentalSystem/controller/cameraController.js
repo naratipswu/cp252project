@@ -129,7 +129,6 @@ exports.browseCameras = async (req, res) => {
     });
 };
 
-// eslint-disable-next-line complexity
 exports.addCamera = async (req, res) => {
     const { brand, model, stock, pricePerDay, imageUrl } = req.body;
     const normalizedBrand = typeof brand === 'string' ? brand.trim() : '';
@@ -257,7 +256,7 @@ exports.bookCamera = async (req, res) => {
     const customer = await getCustomerForSession(req);
 
     try {
-        const rental = await sequelize.transaction(
+        await sequelize.transaction(
             { isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE },
             async (transaction) => {
                 const equipment = await Equipment.findByPk(normalizedCameraId, {

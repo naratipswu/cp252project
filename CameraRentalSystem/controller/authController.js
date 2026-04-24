@@ -179,7 +179,6 @@ exports.updateUserRole = (req, res) => {
         .catch(() => res.status(500).send('Failed to update role'));
 };
 
-// eslint-disable-next-line complexity
 exports.createAdminAccount = async (req, res) => {
     const { username, email, password } = req.body;
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
@@ -322,7 +321,6 @@ exports.loginGoogle = async (req, res) => {
     return res.redirect('/browse');
 };
 
-// eslint-disable-next-line complexity
 /**
  * Registers a new user customer account into the database.
  * Computes the bcrypt hash for the password before saving.

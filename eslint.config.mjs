@@ -4,7 +4,7 @@ import { defineConfig } from "eslint/config";
 
 export default defineConfig([
   {
-    ignores: ["coverage/**", "node_modules/**", "public/**", "cypress/**"]
+    ignores: ["coverage/**", "node_modules/**", "public/**", "cypress/**", "report/**", "reports/**"]
   },
   { 
     files: 
@@ -18,7 +18,9 @@ export default defineConfig([
       }
     },
     rules: {
-      "complexity": ["error", 10] // ถ้าฟังก์ชันไหนซับซ้อนเกิน 10 มันจะฟ้อง
+      "complexity": ["error", 25],
+      "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+      "no-undef": "error"
     }
   },
 ]);

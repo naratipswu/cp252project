@@ -23,7 +23,6 @@ async function getExistingTablesSet() {
   return new Set(tables.map(normalizeTableName));
 }
 
-// eslint-disable-next-line complexity
 async function migrateLegacyPostgresTables() {
   const tables = await getExistingTablesSet();
   const hasUsers = tables.has('Users');

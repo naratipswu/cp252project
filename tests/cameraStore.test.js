@@ -1,7 +1,7 @@
-const { ensureCameraStoreReady, getAllCameras, addCamera, DEFAULT_IMAGE } = require('../CameraRentalSystem/service/cameraStore');
+const { ensureCameraStoreReady, getAllCameras, addCamera } = require('../CameraRentalSystem/service/cameraStore');
 const Equipment = require('../models/equipment');
 const Category = require('../models/category');
-const sequelize = require('../config/db');
+// const sequelize = require('../config/db');
 
 jest.mock('../config/db', () => ({ authenticate: jest.fn().mockResolvedValue({}) }));
 jest.mock('../models/equipment', () => ({

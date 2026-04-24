@@ -1,5 +1,5 @@
 const mediaController = require('../CameraRentalSystem/controller/mediaController');
-const { UPLOAD_CATEGORIES, getDirectoryStructure } = require('../CameraRentalSystem/service/uploadService');
+// const { UPLOAD_CATEGORIES, getDirectoryStructure } = require('../CameraRentalSystem/service/uploadService');
 const { getAllCameras } = require('../CameraRentalSystem/service/cameraStore');
 const Equipment = require('../models/equipment');
 

@@ -300,7 +300,7 @@ async function seedDatabase() {
     console.log('✅ Created 10 rental details');
 
     // 6. PAYMENTS
-    const payments = await Payment.bulkCreate([
+    await Payment.bulkCreate([
       {
         RentalID: rentals[0].RentalID,
         PaymentMethod: 'bank_transfer',

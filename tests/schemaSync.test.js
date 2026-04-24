@@ -1,6 +1,6 @@
 const sequelize = require('../config/db');
 const { ensureFullSchemaReady } = require('../CameraRentalSystem/service/schemaSync');
-const models = require('../models');
+// const models = require('../models');
 
 jest.mock('../config/db', () => {
     const mQI = {

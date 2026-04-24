@@ -1,5 +1,5 @@
 const dashboardController = require('../CameraRentalSystem/controller/dashboardController');
-const { Payment, Rental, RentalDetail, Customer, Equipment } = require('../models');
+const { Payment, RentalDetail } = require('../models');
 
 jest.mock('../models', () => ({
     Payment: {

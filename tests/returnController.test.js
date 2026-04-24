@@ -1,6 +1,6 @@
 const returnController = require('../CameraRentalSystem/controller/returnController');
-const { RentalDetail, Return, SyncLog, Equipment } = require('../models');
-const sequelize = require('../config/db');
+const { RentalDetail, Return, Equipment } = require('../models');
+// const sequelize = require('../config/db');
 
 jest.mock('../config/db', () => ({
     transaction: jest.fn((options, callback) => callback({ LOCK: { UPDATE: 'UPDATE' } })),
