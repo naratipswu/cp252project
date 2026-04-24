@@ -12,6 +12,22 @@ jobs:
     strategy:
       matrix:
         endpoint: [homepage, cameras, search, admin]
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: camera_rental
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d camera_rental"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -26,15 +42,27 @@ jobs:
         run: npm ci
 
       - name: 🚀 Start Server
-        run: npm start &
+        run: |
+          nohup npm start > /tmp/server.log 2>&1 &
+          sleep 5
+        env:
+          NODE_ENV: production
+          SESSION_SECRET: ci-only-change-me
+          DB_DIALECT: postgres
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_NAME: camera_rental
+          DB_USER: postgres
+          DB_PASSWORD: postgres
 
       - name: ⏳ Wait for server
-        run: npx wait-on http://localhost:3000 --timeout 60000
+        run: |
+          npx wait-on http://localhost:3000 --timeout 60000 || (cat /tmp/server.log && exit 1)
 
       - name: 📊 Run Performance Test - ${{ matrix.endpoint }}
         run: |
           echo "Testing endpoint: ${{ matrix.endpoint }}"
-          npm run profile
+          npm run profile -- ${{ matrix.endpoint }}
         continue-on-error: true
 
       - name: 📤 Upload Results
