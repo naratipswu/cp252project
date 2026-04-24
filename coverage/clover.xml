@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1777001579860" clover="3.2.0">
-  <project timestamp="1777001579861" name="All files">
+<coverage generated="1777003971383" clover="3.2.0">
+  <project timestamp="1777003971383" name="All files">
     <metrics statements="913" coveredstatements="892" conditionals="697" coveredconditionals="609" methods="135" coveredmethods="132" elements="1745" coveredelements="1633" complexity="0" loc="913" ncloc="913" packages="4" files="26" classes="26"/>
     <package name="CameraRentalSystem.controller">
       <metrics statements="625" coveredstatements="606" conditionals="519" coveredconditionals="449" methods="103" coveredmethods="100"/>
