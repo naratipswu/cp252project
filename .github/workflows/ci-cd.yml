@@ -205,9 +205,7 @@ jobs:
         env:
           NODE_ENV: production
           # ต้องมีค่าเสมอ (เลือกอย่างใดอย่างหนึ่ง)
-          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
-          # หรือชั่วคราวเพื่อให้ผ่าน CI:
-          # SESSION_SECRET: ${{ secrets.SESSION_SECRET || 'ci-only-change-me' }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET || 'ci-only-change-me' }}
 
           DB_DIALECT: postgres
           DB_HOST: 127.0.0.1
