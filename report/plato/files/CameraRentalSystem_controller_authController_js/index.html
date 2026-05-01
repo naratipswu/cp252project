@@ -47,11 +47,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
-      <p class="stat">62.81</p>
+      <p class="stat">63.64</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
-      <p class="stat">427</p>
+      <p class="stat">426</p>
     </div>
   </div>
   <div class="row historical">
@@ -65,11 +65,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">67.23</p>
+      <p class="stat">67.35</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
-      <p class="stat">5.77</p>
+      <p class="stat">5.75</p>
     </div>
   </div>
 </div>
@@ -273,29 +273,29 @@ exports.updateUserRole = (req, res) =&gt; {
         .catch(() =&gt; res.status(500).send(&#039;Failed to update role&#039;));
 };
 
-// eslint-disable-next-line complexity
+function validateAdminAccountInput(username, email, password) {
+    if (!username || !email || !password) return &#039;Username, email and password are required&#039;;
+    if (!isValidEmail(email)) return &#039;Please provide a valid email address&#039;;
+    if (password.length &lt; 8) return &#039;Password must be at least 8 characters&#039;;
+    return null;
+}
+
 exports.createAdminAccount = async (req, res) =&gt; {
     const { username, email, password } = req.body;
     const normalizedUsername = typeof username === &#039;string&#039; ? username.trim() : &#039;&#039;;
     const normalizedEmail = typeof email === &#039;string&#039; ? email.trim().toLowerCase() : &#039;&#039;;
     const normalizedPassword = typeof password === &#039;string&#039; ? password : &#039;&#039;;
 
-    if (!normalizedUsername || !normalizedEmail || !normalizedPassword) {
-        return renderAdminAccounts(res, { status: 400, error: &#039;Username, email and password are required&#039; });
+    const validationError = validateAdminAccountInput(normalizedUsername, normalizedEmail, normalizedPassword);
+    if (validationError) {
+        return renderAdminAccounts(res, { status: 400, error: validationError });
     }
-    if (!isValidEmail(normalizedEmail)) {
-        return renderAdminAccounts(res, { status: 400, error: &#039;Please provide a valid email address&#039; });
-    }
-    if (normalizedPassword.length &lt; 8) {
-        return renderAdminAccounts(res, { status: 400, error: &#039;Password must be at least 8 characters&#039; });
-    }
+
     const duplicate = await Customer.findOne({
-        where: { Email: normalizedEmail }
+        where: { [Op.or]: [{ Email: normalizedEmail }, { Username: normalizedUsername }] }
     });
-    const duplicateUsername = await Customer.findOne({
-        where: { Username: normalizedUsername }
-    });
-    if (duplicate || duplicateUsername) {
+    
+    if (duplicate) {
         return renderAdminAccounts(res, { status: 400, error: &#039;Username or email already exists&#039; });
     }
 
@@ -416,13 +416,20 @@ exports.loginGoogle = async (req, res) =&gt; {
     return res.redirect(&#039;/browse&#039;);
 };
 
-// eslint-disable-next-line complexity
 /**
  * Registers a new user customer account into the database.
  * Computes the bcrypt hash for the password before saving.
  * @param {import(&#039;express&#039;).Request} req - Express request object.
  * @param {import(&#039;express&#039;).Response} res - Express response object.
  */
+function validateRegisterInput(username, password, email, firstName, lastName, phone) {
+    if (!username || !password || !email || !firstName || !lastName || !phone) return &#039;All fields are required&#039;;
+    if (!isValidEmail(email)) return &#039;Please provide a valid email address&#039;;
+    if (!email.endsWith(&#039;@gmail.com&#039;)) return &#039;Please provide a @gmail.com address&#039;;
+    if (password.length &lt; 8) return &#039;Password must be at least 8 characters&#039;;
+    return null;
+}
+
 exports.register = async (req, res) =&gt; {
     const { username, password, email, firstName, lastName, phone, address } = req.body;
     const normalizedUsername = typeof username === &#039;string&#039; ? username.trim() : &#039;&#039;;
@@ -433,23 +440,15 @@ exports.register = async (req, res) =&gt; {
     const normalizedPhone = typeof phone === &#039;string&#039; ? phone.trim() : &#039;&#039;;
     const normalizedAddress = typeof address === &#039;string&#039; ? address.trim() : &#039;&#039;;
 
-    if (!normalizedUsername || !normalizedPassword || !normalizedEmail || !normalizedFirstName || !normalizedLastName || !normalizedPhone) {
-        return res.render(&#039;signup&#039;, { error: &#039;All fields are required&#039; });
-    }
-    if (!isValidEmail(normalizedEmail)) {
-        return res.render(&#039;signup&#039;, { error: &#039;Please provide a valid email address&#039; });
-    }
-    if (!normalizedEmail.endsWith(&#039;@gmail.com&#039;)) {
-        return res.render(&#039;signup&#039;, { error: &#039;Please provide a @gmail.com address&#039; });
+    const validationError = validateRegisterInput(normalizedUsername, normalizedPassword, normalizedEmail, normalizedFirstName, normalizedLastName, normalizedPhone);
+    if (validationError) {
+        return res.render(&#039;signup&#039;, { error: validationError });
     }
 
-    if (normalizedPassword.length &lt; 8) {
-        return res.render(&#039;signup&#039;, { error: &#039;Password must be at least 8 characters&#039; });
-    }
-
-    const duplicateUser = await Customer.findOne({ where: { Username: normalizedUsername } });
-    const duplicateEmail = await Customer.findOne({ where: { Email: normalizedEmail } });
-    if (duplicateUser || duplicateEmail) {
+    const duplicate = await Customer.findOne({
+        where: { [Op.or]: [{ Username: normalizedUsername }, { Email: normalizedEmail }] }
+    });
+    if (duplicate) {
         return res.render(&#039;signup&#039;, { error: &#039;Username or email already exists&#039; });
     }
 

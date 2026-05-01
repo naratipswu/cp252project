@@ -12,7 +12,7 @@
     "profile": "node performance/profile.js",
     "profile:report": "node performance/generate-report.js",
     "build": "echo 'Build verification complete'",
-    "plato": "es6-plato -r -d report/plato -e .eslintrc.plato.json CameraRentalSystem models utils"
+    "plato": "es6-plato -r -d report/plato -e .eslintrc.plato.json CameraRentalSystem utils"
   },
   "jest": {
     "collectCoverageFrom": [

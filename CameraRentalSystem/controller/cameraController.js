@@ -1,6 +1,6 @@
-const { Op, Transaction } = require('sequelize');
-const sequelize = require('../../config/db');
+const { Op } = require('sequelize');
 const { getAllCameras, addCamera, DEFAULT_IMAGE } = require('../service/cameraStore');
+const { createBookingTransaction, confirmPaymentTransaction } = require('../service/bookingService');
 const { Customer, Equipment, Rental, RentalDetail, Payment, Category } = require('../../models');
 
 function getDateOrNull(dateString) {
@@ -245,70 +245,19 @@ exports.bookCamera = async (req, res) => {
     if (!Number.isFinite(normalizedCameraId) || normalizedCameraId <= 0 || !startDate || !endDate) {
         return res.status(400).send('Invalid input');
     }
-
     const start = getDateOrNull(startDate);
     const end = getDateOrNull(endDate);
     if (!start || !end || start > end) {
         return res.status(400).send('Invalid booking dates');
     }
-    const startDateOnly = start.toISOString().slice(0, 10);
-    const endDateOnly = end.toISOString().slice(0, 10);
     const customer = await getCustomerForSession(req);
-
     try {
-        await sequelize.transaction(
-            { isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE },
-            async (transaction) => {
-                const equipment = await Equipment.findByPk(normalizedCameraId, {
-                    transaction,
-                    lock: transaction.LOCK.UPDATE
-                });
-                if (!equipment) {
-                    const error = new Error('Camera not found');
-                    error.statusCode = 404;
-                    throw error;
-                }
-                if (equipment.Status !== 'available') {
-                    const error = new Error('Camera is out of stock');
-                    error.statusCode = 400;
-                    throw error;
-                }
-
-                // Overbooking allows this to pass without blocking.
-                if (!customer) {
-                    const error = new Error('Unauthorized');
-                    error.statusCode = 401;
-                    throw error;
-                }
-
-                const rentalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-                const totalPrice = rentalDays * Number(equipment.DailyRate);
-                const createdRental = await Rental.create({
-                    RentalDate: new Date(),
-                    TotalAmount: totalPrice,
-                    RentalStatus: 'pending',
-                    CustomerID: customer.CustomerID
-                }, { transaction });
-                await RentalDetail.create({
-                    RentalID: createdRental.RentalID,
-                    EquipmentID: equipment.EquipmentID,
-                    StartDate: startDateOnly,
-                    EndDate: endDateOnly,
-                    SubTotal: totalPrice
-                }, { transaction });
-
-                equipment.Status = 'rented';
-                await equipment.save({ transaction });
-
-                return createdRental;
-            }
-        );
+        const startDateOnly = start.toISOString().slice(0, 10);
+        const endDateOnly = end.toISOString().slice(0, 10);
+        await createBookingTransaction(customer, normalizedCameraId, start, end, startDateOnly, endDateOnly);
         return res.redirect('/cart');
     } catch (error) {
-        let msg = 'Failed to create booking';
-        if (error && error.statusCode) {
-            msg = error.message;
-        }
+        const msg = (error && error.statusCode) ? error.message : 'Failed to create booking';
         return res.redirect(`/browse?error=${encodeURIComponent(msg)}`);
     }
 };
@@ -399,43 +348,30 @@ exports.confirmBooking = async (req, res) => {
     return res.redirect('/cart');
 };
 
-exports.showPaymentPage = (req, res) => {
-    const { bookingId } = req.params;
-    const rentalId = Number(bookingId);
-    return Rental.findByPk(rentalId)
-        .then((rental) => {
-            if (!rental) return res.status(404).send('Booking not found');
-            return Customer.findByPk(rental.CustomerID).then((customer) => {
-                if (!customer) return res.status(404).send('Booking not found');
-                if (customer.Username !== req.session.user.username && req.session.user.role !== 'admin') {
-                    return res.status(403).send('Forbidden');
-                }
-                return Payment.findOne({ where: { RentalID: rental.RentalID } }).then((payment) => {
-                    if (payment) {
-                        if (payment.PaymentStatus === 'pending') {
-                            return res.status(409).send('Your slip is pending admin approval');
-                        }
-                        if (payment.PaymentStatus === 'approved') {
-                            return res.status(409).send('Payment has already been approved');
-                        }
-                        return res.render('payment', {
-                            booking: {
-                                id: rental.RentalID,
-                                totalPrice: Number(rental.TotalAmount),
-                                previousSlipRejected: true
-                            }
-                        });
-                    }
-                    return res.render('payment', {
-                        booking: {
-                            id: rental.RentalID,
-                            totalPrice: Number(rental.TotalAmount)
-                        }
-                    });
-                });
-            });
-        })
-        .catch(() => res.status(500).send('Failed to load payment page'));
+function renderPaymentPage(res, rental, payment) {
+    if (!payment) {
+        return res.render('payment', { booking: { id: rental.RentalID, totalPrice: Number(rental.TotalAmount) } });
+    }
+    if (payment.PaymentStatus === 'pending') return res.status(409).send('Your slip is pending admin approval');
+    if (payment.PaymentStatus === 'approved') return res.status(409).send('Payment has already been approved');
+    return res.render('payment', { booking: { id: rental.RentalID, totalPrice: Number(rental.TotalAmount), previousSlipRejected: true } });
+}
+
+exports.showPaymentPage = async (req, res) => {
+    const rentalId = Number(req.params.bookingId);
+    try {
+        const rental = await Rental.findByPk(rentalId);
+        if (!rental) return res.status(404).send('Booking not found');
+        const customer = await Customer.findByPk(rental.CustomerID);
+        if (!customer) return res.status(404).send('Booking not found');
+        if (customer.Username !== req.session.user.username && req.session.user.role !== 'admin') {
+            return res.status(403).send('Forbidden');
+        }
+        const payment = await Payment.findOne({ where: { RentalID: rental.RentalID } });
+        return renderPaymentPage(res, rental, payment);
+    } catch (err) {
+        return res.status(500).send('Failed to load payment page');
+    }
 };
 
 /**
@@ -454,117 +390,53 @@ exports.confirmPayment = async (req, res) => {
     if (customer.Username !== req.session.user.username && req.session.user.role !== 'admin') {
         return res.status(403).send('Forbidden');
     }
-
     try {
-        await sequelize.transaction(
-            { isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE },
-            async (transaction) => {
-                const lockedRental = await Rental.findByPk(rentalId, {
-                    transaction,
-                    lock: transaction.LOCK.UPDATE
-                });
-                if (!lockedRental) {
-                    const error = new Error('Booking not found');
-                    error.statusCode = 404;
-                    throw error;
-                }
-
-                const payment = await Payment.findOne({
-                    where: { RentalID: lockedRental.RentalID },
-                    transaction,
-                    lock: transaction.LOCK.UPDATE
-                });
-                if (lockedRental.RentalStatus !== 'active') {
-                    const error = new Error('Payment cannot be confirmed from its current state');
-                    error.statusCode = 409;
-                    throw error;
-                }
-                if (!req.file) {
-                    const error = new Error('Please upload a payment slip');
-                    error.statusCode = 400;
-                    throw error;
-                }
-
-                if (!payment) {
-                    await Payment.create({
-                        RentalID: lockedRental.RentalID,
-                        PaymentMethod: 'app-payment',
-                        Amount: lockedRental.TotalAmount,
-                        PaymentDate: new Date(),
-                        SlipPath: `/uploads/slips/${req.file.filename}`,
-                        PaymentStatus: 'pending'
-                    }, { transaction });
-                } else if (payment.PaymentStatus === 'rejected') {
-                    payment.PaymentDate = new Date();
-                    payment.Amount = lockedRental.TotalAmount;
-                    payment.SlipPath = `/uploads/slips/${req.file.filename}`;
-                    payment.PaymentStatus = 'pending';
-                    await payment.save({ transaction });
-                } else {
-                    const error = new Error('Payment cannot be confirmed from its current state');
-                    error.statusCode = 409;
-                    throw error;
-                }
-            }
-        );
+        const slipFilename = req.file ? req.file.filename : null;
+        await confirmPaymentTransaction(rentalId, slipFilename);
     } catch (error) {
-        if (error && error.statusCode) {
-            return res.status(error.statusCode).send(error.message);
-        }
+        if (error && error.statusCode) return res.status(error.statusCode).send(error.message);
         if (error && error.name === 'SequelizeUniqueConstraintError') {
             return res.status(409).send('Payment cannot be confirmed from its current state');
         }
         return res.status(500).send('Failed to confirm payment');
     }
-
     return res.redirect('/cart');
 };
 
+function formatPaymentSlip(payment) {
+    const rental = payment.Rental;
+    const detail = rental.RentalDetails && rental.RentalDetails.length > 0 ? rental.RentalDetails[0] : null;
+    const equipment = detail ? detail.Equipment : null;
+    return {
+        paymentId: payment.PaymentID,
+        paymentStatus: payment.PaymentStatus || 'approved',
+        paymentDate: payment.PaymentDate,
+        amount: Number(payment.Amount),
+        slipPath: payment.SlipPath || null,
+        rentalId: rental.RentalID,
+        rentalStatus: rental.RentalStatus,
+        customer: { username: rental.Customer.Username, email: rental.Customer.Email },
+        booking: {
+            startDate: detail ? detail.StartDate : '-',
+            endDate: detail ? detail.EndDate : '-',
+            cameraModel: equipment ? `${equipment.Brand} ${equipment.ModelName}` : '-'
+        }
+    };
+}
+
 exports.showAdminPaymentSlips = async (req, res) => {
     const payments = await Payment.findAll({
-        include: [
-            {
-                model: Rental,
-                required: true,
-                include: [
-                    { model: Customer, required: true },
-                    {
-                        model: RentalDetail,
-                        required: false,
-                        include: [{ model: Equipment, required: false }]
-                    }
-                ]
-            }
-        ],
+        include: [{
+            model: Rental,
+            required: true,
+            include: [
+                { model: Customer, required: true },
+                { model: RentalDetail, required: false, include: [{ model: Equipment, required: false }] }
+            ]
+        }],
         order: [['PaymentDate', 'DESC']]
     });
-
-    return res.render('admin_payment_slips', {
-        user: req.session.user,
-        slips: payments.map((payment) => {
-            const rental = payment.Rental;
-            const detail = rental.RentalDetails && rental.RentalDetails.length > 0 ? rental.RentalDetails[0] : null;
-            const equipment = detail ? detail.Equipment : null;
-            return {
-                paymentId: payment.PaymentID,
-                paymentStatus: payment.PaymentStatus || 'approved',
-                paymentDate: payment.PaymentDate,
-                amount: Number(payment.Amount),
-                slipPath: payment.SlipPath || null,
-                rentalId: rental.RentalID,
-                rentalStatus: rental.RentalStatus,
-                customer: {
-                    username: rental.Customer.Username,
-                    email: rental.Customer.Email
-                },
-                booking: {
-                    startDate: detail ? detail.StartDate : '-',
-                    endDate: detail ? detail.EndDate : '-',
-                    cameraModel: equipment ? `${equipment.Brand} ${equipment.ModelName}` : '-'
-                }
-            };
-        })
-    });
+    return res.render('admin_payment_slips', { user: req.session.user, slips: payments.map(formatPaymentSlip) });
 };
 
 exports.approvePaymentSlip = async (req, res) => {

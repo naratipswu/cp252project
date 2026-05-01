@@ -179,28 +179,29 @@ exports.updateUserRole = (req, res) => {
         .catch(() => res.status(500).send('Failed to update role'));
 };
 
+function validateAdminAccountInput(username, email, password) {
+    if (!username || !email || !password) return 'Username, email and password are required';
+    if (!isValidEmail(email)) return 'Please provide a valid email address';
+    if (password.length < 8) return 'Password must be at least 8 characters';
+    return null;
+}
+
 exports.createAdminAccount = async (req, res) => {
     const { username, email, password } = req.body;
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
     const normalizedPassword = typeof password === 'string' ? password : '';
 
-    if (!normalizedUsername || !normalizedEmail || !normalizedPassword) {
-        return renderAdminAccounts(res, { status: 400, error: 'Username, email and password are required' });
+    const validationError = validateAdminAccountInput(normalizedUsername, normalizedEmail, normalizedPassword);
+    if (validationError) {
+        return renderAdminAccounts(res, { status: 400, error: validationError });
     }
-    if (!isValidEmail(normalizedEmail)) {
-        return renderAdminAccounts(res, { status: 400, error: 'Please provide a valid email address' });
-    }
-    if (normalizedPassword.length < 8) {
-        return renderAdminAccounts(res, { status: 400, error: 'Password must be at least 8 characters' });
-    }
+
     const duplicate = await Customer.findOne({
-        where: { Email: normalizedEmail }
+        where: { [Op.or]: [{ Email: normalizedEmail }, { Username: normalizedUsername }] }
     });
-    const duplicateUsername = await Customer.findOne({
-        where: { Username: normalizedUsername }
-    });
-    if (duplicate || duplicateUsername) {
+    
+    if (duplicate) {
         return renderAdminAccounts(res, { status: 400, error: 'Username or email already exists' });
     }
 
@@ -327,6 +328,14 @@ exports.loginGoogle = async (req, res) => {
  * @param {import('express').Request} req - Express request object.
  * @param {import('express').Response} res - Express response object.
  */
+function validateRegisterInput(username, password, email, firstName, lastName, phone) {
+    if (!username || !password || !email || !firstName || !lastName || !phone) return 'All fields are required';
+    if (!isValidEmail(email)) return 'Please provide a valid email address';
+    if (!email.endsWith('@gmail.com')) return 'Please provide a @gmail.com address';
+    if (password.length < 8) return 'Password must be at least 8 characters';
+    return null;
+}
+
 exports.register = async (req, res) => {
     const { username, password, email, firstName, lastName, phone, address } = req.body;
     const normalizedUsername = typeof username === 'string' ? username.trim() : '';
@@ -337,23 +346,15 @@ exports.register = async (req, res) => {
     const normalizedPhone = typeof phone === 'string' ? phone.trim() : '';
     const normalizedAddress = typeof address === 'string' ? address.trim() : '';
 
-    if (!normalizedUsername || !normalizedPassword || !normalizedEmail || !normalizedFirstName || !normalizedLastName || !normalizedPhone) {
-        return res.render('signup', { error: 'All fields are required' });
-    }
-    if (!isValidEmail(normalizedEmail)) {
-        return res.render('signup', { error: 'Please provide a valid email address' });
-    }
-    if (!normalizedEmail.endsWith('@gmail.com')) {
-        return res.render('signup', { error: 'Please provide a @gmail.com address' });
+    const validationError = validateRegisterInput(normalizedUsername, normalizedPassword, normalizedEmail, normalizedFirstName, normalizedLastName, normalizedPhone);
+    if (validationError) {
+        return res.render('signup', { error: validationError });
     }
 
-    if (normalizedPassword.length < 8) {
-        return res.render('signup', { error: 'Password must be at least 8 characters' });
-    }
-
-    const duplicateUser = await Customer.findOne({ where: { Username: normalizedUsername } });
-    const duplicateEmail = await Customer.findOne({ where: { Email: normalizedEmail } });
-    if (duplicateUser || duplicateEmail) {
+    const duplicate = await Customer.findOne({
+        where: { [Op.or]: [{ Username: normalizedUsername }, { Email: normalizedEmail }] }
+    });
+    if (duplicate) {
         return res.render('signup', { error: 'Username or email already exists' });
     }
 

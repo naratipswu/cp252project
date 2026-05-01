@@ -171,6 +171,7 @@ describe('CameraController 100% Coverage Suite', () => {
             const mockCam = { Status: 'available', DailyRate: 100, EquipmentID: 1, save: jest.fn() };
             Equipment.findByPk.mockResolvedValue(mockCam);
             Customer.findOne.mockResolvedValue({ CustomerID: 1, Username: 'me' });
+            RentalDetail.findOne.mockResolvedValue(null);
             Rental.create.mockResolvedValue({ RentalID: 10 });
 
             await cameraController.bookCamera({
@@ -199,6 +200,12 @@ describe('CameraController 100% Coverage Suite', () => {
             Equipment.findByPk.mockResolvedValue({ Status: 'available' });
             await cameraController.bookCamera({ body: { cameraId: '1', startDate: '2024-01-01', endDate: '2024-01-02' }, session: {} }, res);
             expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error=Unauthorized'));
+
+            // Dates already booked
+            Customer.findOne.mockResolvedValue({ CustomerID: 1, Username: 'u' });
+            RentalDetail.findOne.mockResolvedValue({});
+            await cameraController.bookCamera({ body: { cameraId: '1', startDate: '2024-01-01', endDate: '2024-01-02' }, session: { user: { username: 'u' } } }, res);
+            expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('error=Dates%20already%20booked'));
 
             const err = new Error('Generic');
             Equipment.findByPk.mockRejectedValue(err);

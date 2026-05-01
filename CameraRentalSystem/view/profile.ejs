@@ -112,7 +112,7 @@
                             
                             <div class="relative overflow-hidden">
                                 <label class="block text-[8px] font-black uppercase tracking-widest text-brand-yellow mb-2 text-center">Change Portrait</label>
-                                <input type="file" name="avatarFile" accept=".jpg,.jpeg,.png,.webp,.gif,.svg" class="block w-full text-[10px] text-gray-500 file:mr-0 file:py-2 file:px-0 file:rounded-full file:border-0 file:text-[9px] file:font-black file:uppercase file:bg-transparent file:text-white hover:file:text-brand-yellow cursor-pointer" required>
+                                <input type="file" name="avatarFile" aria-label="Upload Avatar" accept=".jpg,.jpeg,.png,.webp,.gif,.svg" class="block w-full text-[10px] text-gray-500 file:mr-0 file:py-2 file:px-0 file:rounded-full file:border-0 file:text-[9px] file:font-black file:uppercase file:bg-transparent file:text-white hover:file:text-brand-yellow cursor-pointer" required>
                             </div>
                             <button type="submit" class="w-full bg-white/5 border border-white/10 text-white font-bold tracking-widest text-[9px] py-3 uppercase hover:bg-brand-yellow hover:text-black hover:border-brand-yellow transition duration-300">
                                 Update Avatar
@@ -173,33 +173,33 @@
                                 <div class="grid grid-cols-2 gap-6">
                                     <div class="space-y-2">
                                         <label class="profile-label pl-2">First Name</label>
-                                        <input type="text" name="firstName" value="<%= user.firstName %>" class="profile-input" required>
+                                        <input type="text" name="firstName" value="<%= user.firstName %>" aria-label="First Name" class="profile-input" required>
                                     </div>
                                     <div class="space-y-2">
                                         <label class="profile-label pl-2">Last Name</label>
-                                        <input type="text" name="lastName" value="<%= user.lastName %>" class="profile-input" required>
+                                        <input type="text" name="lastName" value="<%= user.lastName %>" aria-label="Last Name" class="profile-input" required>
                                     </div>
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-6">
                                     <div class="space-y-2 col-span-2 md:col-span-1">
                                         <label class="profile-label pl-2">Username (Locked)</label>
-                                        <input type="text" value="<%= user.username %>" class="profile-input opacity-40 cursor-not-allowed" disabled>
+                                        <input type="text" value="<%= user.username %>" aria-label="Username" class="profile-input opacity-40 cursor-not-allowed" disabled>
                                     </div>
                                     <div class="space-y-2 col-span-2 md:col-span-1">
                                         <label class="profile-label pl-2">Email</label>
-                                        <input type="email" name="email" value="<%= user.email %>" class="profile-input" required>
+                                        <input type="email" name="email" value="<%= user.email %>" aria-label="Email Address" class="profile-input" required>
                                     </div>
                                 </div>
 
                                 <div class="space-y-2">
                                     <label class="profile-label pl-2">Phone</label>
-                                    <input type="text" name="phone" value="<%= user.phone %>" class="profile-input" required>
+                                    <input type="text" name="phone" value="<%= user.phone %>" aria-label="Phone Number" class="profile-input" required>
                                 </div>
 
                                 <div class="space-y-2">
                                     <label class="profile-label pl-2">Address</label>
-                                    <textarea name="address" rows="3" class="profile-input resize-none"><%= user.address %></textarea>
+                                    <textarea name="address" rows="3" aria-label="Address" class="profile-input resize-none"><%= user.address %></textarea>
                                 </div>
 
                                 <div class="pt-6 flex items-center justify-end gap-6">

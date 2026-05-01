@@ -47,11 +47,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
-      <p class="stat">52.24</p>
+      <p class="stat">61.10</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
-      <p class="stat">91</p>
+      <p class="stat">75</p>
     </div>
   </div>
   <div class="row historical">
@@ -65,11 +65,11 @@
   <div class="row">
     <div class="col-md-6">
       <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
-      <p class="stat">16.31</p>
+      <p class="stat">20.92</p>
     </div>
     <div class="col-md-6">
       <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
-      <p class="stat">0.90</p>
+      <p class="stat">1.06</p>
     </div>
   </div>
 </div>
@@ -92,90 +92,74 @@
 
 <div class="container">
   <div class="row">
-    <textarea id="file-source" class="col-md-12">const { Op, fn, col } = require(&#039;sequelize&#039;);
+    <textarea id="file-source" class="col-md-12">const { Op } = require(&#039;sequelize&#039;);
 const { Payment, Rental, RentalDetail, Customer, Equipment } = require(&#039;../../models&#039;);
+
+function getDateRange() {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+    return { startOfDay, endOfDay, startOfMonth, endOfMonth };
+}
+
+async function getMonthlyIncome(startOfMonth, endOfMonth) {
+    const result = await Payment.sum(&#039;Amount&#039;, {
+        where: { PaymentStatus: &#039;approved&#039;, PaymentDate: { [Op.gte]: startOfMonth, [Op.lte]: endOfMonth } }
+    });
+    return result || 0;
+}
+
+async function countDailyActivity(startOfDay, endOfDay) {
+    const deliveriesToday = await RentalDetail.count({
+        include: [{ model: Rental, required: true, where: { RentalStatus: &#039;active&#039; } }],
+        where: { StartDate: { [Op.gte]: startOfDay, [Op.lt]: endOfDay } }
+    });
+    const returnCount = await RentalDetail.count({
+        include: [{ model: Rental, required: true, where: { RentalStatus: &#039;completed&#039; } }],
+        where: { EndDate: { [Op.gte]: startOfDay, [Op.lt]: endOfDay } }
+    });
+    return { deliveriesToday, returnCount };
+}
+
+function formatBookingRow(row) {
+    return {
+        id: row.Rental.RentalID,
+        user: row.Rental.Customer.Email || row.Rental.Customer.Username,
+        cameraModel: `${row.Equipment.Brand} ${row.Equipment.ModelName}`,
+        startDate: row.StartDate,
+        endDate: row.EndDate,
+        totalPrice: Number(row.Rental.TotalAmount)
+    };
+}
+
+async function getRecentBookings() {
+    const rows = await RentalDetail.findAll({
+        include: [
+            { model: Rental, required: true, include: [{ model: Customer, required: true }] },
+            { model: Equipment, required: true }
+        ],
+        order: [[&#039;RentalDetailID&#039;, &#039;DESC&#039;]],
+        limit: 50
+    });
+    return rows.map(r =&gt; formatBookingRow(r.toJSON()));
+}
 
 exports.showDashboard = async (req, res) =&gt; {
     try {
-        const today = new Date();
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
-        
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+        const { startOfDay, endOfDay, startOfMonth, endOfMonth } = getDateRange();
+        const [monthlyIncome, { deliveriesToday, returnCount }, pendingPayments, bookings] = await Promise.all([
+            getMonthlyIncome(startOfMonth, endOfMonth),
+            countDailyActivity(startOfDay, endOfDay),
+            Payment.count({ where: { PaymentStatus: &#039;pending&#039; } }),
+            getRecentBookings()
+        ]);
 
-        // 1. Monthly Income (Sum of approved payments this month)
-        const incomeResult = await Payment.sum(&#039;Amount&#039;, {
-            where: {
-                PaymentStatus: &#039;approved&#039;,
-                PaymentDate: {
-                    [Op.gte]: startOfMonth,
-                    [Op.lte]: endOfMonth
-                }
-            }
-        });
-        const monthlyIncome = incomeResult || 0;
-
-        // 2. Deliveries Today (active rentals starting today)
-        const deliveriesToday = await RentalDetail.count({
-            include: [{
-                model: Rental,
-                required: true,
-                where: { RentalStatus: &#039;active&#039; }
-            }],
-            where: {
-                StartDate: {
-                    [Op.gte]: startOfDay,
-                    [Op.lt]: endOfDay
-                }
-            }
-        });
-
-        // 3. Returns Expected Today (completed rentals ending today)
-        const returnCount = await RentalDetail.count({
-            include: [{
-                model: Rental,
-                required: true,
-                where: { RentalStatus: &#039;completed&#039; }
-            }],
-            where: {
-                EndDate: {
-                    [Op.gte]: startOfDay,
-                    [Op.lt]: endOfDay
-                }
-            }
-        });
-
-        // Pending items summary (for quick access buttons)
-        const pendingPayments = await Payment.count({ where: { PaymentStatus: &#039;pending&#039; } });
-        
-        // Fetch recent bookings for the table below command center
-        const recentRows = await RentalDetail.findAll({
-            include: [
-                { model: Rental, required: true, include: [{ model: Customer, required: true }] },
-                { model: Equipment, required: true }
-            ],
-            order: [[&#039;RentalDetailID&#039;, &#039;DESC&#039;]],
-            limit: 50
-        });
-        const bookings = recentRows.map(r =&gt; r.toJSON()).map(row =&gt; ({
-            id: row.Rental.RentalID,
-            user: row.Rental.Customer.Email || row.Rental.Customer.Username,
-            cameraModel: `${row.Equipment.Brand} ${row.Equipment.ModelName}`,
-            startDate: row.StartDate,
-            endDate: row.EndDate,
-            totalPrice: Number(row.Rental.TotalAmount)
-        }));
-        
         res.render(&#039;admin&#039;, {
             user: req.session.user,
             bookings,
-            stats: {
-                monthlyIncome,
-                deliveriesToday,
-                returnsToday: returnCount,
-                pendingPayments
-            }
+            stats: { monthlyIncome, deliveriesToday, returnsToday: returnCount, pendingPayments }
         });
     } catch (error) {
         console.error(&#039;Error loading dashboard:&#039;, error);

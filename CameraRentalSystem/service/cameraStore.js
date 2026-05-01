@@ -83,25 +83,23 @@ async function addCamera(cameraInput) {
   };
 
   const catId = cameraInput.categoryId;
-  let defaultCategory = await Category.findByPk(catId || 1) || await Category.findOne();
+  const defaultCategory = await Category.findByPk(catId || 1) || await Category.findOne();
   const now = Date.now();
   const count = Number.isInteger(payload.stock) && payload.stock > 0 ? payload.stock : 1;
-  const createdRows = [];
-  for (let i = 0; i < count; i += 1) {
-    const serialNumber = `eq-${now}-${Math.floor(Math.random() * 10000)}-${i}`;
-    const created = await Equipment.create({
-      ModelName: payload.model,
-      Brand: payload.brand,
-      SerialNumber: serialNumber,
-      DailyRate: payload.pricePerDay,
-      ImageURL: payload.image,
-      Status: 'available',
-      CategoryID: defaultCategory.CategoryID
-    });
-    createdRows.push(created.toJSON());
-  }
 
-  const first = createdRows[0];
+  const toCreate = Array.from({ length: count }, (_, i) => ({
+    ModelName: payload.model,
+    Brand: payload.brand,
+    SerialNumber: `eq-${now}-${Math.floor(Math.random() * 10000)}-${i}`,
+    DailyRate: payload.pricePerDay,
+    ImageURL: payload.image,
+    Status: 'available',
+    CategoryID: defaultCategory.CategoryID
+  }));
+
+  const createdRows = await Equipment.bulkCreate(toCreate, { returning: true });
+  const first = createdRows[0].toJSON();
+
   return {
     id: first.EquipmentID,
     model: first.ModelName,

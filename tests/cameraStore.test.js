@@ -7,7 +7,7 @@ jest.mock('../config/db', () => ({ authenticate: jest.fn().mockResolvedValue({})
 jest.mock('../models/equipment', () => ({
     sync: jest.fn().mockResolvedValue({}),
     count: jest.fn().mockResolvedValue(0),
-    bulkCreate: jest.fn().mockResolvedValue([]),
+    bulkCreate: jest.fn().mockResolvedValue([{ toJSON: () => ({ EquipmentID: 1, ModelName: 'M', Brand: 'B', DailyRate: 100, Status: 'available', ImageURL: 'pic' }) }]),
     findAll: jest.fn().mockResolvedValue([]),
     create: jest.fn().mockResolvedValue({ toJSON: () => ({ EquipmentID: 1, DailyRate: 100, Status: 'available', ImageURL: 'pic' }) }),
 }));

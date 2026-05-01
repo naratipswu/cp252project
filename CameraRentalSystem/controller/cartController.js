@@ -78,12 +78,9 @@ exports.cancelCartItem = async (req, res) => {
   await rental.save();
 
   const details = await RentalDetail.findAll({ where: { RentalID: rental.RentalID } });
-  for (const d of details) {
-    const eq = await Equipment.findByPk(d.EquipmentID);
-    if (eq && eq.Status === 'rented') {
-      eq.Status = 'available';
-      await eq.save();
-    }
+  const equipmentIds = details.map((d) => d.EquipmentID);
+  if (equipmentIds.length > 0) {
+    await Equipment.update({ Status: 'available' }, { where: { EquipmentID: { [Op.in]: equipmentIds }, Status: 'rented' } });
   }
 
   return res.redirect('/cart');
